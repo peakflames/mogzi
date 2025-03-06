@@ -12,6 +12,10 @@ An interactive command-line chat application that leverages OpenAI-compatible AP
 - Cross-platform support (Windows, MacOS, Linux)
 - Built-in help command (`-h` or `--help`)
 
+## Screenshot
+
+![CliChat Screenshot](screenshot.png)
+
 ## Prerequisites
 
 Before running the application, ensure you have:

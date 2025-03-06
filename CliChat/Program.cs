@@ -250,7 +250,7 @@ while (true)
 void WriteTokenMetrics(List<ChatMessage> chatHistory)
 {   
     var currentForegroundColor = Console.ForegroundColor;
-    Console.ForegroundColor = ConsoleColor.DarkMagenta;
+    Console.ForegroundColor = ConsoleColor.Yellow;
 
     // calculate the percentage of tokens used against the 200K limit
     var tokenCount = GetTokenCount(chatHistory);
