@@ -84,7 +84,7 @@ var defaultShell = operatingSystem switch {
 
 Console.ForegroundColor = ConsoleColor.Yellow;
 Console.WriteLine($"CliChat> Operating System: {operatingSystem}, Default Shell: {defaultShell}");
-Console.WriteLine($"CliChat> OpenAI (BaseUri='{OPENAI_API_BASE}', Model='{OPENAI_API_MODEL}', ApiKey='******'");
+Console.WriteLine($"CliChat> OpenAI (BaseUri='{OPENAI_API_BASE}', Model='{OPENAI_API_MODEL}', ApiKey='******')");
 
 var systemPrompt = SystemPrompt.Prompt(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), operatingSystem.ToString(), defaultShell);
 

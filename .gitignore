@@ -485,3 +485,4 @@ $RECYCLE.BIN/
 
 tmp/
 data/
+*.exe
