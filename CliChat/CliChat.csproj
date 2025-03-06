@@ -12,6 +12,7 @@
     <PackageReference Include="Microsoft.Extensions.AI" Version="9.3.0-*" />
     <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="9.3.0-*" />
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="9.3.0-*" />
+    <PackageReference Include="SharpToken" Version="2.0.3" />
   </ItemGroup>
 
 </Project>
