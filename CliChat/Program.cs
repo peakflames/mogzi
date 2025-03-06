@@ -157,7 +157,7 @@ if (dataDir != null)
                 Console.WriteLine("Sending API Request...");
                 var chunkResponse = await chatClient.GetResponseAsync(chatHistory);
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("\nClaude:");
+                Console.WriteLine($"\nModel ({OPENAI_API_MODEL!}):");
                 Console.WriteLine(chunkResponse.Message.Text);
                 chatHistory.Add(new ChatMessage(ChatRole.Assistant, chunkResponse.Message.Text));
                 WriteTokenMetrics(chatHistory);
@@ -182,7 +182,7 @@ if (dataDir != null)
             Console.WriteLine("Sending API Request...");
             var chunkResponse = await chatClient.GetResponseAsync(chatHistory);
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("\nClaude:");
+            Console.WriteLine($"\nModel ({OPENAI_API_MODEL!}):");
             Console.WriteLine(chunkResponse.Message.Text);
             chatHistory.Add(new ChatMessage(ChatRole.Assistant, chunkResponse.Message.Text));
             WriteTokenMetrics(chatHistory);
@@ -230,7 +230,7 @@ while (true)
     Console.ForegroundColor = ConsoleColor.Gray;
     Console.WriteLine("Sending API Request...");
     Console.ForegroundColor = ConsoleColor.Green;
-    Console.WriteLine("\nClaude:");
+    Console.WriteLine($"\nModel ({OPENAI_API_MODEL!}):");
     var response = "";
     await foreach (var item in chatClient.GetStreamingResponseAsync(chatHistory))
     {
@@ -255,7 +255,14 @@ void WriteTokenMetrics(List<ChatMessage> chatHistory)
     // calculate the percentage of tokens used against the 200K limit
     var tokenCount = GetTokenCount(chatHistory);
     var percentage = (double)tokenCount / 200000 * 100;
-    Console.WriteLine($"[I/O Tokens Used: {tokenCount} of 200K, {percentage:N2}%]");
+    if (OPENAI_API_MODEL!.Contains("claude"))
+    {
+        Console.WriteLine($"[I/O Tokens Used: {tokenCount} of 200K, {percentage:N2}%]");
+    }
+    else
+    {
+        Console.WriteLine($"[Tokens Used: {tokenCount}");
+    }
     Console.ForegroundColor = currentForegroundColor;
 }
 
