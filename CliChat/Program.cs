@@ -61,6 +61,7 @@ var defaultShell = operatingSystem switch {
 
 Console.ForegroundColor = ConsoleColor.Yellow;
 Console.WriteLine($"CliChat> Operating System: {operatingSystem}, Default Shell: {defaultShell}");
+Console.WriteLine($"CliChat> OpenAI (BaseUri='{OPENAI_API_BASE}', Model='{OPENAI_API_MODEL}', ApiKey='******'");
 
 var systemPrompt = SystemPrompt.Prompt(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), operatingSystem.ToString(), defaultShell);
 
@@ -118,9 +119,11 @@ foreach (var file in files)
 
             
             // Stream the AI Response and add to chat history
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.WriteLine("Sending API Request...");
+            var chuckResponse = await chatClient.GetResponseAsync(chatHistory);
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("\nClaude:");
-            var chuckResponse = await chatClient.GetResponseAsync(chatHistory);
             Console.WriteLine(chuckResponse.Message.Text);
             chatHistory.Add(new ChatMessage(ChatRole.Assistant, chuckResponse.Message.Text));
             WriteTokenMetrics(chatHistory);
@@ -141,9 +144,11 @@ foreach (var file in files)
         """));
 
         // Stream the AI Response and add to chat history
+        Console.ForegroundColor = ConsoleColor.Gray;
+        Console.WriteLine("Sending API Request...");
+        var chuckResponse = await chatClient.GetResponseAsync(chatHistory);
         Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine("\nClaude:");
-        var chuckResponse = await chatClient.GetResponseAsync(chatHistory);
         Console.WriteLine(chuckResponse.Message.Text);
         chatHistory.Add(new ChatMessage(ChatRole.Assistant, chuckResponse.Message.Text));
         WriteTokenMetrics(chatHistory);
@@ -183,6 +188,8 @@ while (true)
     chatHistory.Add(new ChatMessage(ChatRole.User, userPrompt));
 
     // Stream the AI Response and add to chat history
+    Console.ForegroundColor = ConsoleColor.Gray;
+    Console.WriteLine("Sending API Request...");
     Console.ForegroundColor = ConsoleColor.Green;
     Console.WriteLine("\nClaude:");
     var response = "";
