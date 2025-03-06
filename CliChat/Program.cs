@@ -1,6 +1,30 @@
-﻿using System.ClientModel;
+﻿﻿using System.ClientModel;
 using Microsoft.Extensions.AI;
 using OpenAI;
+
+static void PrintUsage()
+{
+    Console.WriteLine("Usage: clichat [directory]");
+    Console.WriteLine();
+    Console.WriteLine("Arguments:");
+    Console.WriteLine("  directory    Optional path to directory containing markdown files to load");
+    Console.WriteLine();
+    Console.WriteLine("Options:");
+    Console.WriteLine("  -h, --help   Show this help message");
+    Console.WriteLine();
+    Console.WriteLine("Examples:");
+    Console.WriteLine("  clichat                  # Start with no files loaded");
+    Console.WriteLine("  clichat ~/docs           # Load markdown files from ~/docs");
+    Console.WriteLine("  clichat \"C:\\My Docs\"    # Load markdown files from Windows path");
+    Environment.Exit(0);
+}
+
+// Handle help command
+if (args.Length > 0 && (args[0] == "--help" || args[0] == "-h"))
+{
+    PrintUsage();
+    return;
+}
 
 Console.ForegroundColor = ConsoleColor.Yellow;
 Console.WriteLine("Welcome to the CliChat!");
@@ -43,7 +67,6 @@ if (encounteredError)
     Environment.Exit(1);
 }
 
-
 var chatClient = new OpenAIClient(
     new ApiKeyCredential(OPENAI_API_KEY!),
     new OpenAIClientOptions { 
@@ -51,7 +74,7 @@ var chatClient = new OpenAIClient(
     })
     .AsChatClient(OPENAI_API_MODEL!);
 
-// Detectect the current operating system, we need to handle Windows, MacOS, and Linux differently
+// Detect the current operating system, we need to handle Windows, MacOS, and Linux differently
 var operatingSystem = Environment.OSVersion.Platform;
 var defaultShell = operatingSystem switch {
     PlatformID.Win32NT => "powershell",
@@ -71,104 +94,120 @@ List<ChatMessage> chatHistory =
 ];
 
 // -------------------------------------------------------------------------------------------
-// ✅ Load .\\data directory into the chat history
+// ✅ Load markdown files from specified directory (if provided)
 // -------------------------------------------------------------------------------------------
-Console.WriteLine("CliChat> Loading the .\\data directory...");
+var dataDir = args.Length > 0 ? args[0] : null;
 
-// prepare the user prompt and add the all files to the chat history
-chatHistory.Add(new ChatMessage(ChatRole.User, 
-"""
-I may have some Markdown files in the .\\data directory that I will provide you now. Once you have received the content of the file, only respone with "I have loaded the file {{FILENAME}} and its chucks".
-"""));
-
-var files = Directory.GetFiles("..\\data", "*.md");
-
-foreach (var file in files)
+if (dataDir != null)
 {
-    Console.ForegroundColor = ConsoleColor.Yellow;
-    Console.WriteLine($"CliChat> Reading file: {file}...");
-    var fileContents = File.ReadAllText(file) + Environment.NewLine;
-    
-    // Report the number words in the file
-    var wordCount = fileContents.Split().Length;
-    
-    // if the wordCount is greater that 10000, then we must send the file contents in chunks of 10000 words each to the AI
-    if (wordCount > 10000)
+    if (!Directory.Exists(dataDir))
     {
-        var userPrompt = $"""The file {file} has {wordCount} words. I will send it to you in 10000 word chucks.""";
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine($"CliChat> {userPrompt}");
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"Error: Directory '{dataDir}' does not exist.");
+        Environment.Exit(1);
+    }
 
-        var chunkSize = 10000;
-        var chunks = fileContents.Split(new string[] { " " }, StringSplitOptions.None);
-        var chunkId = 0;
-        for (int i = 0; i < chunks.Length; i += chunkSize, chunkId++)
+    Console.WriteLine($"CliChat> Loading files from: {dataDir}");
+
+    // prepare the user prompt and add the all files to the chat history
+    chatHistory.Add(new ChatMessage(ChatRole.User, 
+    $"""
+    I may have some Markdown files in the {dataDir} directory that I will provide you now. Once you have received the content of the file, only respond with "I have loaded the file FILENAME and its chunks".
+    """));
+
+    var files = Directory.GetFiles(dataDir, "*.md");
+
+    foreach (var file in files)
+    {
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine($"CliChat> Reading file: {file}...");
+        var fileContents = File.ReadAllText(file) + Environment.NewLine;
+        
+        // Report the number words in the file
+        var wordCount = fileContents.Split().Length;
+        
+        // if the wordCount is greater that 10000, then we must send the file contents in chunks of 10000 words each to the AI
+        if (wordCount > 10000)
         {
-            var chunk = string.Join(" ", chunks.Skip(i).Take(chunkSize));
+            var userPrompt = $"""The file {file} has {wordCount} words. I will send it to you in 10000 word chunks.""";
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"CliChat> Sending file {file}, chuck {chunkId} to AI...");
+            Console.WriteLine($"CliChat> {userPrompt}");
+
+            var chunkSize = 10000;
+            var chunks = fileContents.Split(new string[] { " " }, StringSplitOptions.None);
+            var chunkId = 0;
+            for (int i = 0; i < chunks.Length; i += chunkSize, chunkId++)
+            {
+                var chunk = string.Join(" ", chunks.Skip(i).Take(chunkSize));
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"CliChat> Sending file {Path.GetFileName(file)}, chunk {chunkId} to AI...");
+                chatHistory.Add(new ChatMessage(ChatRole.User,
+                $"""
+                Filename: {Path.GetFileName(file)}
+                Chunk: {chunkId}
+                File Contents:
+                ```markdown
+                {chunk}
+                ```
+                """));
+
+                
+                // Stream the AI Response and add to chat history
+                Console.ForegroundColor = ConsoleColor.Gray;
+                Console.WriteLine("Sending API Request...");
+                var chunkResponse = await chatClient.GetResponseAsync(chatHistory);
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("\nClaude:");
+                Console.WriteLine(chunkResponse.Message.Text);
+                chatHistory.Add(new ChatMessage(ChatRole.Assistant, chunkResponse.Message.Text));
+                WriteTokenMetrics(chatHistory);
+            }
+        }
+        else
+        {
+            Console.WriteLine($"CliChat> File has {wordCount} words. Sending to AI...");
+
+            // add the file contents to the chat history
             chatHistory.Add(new ChatMessage(ChatRole.User,
             $"""
-            Filename: {file}
-            Chuck: {chunkId}
+            Filename: {Path.GetFileName(file)}
             File Contents:
             ```markdown
-            {chunk}
+            {fileContents}
             ```
             """));
 
-            
             // Stream the AI Response and add to chat history
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.WriteLine("Sending API Request...");
-            var chuckResponse = await chatClient.GetResponseAsync(chatHistory);
+            var chunkResponse = await chatClient.GetResponseAsync(chatHistory);
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("\nClaude:");
-            Console.WriteLine(chuckResponse.Message.Text);
-            chatHistory.Add(new ChatMessage(ChatRole.Assistant, chuckResponse.Message.Text));
+            Console.WriteLine(chunkResponse.Message.Text);
+            chatHistory.Add(new ChatMessage(ChatRole.Assistant, chunkResponse.Message.Text));
             WriteTokenMetrics(chatHistory);
         }
     }
+
+    Console.ForegroundColor = ConsoleColor.Yellow;
+    if (files.Length == 0)
+    {
+        Console.WriteLine($"CliChat> No Markdown files found in '{dataDir}'");
+        chatHistory.Add(new ChatMessage(ChatRole.User, 
+            $"Disregard. I confirmed I do not have Markdown files in '{dataDir}' after all."));
+    }
     else
     {
-        Console.WriteLine($"CliChat> File has {wordCount} words. Sending to AI...");
-
-        // add the file contents to the chat history
-        chatHistory.Add(new ChatMessage(ChatRole.User,
-        $"""
-        Filename: {file}
-        File Contents:
-        ```markdown
-        {fileContents}
-        ```
-        """));
-
-        // Stream the AI Response and add to chat history
-        Console.ForegroundColor = ConsoleColor.Gray;
-        Console.WriteLine("Sending API Request...");
-        var chuckResponse = await chatClient.GetResponseAsync(chatHistory);
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine("\nClaude:");
-        Console.WriteLine(chuckResponse.Message.Text);
-        chatHistory.Add(new ChatMessage(ChatRole.Assistant, chuckResponse.Message.Text));
-        WriteTokenMetrics(chatHistory);
+        Console.WriteLine("CliChat> Loaded Markdown files:");
+        foreach (var file in files)
+        {
+            Console.WriteLine($"\t{Path.GetFileName(file)}");
+        }
     }
-}
-
-Console.ForegroundColor = ConsoleColor.Yellow;
-if (files.Length == 0)
-{
-    Console.WriteLine("CliChat> No Markdown files found in the .\\data directory.");
-    chatHistory.Add(new ChatMessage(ChatRole.User, 
-        "Disregard. I confirmed I do not have Markdown files in the .\\data directory after all."));
 }
 else
 {
-    Console.WriteLine("CliChat> Loaded Markdown files:");
-    foreach (var file in files)
-    {
-        Console.WriteLine($"\t{file}");
-    }
+    Console.WriteLine("CliChat> No directory specified. Starting empty chat.");
 }
 
 // -------------------------------------------------------------------------------------------
@@ -204,7 +243,6 @@ while (true)
     WriteTokenMetrics(chatHistory);
 }
 
-
 /// <summary>
 /// Write the token metrics to the console.
 /// </summary>
@@ -220,7 +258,6 @@ void WriteTokenMetrics(List<ChatMessage> chatHistory)
     Console.WriteLine($"[I/O Tokens Used: {tokenCount} of 200K, {percentage:N2}%]");
     Console.ForegroundColor = currentForegroundColor;
 }
-
 
 /// <summary>
 /// Calculate the number of tokens that the messages would consume.

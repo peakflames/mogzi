@@ -7,13 +7,15 @@ An interactive command-line chat application that leverages OpenAI-compatible AP
 - Interactive chat interface with streaming AI responses
 - Support for OpenAI-compatible API providers
 - Automatic operating system detection and shell configuration
-- Markdown file processing from data directory with smart chunking for large files
+- Optional Markdown file processing with smart chunking for large files
 - Real-time token usage monitoring (against 200K token limit)
 - Cross-platform support (Windows, MacOS, Linux)
+- Built-in help command (`-h` or `--help`)
 
 ## Prerequisites
 
 Before running the application, ensure you have:
+
 - .NET SDK installed
 - Access to an OpenAI-compatible API provider
 - Required environment variables configured:
@@ -39,13 +41,27 @@ Before running the application, ensure you have:
 
 3. Configure environment variables with your API provider details
 
-4. Run the application:
-
-   ```bash
-   dotnet run
-   ```
-
 ## Usage
+
+```bash
+clichat [directory]
+```
+
+### Arguments
+
+- `directory`: Optional path to directory containing markdown files to load
+
+### Options
+
+- `-h, --help`: Show help message
+
+### Examples
+
+```bash
+clichat                  # Start with no files loaded
+clichat ~/docs          # Load markdown files from ~/docs
+clichat "C:\My Docs"    # Load markdown files from Windows path
+```
 
 ### Chat Interface
 
@@ -56,7 +72,8 @@ Before running the application, ensure you have:
 
 ### Markdown File Processing
 
-The application automatically processes Markdown files from the `.\data` directory:
+When a directory is specified, the application processes all Markdown files from that location:
+
 - Files are loaded at startup
 - Large files (>10,000 words) are automatically chunked for processing
 - File contents are incorporated into the chat context
@@ -71,6 +88,7 @@ The application automatically processes Markdown files from the `.\data` directo
 ## Exit
 
 To exit the application:
+
 - Type `exit` or `quit`
 - Press Enter with an empty message
 - The application will cleanly terminate
