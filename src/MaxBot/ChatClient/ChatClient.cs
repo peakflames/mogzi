@@ -13,11 +13,15 @@ public partial class ChatClient
     public IChatClient ChatClientMEAI { get; init; }
     public MaxbotConfiguration Config { get; init; }
     public string SystemPrompt { get; init; }
+    public Profile ActiveProfile { get; init; }
+    public ApiProvider ActiveApiProvider { get; init; }
 
-    private ChatClient(IChatClient chatClient, MaxbotConfiguration config)
+    private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider)
     {
         ChatClientMEAI = chatClient;
         Config = config;
+        ActiveProfile = activeProfile;
+        ActiveApiProvider = activeApiProvider;
 
         // Detect the current operating system, we need to handle Windows, MacOS, and Linux differently
         var operatingSystem = Environment.OSVersion.Platform;
@@ -31,7 +35,7 @@ public partial class ChatClient
     }
 
     
-    public static Result<ChatClient> Create(string configFilePath)
+    public static Result<ChatClient> Create(string configFilePath, string? profileName = null)
     {
         string jsonContent;
         try
@@ -62,11 +66,23 @@ public partial class ChatClient
         }
 
 
-        // Find the default profile or use the first one if no default is specified
-        var profile = maxbotConfig.Profiles.FirstOrDefault(p => p.Default) ?? maxbotConfig.Profiles.FirstOrDefault();
-        if (profile is null)
+        // Find the specified profile, or default profile, or first profile
+        Profile? profile;
+        if (!string.IsNullOrEmpty(profileName))
         {
-            return Result.Fail($"No profiles found in the configuration.");
+            profile = maxbotConfig.Profiles.FirstOrDefault(p => p.Name == profileName);
+            if (profile is null)
+            {
+                return Result.Fail($"Profile '{profileName}' not found in configuration.");
+            }
+        }
+        else
+        {
+            profile = maxbotConfig.Profiles.FirstOrDefault(p => p.Default) ?? maxbotConfig.Profiles.FirstOrDefault();
+            if (profile is null)
+            {
+                return Result.Fail($"No profiles found in the configuration.");
+            }
         }
 
         // Find the corresponding API provider
@@ -87,6 +103,6 @@ public partial class ChatClient
             })
             .AsChatClient(modelId);
 
-        return new ChatClient(chatClient, maxbotConfig);
+        return new ChatClient(chatClient, maxbotConfig, profile, apiProvider);
     }
 }

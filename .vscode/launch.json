@@ -15,6 +15,18 @@
             "stopAtEntry": false,
             "console": "internalConsole",
             "justMyCode": false
+        },
+        {
+            "name": "C#: CLI with Specific Profile",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/Cli/bin/Debug/net9.0/max.dll",
+            "args": ["-p", "Requesty"],
+            "cwd": "${workspaceFolder}/src/Cli",
+            "stopAtEntry": false,
+            "console": "internalConsole",
+            "justMyCode": false
         }
         
     ]

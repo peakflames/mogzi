@@ -8,8 +8,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PublishAot>true</PublishAot>
-    <DebugType>None</DebugType>
-    <DebugSymbols>False</DebugSymbols>
+    <!-- <DebugType>None</DebugType>
+    <DebugSymbols>False</DebugSymbols> -->
     <AllowedReferenceRelatedFileExtensions>*.pdb</AllowedReferenceRelatedFileExtensions>
     <ExcludeFilesFromDeployment>bin\**\*.pdb</ExcludeFilesFromDeployment>
   </PropertyGroup>
