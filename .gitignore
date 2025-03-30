@@ -486,3 +486,6 @@ $RECYCLE.BIN/
 tmp/
 data/
 *.exe
+
+# Maxbot
+dist/

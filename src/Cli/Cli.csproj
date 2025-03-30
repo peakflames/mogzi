@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Version>0.0.0</Version>
+    <AssemblyName>max</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PublishAot>true</PublishAot>
+    <DebugType>None</DebugType>
+    <DebugSymbols>False</DebugSymbols>
+    <AllowedReferenceRelatedFileExtensions>*.pdb</AllowedReferenceRelatedFileExtensions>
+    <ExcludeFilesFromDeployment>bin\**\*.pdb</ExcludeFilesFromDeployment>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MaxBot\MaxBot.csproj" />
+  </ItemGroup>
+
+
+</Project>
