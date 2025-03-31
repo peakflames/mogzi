@@ -67,7 +67,7 @@ public class App
                 // Console.WriteLine("Sending API Request...");
                 // Console.WriteLine($"\n{aiName}:");
                 var response = "";
-                await foreach (var item in maxClient.ChatClientMEAI.GetStreamingResponseAsync(chatHistory))
+                await foreach (var item in maxClient.ChatClientMEAI.GetStreamingResponseAsync(chatHistory, maxClient.ChatOptions))
                 {
                     Console.Write(item.Text);
                     response += item.Text;
@@ -109,7 +109,7 @@ public class App
             chatHistory.Add(new ChatMessage(ChatRole.User, userPrompt));
 
             var response = "";
-            await foreach (var item in maxClient.ChatClientMEAI.GetStreamingResponseAsync(chatHistory))
+            await foreach (var item in maxClient.ChatClientMEAI.GetStreamingResponseAsync(chatHistory, maxClient.ChatOptions))
             {
                 Console.Write(item.Text);
                 response += item.Text;

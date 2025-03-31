@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using MaxBot.Domain;
 
+
 namespace MaxBot;
 
 public partial class ChatClient
@@ -21,12 +22,15 @@ public partial class ChatClient
     public string Username { get; init; }
     public string Hostname { get; init; }
 
-    private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider)
+    public ChatOptions ChatOptions { get; init; }
+
+    private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, ChatOptions chatOptions)
     {
         ChatClientMEAI = chatClient;
         Config = config;
         ActiveProfile = activeProfile;
         ActiveApiProvider = activeApiProvider;
+        ChatOptions = chatOptions;
 
         // Detect the current operating system, we need to handle Windows, MacOS, and Linux differently
         OperatingSystem = Environment.OSVersion.Platform;
@@ -46,7 +50,8 @@ public partial class ChatClient
                                                    OperatingSystem.ToString(),
                                                    DefaultShell,
                                                    Username,
-                                                   Hostname);
+                                                   Hostname,
+                                                   Directory.GetCurrentDirectory());
     }
 
     
@@ -116,8 +121,19 @@ public partial class ChatClient
             new OpenAIClientOptions { 
                 Endpoint = new(baseUrl)
             })
-            .AsChatClient(modelId);
+            .AsChatClient(modelId)
+                .AsBuilder()
+                    .UseFunctionInvocation()
+                    .Build();
 
-        return new ChatClient(chatClient, maxbotConfig, profile, apiProvider);
+        var chatOptions = new ChatOptions{
+            Tools = [
+                AIFunctionFactory.Create(FileSystemTools.WriteFile),
+                AIFunctionFactory.Create(FileSystemTools.ReadFile),
+            ]
+        };
+
+        return new ChatClient(chatClient, maxbotConfig, profile, apiProvider, chatOptions);
     }
+
 }
