@@ -1,0 +1,66 @@
+name: Build AOT Executables
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        include:
+          - os: windows-latest
+            rid: win-x64
+            extension: .exe
+          - os: ubuntu-latest
+            rid: linux-x64
+            extension: ''
+          - os: macos-latest
+            rid: osx-x64
+            extension: ''
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '9.0.201'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet publish -c Release -r ${{ matrix.rid }} -o ./publish/${{ matrix.rid }}
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: max-${{ matrix.rid }}
+        path: ./publish/${{ matrix.rid }}/max${{ matrix.extension }}
+
+  create-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            max-win-x64/max.exe
+            max-linux-x64/max
+            max-osx-x64/max
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
