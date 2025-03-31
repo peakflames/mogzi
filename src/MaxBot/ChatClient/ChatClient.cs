@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using MaxBot.Domain;
 
+
 namespace MaxBot;
 
 public partial class ChatClient
@@ -21,7 +22,11 @@ public partial class ChatClient
     public string Username { get; init; }
     public string Hostname { get; init; }
 
-    private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider)
+    public ChatOptions ChatOptions { get; init; }
+
+    private FileSystemTools FileSystemTools { get; init; }
+
+    private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, Action<string>? llmResponseDetailsCallback = null)
     {
         ChatClientMEAI = chatClient;
         Config = config;
@@ -46,11 +51,21 @@ public partial class ChatClient
                                                    OperatingSystem.ToString(),
                                                    DefaultShell,
                                                    Username,
-                                                   Hostname);
+                                                   Hostname,
+                                                   Directory.GetCurrentDirectory());
+
+        FileSystemTools = new FileSystemTools(llmResponseDetailsCallback);
+        ChatOptions = new ChatOptions{
+            Tools = [
+                AIFunctionFactory.Create(FileSystemTools.WriteFile),
+                AIFunctionFactory.Create(FileSystemTools.ReadFile),
+                AIFunctionFactory.Create(FileSystemTools.ListFiles),
+            ]
+        };
     }
 
     
-    public static Result<ChatClient> Create(string configFilePath, string? profileName = null)
+    public static Result<ChatClient> Create(string configFilePath, string? profileName = null, Action<string>? llmResponseDetailsCallback = null)
     {
         string jsonContent;
         try
@@ -116,8 +131,13 @@ public partial class ChatClient
             new OpenAIClientOptions { 
                 Endpoint = new(baseUrl)
             })
-            .AsChatClient(modelId);
+            .AsChatClient(modelId)
+                .AsBuilder()
+                    .UseFunctionInvocation()
+                    .Build();
 
-        return new ChatClient(chatClient, maxbotConfig, profile, apiProvider);
+        
+        return new ChatClient(chatClient, maxbotConfig, profile, apiProvider, llmResponseDetailsCallback);
     }
+
 }

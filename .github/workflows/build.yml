@@ -94,13 +94,6 @@ jobs:
           cp "${{ env.PROJECT_NAME }}-osx-x64/${{ env.PROJECT_NAME }}" "release-assets/${{ env.PROJECT_NAME }}-osx-x64"
           chmod +x "release-assets/${{ env.PROJECT_NAME }}-linux-x64" "release-assets/${{ env.PROJECT_NAME }}-osx-x64"
 
-      # - name: Generate release notes
-      #   run: |
-      #     echo "# Release v${{ env.VERSION }}" > RELEASE_NOTES.md
-      #     echo "" >> RELEASE_NOTES.md
-      #     echo "## Changes" >> RELEASE_NOTES.md
-      #     git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> RELEASE_NOTES.md
-
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
