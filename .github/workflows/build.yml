@@ -1,21 +1,27 @@
-name: Build AOT Executables
-
-permissions:
-  contents: write
+name: Build and Release
 
 on:
   push:
     branches: [ main ]
+    tags: [ 'v*' ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+
+env:
+  PROJECT_PATH: src/Cli/Cli.csproj
+  PROJECT_NAME: max
+  DOTNET_VERSION: '9.0.x'
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false  # Continue with other builds if one fails
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
         include:
           - os: windows-latest
             rid: win-x64
@@ -29,38 +35,71 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for proper versioning
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '9.0.x'
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Set version from tag
+      if: startsWith(github.ref, 'refs/tags/')
+      shell: bash
+      run: |
+        TAG=${GITHUB_REF#refs/tags/v}
+        echo "VERSION=$TAG" >> $GITHUB_ENV
+        # Update version in project file if needed
+        dotnet tool install -g dotnet-property
+        dotnet property ${{ env.PROJECT_PATH }} Version:"$TAG"
 
     - name: Restore dependencies
-      run: dotnet restore src/Cli/Cli.csproj
+      run: dotnet restore ${{ env.PROJECT_PATH }}
 
     - name: Build
-      run: dotnet publish src/Cli/Cli.csproj -c Release -r ${{ matrix.rid }} -o ./publish/${{ matrix.rid }}
+      run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -r ${{ matrix.rid }} -o ./publish/${{ matrix.rid }}
+
+    - name: Test
+      run: dotnet test --no-restore --verbosity normal
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: max-${{ matrix.rid }}
-        path: ./publish/${{ matrix.rid }}/max${{ matrix.extension }}
+        name: ${{ env.PROJECT_NAME }}-${{ matrix.rid }}
+        path: ./publish/${{ matrix.rid }}/${{ env.PROJECT_NAME }}${{ matrix.extension }}
+        if-no-files-found: error
 
   create-release:
     needs: build
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     steps:
+      - uses: actions/checkout@v4
+        
       - name: Download all artifacts
         uses: actions/download-artifact@v4
+
+      - name: Set version from tag
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      - name: Generate release notes
+        run: |
+          echo "# Release v${{ env.VERSION }}" > RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "## Changes" >> RELEASE_NOTES.md
+          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> RELEASE_NOTES.md
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          name: Release v${{ env.VERSION }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
           files: |
-            max-win-x64/max.exe
-            max-linux-x64/max
-            max-osx-x64/max
+            ${{ env.PROJECT_NAME }}-win-x64/${{ env.PROJECT_NAME }}.exe
+            ${{ env.PROJECT_NAME }}-linux-x64/${{ env.PROJECT_NAME }}
+            ${{ env.PROJECT_NAME }}-osx-x64/${{ env.PROJECT_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
