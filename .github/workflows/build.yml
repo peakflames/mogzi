@@ -36,10 +36,10 @@ jobs:
         dotnet-version: '9.0.x'
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore src/Cli/Cli.csproj
 
     - name: Build
-      run: dotnet publish -c Release -r ${{ matrix.rid }} -o ./publish/${{ matrix.rid }}
+      run: dotnet publish src/Cli/Cli.csproj -c Release -r ${{ matrix.rid }} -o ./publish/${{ matrix.rid }}
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
