@@ -1,6 +1,12 @@
-﻿using CLI;
+﻿using System.Text;
+using CLI;
 using FluentResults;
 using MaxBot;
+
+// The most important fix - set console encoding to UTF-8
+   Console.OutputEncoding = Encoding.UTF8;
+
+
 
 // Parse command line arguments
 var argResult   = CliArgParser.Parse(args);

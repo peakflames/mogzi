@@ -57,6 +57,7 @@ public class App
     {
         try
         {
+            var robotEmjoiUnicode = char.ConvertFromUtf32(0x1F916); // 🤖
             List<ChatMessage> chatHistory =
             [
                 new(ChatRole.System, maxClient.SystemPrompt),
@@ -70,7 +71,7 @@ public class App
                 // Get user prompt and add to chat history
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 var userInfo = $"{maxClient.Username}@{maxClient.Hostname}";
-                Console.Write($"\n{userInfo} MaxBot 🤖\n% ");
+                Console.Write($"\n{userInfo} MaxBot {robotEmjoiUnicode}\n% ");
                 Console.ForegroundColor = ConsoleColor.White;
                 var userPrompt = Console.ReadLine();
                 Console.WriteLine();
