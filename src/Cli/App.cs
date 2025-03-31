@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using FluentResults;
 using MaxBot;
 using Microsoft.Extensions.AI;
 
@@ -15,6 +16,22 @@ public class App
     {
         this.showStatus = showStatus;
         this.maxClient = maxClient;
+    }
+
+    public static void ConsoleWriteLLMResponseDetails(string response)
+    {
+        var originalColor = Console.ForegroundColor;
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine($"\n{response}");
+        Console.ForegroundColor = originalColor;
+    }
+
+    public static void ConsoleWriteError(Result result, bool exit = true)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"Error: {result.Errors.First().Message}");
+        if (exit)
+            Environment.Exit(1);
     }
 
     public async Task<int> Run(string activeMode, string? userPrompt = null)
@@ -53,8 +70,10 @@ public class App
                 // Get user prompt and add to chat history
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 var userInfo = $"{maxClient.Username}@{maxClient.Hostname}";
-                Console.Write($"\n{userInfo} 🤖 % ");
+                Console.Write($"\n{userInfo} MaxBot 🤖\n% ");
+                Console.ForegroundColor = ConsoleColor.White;
                 var userPrompt = Console.ReadLine();
+                Console.WriteLine();
                 
                 Console.ForegroundColor = ConsoleColor.Blue;
                 // if the user prompt is empty, "exit", or "quit", then exit the chat loop

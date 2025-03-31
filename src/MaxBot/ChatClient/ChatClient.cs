@@ -24,13 +24,14 @@ public partial class ChatClient
 
     public ChatOptions ChatOptions { get; init; }
 
-    private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, ChatOptions chatOptions)
+    private FileSystemTools FileSystemTools { get; init; }
+
+    private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, Action<string>? llmResponseDetailsCallback = null)
     {
         ChatClientMEAI = chatClient;
         Config = config;
         ActiveProfile = activeProfile;
         ActiveApiProvider = activeApiProvider;
-        ChatOptions = chatOptions;
 
         // Detect the current operating system, we need to handle Windows, MacOS, and Linux differently
         OperatingSystem = Environment.OSVersion.Platform;
@@ -52,10 +53,19 @@ public partial class ChatClient
                                                    Username,
                                                    Hostname,
                                                    Directory.GetCurrentDirectory());
+
+        FileSystemTools = new FileSystemTools(llmResponseDetailsCallback);
+        ChatOptions = new ChatOptions{
+            Tools = [
+                AIFunctionFactory.Create(FileSystemTools.WriteFile),
+                AIFunctionFactory.Create(FileSystemTools.ReadFile),
+                AIFunctionFactory.Create(FileSystemTools.ListFiles),
+            ]
+        };
     }
 
     
-    public static Result<ChatClient> Create(string configFilePath, string? profileName = null)
+    public static Result<ChatClient> Create(string configFilePath, string? profileName = null, Action<string>? llmResponseDetailsCallback = null)
     {
         string jsonContent;
         try
@@ -126,14 +136,8 @@ public partial class ChatClient
                     .UseFunctionInvocation()
                     .Build();
 
-        var chatOptions = new ChatOptions{
-            Tools = [
-                AIFunctionFactory.Create(FileSystemTools.WriteFile),
-                AIFunctionFactory.Create(FileSystemTools.ReadFile),
-            ]
-        };
-
-        return new ChatClient(chatClient, maxbotConfig, profile, apiProvider, chatOptions);
+        
+        return new ChatClient(chatClient, maxbotConfig, profile, apiProvider, llmResponseDetailsCallback);
     }
 
 }

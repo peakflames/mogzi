@@ -20,10 +20,10 @@ if (options.ShowHelp)
 }
 
 
-var clientResult = ChatClient.Create(options.ConfigPath, options.ProfileName);
+var clientResult = ChatClient.Create(options.ConfigPath, options.ProfileName, App.ConsoleWriteLLMResponseDetails);
 if (clientResult.IsFailed)
 {
-    ConsoleWriteError(clientResult.ToResult());
+    App.ConsoleWriteError(clientResult.ToResult());
 }
 var maxClient = clientResult.Value;
 
@@ -54,12 +54,6 @@ if (options.ShowStatus)
 return await new App(maxClient, options.ShowStatus).Run(activeMode, options.UserPrompt);
 
 
-void ConsoleWriteError(Result result, bool exit = true)
-{
-    Console.ForegroundColor = ConsoleColor.Red;
-    Console.WriteLine($"Error: {result.Errors.First().Message}");
-    if (exit)
-        Environment.Exit(1);
-}
+
 
 
