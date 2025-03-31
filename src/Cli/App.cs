@@ -57,7 +57,8 @@ public class App
     {
         try
         {
-            var robotEmjoiUnicode = char.ConvertFromUtf32(0x1F916); // 🤖
+            var robotEmoji = char.ConvertFromUtf32(0x1F916);  // 🤖
+            var folderEmoji = char.ConvertFromUtf32(0x1F4C2); // 📂
             List<ChatMessage> chatHistory =
             [
                 new(ChatRole.System, maxClient.SystemPrompt),
@@ -70,8 +71,11 @@ public class App
             {
                 // Get user prompt and add to chat history
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                var userInfo = $"{maxClient.Username}@{maxClient.Hostname}";
-                Console.Write($"\n{userInfo} MaxBot {robotEmjoiUnicode}\n% ");
+                
+                // Get the name of the current working directory, but just the final part of the path
+                var cwd = Directory.GetCurrentDirectory();
+
+                Console.Write($"\n{robotEmoji} Max | {folderEmoji} {cwd}\n% ");    
                 Console.ForegroundColor = ConsoleColor.White;
                 var userPrompt = Console.ReadLine();
                 Console.WriteLine();
