@@ -16,6 +16,11 @@ public partial class ChatClient
     public Profile ActiveProfile { get; init; }
     public ApiProvider ActiveApiProvider { get; init; }
 
+    public PlatformID OperatingSystem { get; init; }
+    public string DefaultShell { get; init; }
+    public string Username { get; init; }
+    public string Hostname { get; init; }
+
     private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider)
     {
         ChatClientMEAI = chatClient;
@@ -24,14 +29,24 @@ public partial class ChatClient
         ActiveApiProvider = activeApiProvider;
 
         // Detect the current operating system, we need to handle Windows, MacOS, and Linux differently
-        var operatingSystem = Environment.OSVersion.Platform;
-        var defaultShell = operatingSystem switch {
+        OperatingSystem = Environment.OSVersion.Platform;
+        DefaultShell = OperatingSystem switch {
             PlatformID.Win32NT => "powershell",
             PlatformID.MacOSX => "zsh",
             _ => "bash"
         };
 
-        SystemPrompt = Promptinator.SystemPrompt(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), operatingSystem.ToString(), defaultShell);
+        // Get username
+        Username = Environment.UserName;
+
+        // Get hostname
+        Hostname = System.Net.Dns.GetHostName();
+
+        SystemPrompt = Promptinator.GetSystemPrompt(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                                                   OperatingSystem.ToString(),
+                                                   DefaultShell,
+                                                   Username,
+                                                   Hostname);
     }
 
     

@@ -4,60 +4,67 @@ An interactive command-line chat application that leverages multiple AI provider
 
 ## Features
 
-- Interactive chat interface with streaming AI responses
-- Support for multiple API providers:
-  - OpenAI-compatible APIs
-  - Anthropic APIs
+- Support both Oneshot and Interactive Chat interface with streaming AI responses
+- Supports only OpenAI-compatible APIs
 - Profile-based configuration for easy switching between providers and models
-- Automatic operating system detection and shell configuration
-- AOT (Ahead-of-Time) compilation support for improved performance
 - Cross-platform support (Windows, MacOS, Linux)
-- Built-in help command (`-h` or `--help`)
-
-## Screenshot
-
-![MaxBot CLI Screenshot](screenshot.png)
 
 ## Prerequisites
 
 Before running the application, ensure you have:
 
-- .NET SDK installed
 - Access to at least one supported API provider
 - Configuration file set up with your API providers and profiles
 
 ## Setup
 
-1. Create a configuration file (`maxbot.config.json`) with your API provider details:
+1. In your home directory, create a configuration file (`maxbot.config.json`) with your API provider details:
 
    ```json
    {
        "maxbotConfig": {
            "apiProviders": [
                {
-                   "name": "ProviderName",
-                   "type": "OpenAI-Compatible",
-                   "apiKey": "your-api-key",
-                   "baseUrl": "https://api.provider.com/v1"
-               },
-               {
-                   "name": "Anthropic",
-                   "type": "Anthropic",
-                   "apiKey": "your-anthropic-api-key"
-               }
+                    "name": "MyCompanyProvider",
+                    "type": "OpenAI-Compatible",
+                    "apiKey": "example-key",
+                    "baseUrl": "https://litellm.mycompany.com"
+                },
+                {
+                    "name": "RequestyAI",
+                    "type": "OpenAI-Compatible",
+                    "apiKey": "example-key",
+                    "baseUrl": "https://router.requesty.ai/v1"
+                },
+                {
+                    "name": "Deepseek",
+                    "type": "OpenAI-Compatible",
+                    "apiKey": "example-key",
+                    "baseUrl": "https://api.deepseek.com"
+                }
            ],
            "profiles": [
                {
                    "default": true,
-                   "name": "DefaultProfile",
-                   "apiProvider": "ProviderName",
-                   "modelId": "model-name"
+                   "name": "Default",
+                   "apiProvider": "MyCompanyProvider",
+                   "modelId": "03-mini"
                },
                {
-                   "name": "AnthropicProfile",
-                   "apiProvider": "Anthropic",
-                   "modelId": "claude-3-sonnet"
-               }
+                   "name": "Sonnet",
+                   "apiProvider": "RequestyAI",
+                   "modelId": "vertex/anthropic/claude-3-7-sonnet"
+               },
+               {
+                    "name": "R1",
+                    "apiProvider": "Deepseek",
+                    "modelId": "deepseek-reasoner"
+                },
+                {
+                    "name": "V3",
+                    "apiProvider": "Deepseek",
+                    "modelId": "deepseek-chat"
+                }
            ]
        }
    }
@@ -78,15 +85,15 @@ maxbot [options]
 ### Examples
 
 ```bash
-maxbot                                # Start with default configuration
-maxbot -c custom-config.json          # Start with custom configuration file
-maxbot -p "Anthropic"                 # Start with specific profile
-maxbot -c custom-config.json -p "GPT" # Start with custom config and specific profile
+maxbot                                                # Start a chat using ~/maxbot.config.json and its default profile
+maxbot -m oneshot -u "Which is the tallest pokemon?"  # Ask a oneshot question using ~/maxbot.config.json and its default profile
+maxbot -p "Sonnet"                                    # Start a chat using local ./maxbot.config.json and the Sonnet profile
+maxbot -c custom-config.json -p "R1"                  # Start a chat using custom-config.json and the R1 profile
 ```
 
 ### Chat Interface
 
-- Start typing your messages after the `User>` prompt
+- Start typing your messages after the `🤖 %` prompt
 - AI responses will stream in real-time with green text
 - Exit the chat by typing `exit`, `quit`, or pressing Enter with no message
 
@@ -122,7 +129,3 @@ To exit the application:
 - Press Enter with an empty message
 - The application will cleanly terminate
 
-## References
-
-- [Microsoft.Extensions.AI Documentation](https://learn.microsoft.com/en-us/dotnet/ai/)
-- [System.Text.Json Source Generation](https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/source-generation)

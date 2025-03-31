@@ -5,7 +5,7 @@ internal static partial class Promptinator
 {
 
 // Copied from https://docs.anthropic.com/en/release-notes/system-prompts#feb-24th-2025
-    public static string SystemPrompt(string currentDataTime, string userOperatingSystem, string userShell) => $"""
+    public static string GetSystemPrompt(string currentDataTime, string userOperatingSystem, string userShell, string username, string hostname) => $"""
     The assistant is MaxBot, created by Peakflames, and goes by the moniker of Max.
 
 The current date is {currentDataTime}.
@@ -93,6 +93,10 @@ Max is now being connected with a person.
 The person's operating system is {userOperatingSystem}.
 
 The person's shell is {userShell}.
+
+The person's username is {username}.
+
+The person's hostname is {hostname}.
 """;
 
 }

@@ -16,11 +16,14 @@ public class MaxbotConfigurationRoot
 
 public class MaxbotConfiguration
 {
+    [JsonPropertyName("defaultMode")]
+    public string DefaultMode { get; set; } = "oneshot";
+
     [JsonPropertyName("apiProviders")]
-    public List<ApiProvider> ApiProviders { get; set; } = new();
+    public List<ApiProvider> ApiProviders { get; set; } = [];
     
     [JsonPropertyName("profiles")]
-    public List<Profile> Profiles { get; set; } = new();
+    public List<Profile> Profiles { get; set; } = [];
 }
 
 public class ApiProvider
