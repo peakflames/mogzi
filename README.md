@@ -24,21 +24,21 @@ Before running the application, ensure you have:
 
    ```sh
    Invoke-WebRequest -Uri https://github.com/peakflames/maxbot/releases/latest/download/max-win-x64.exe -o max.exe
-   cp max.exe SOME\FOLDER\IN\YOUR\PATH   # copy the executable to a folder in your PATH.
+   cp max.exe %USERPROFILE%\AppData\Local\Microsoft\WindowsApps   # copy the executable to a folder in your PATH.
    ```
 
     For MacOS:
 
     ```sh
     curl -sLO https://github.com/peakflames/maxbot/releases/latest/download/max-osx-x64 -o max && chmod +x max
-    cp max.exe SOME/FOLDER/IN/YOUR/PATH   # copy the executable to a folder in your PATH.
+    cp max /usr/local/bin   # copy the executable to a folder in your PATH.
     ```
 
     For Linux:
 
     ```sh
     curl -L https://github.com/peakflames/maxbot/releases/latest/download/max-linux-x64 -o max && chmod +x max
-    cp max.exe SOME/FOLDER/IN/YOUR/PATH   # copy the executable to a folder in your PATH.
+    cp max /usr/local/bin   # copy the executable to a folder in your PATH.
     ```
 
 1. In your home directory, create a configuration file (`maxbot.config.json`) with your API provider details:
