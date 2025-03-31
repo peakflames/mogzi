@@ -4,6 +4,7 @@ An interactive command-line chat application that leverages multiple AI provider
 
 ## Features 🌟
 
+- LLM can read and write files as well obtain directory listings to learn about your repository 📝
 - Support both Oneshot and Interactive Chat interface with streaming AI responses 💬
 - Supports only OpenAI-compatible APIs 🧠
 - Profile-based configuration for easy switching between providers and models 🔄
@@ -135,14 +136,6 @@ The application uses a JSON configuration file with the following structure:
   - **name**: Profile name
   - **apiProvider**: Name of the API provider to use (must match a provider name)
   - **modelId**: Model ID to use for chat completion
-
-## AOT Compilation ⚡
-
-MaxBot supports AOT (Ahead-of-Time) compilation for improved performance:
-
-```bash
-dotnet publish -c Release -r win-x64 --self-contained
-```
 
 ## Exit 👋
 
