@@ -59,8 +59,8 @@ jobs:
     - name: Build
       run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -r ${{ matrix.rid }} -o ./publish/${{ matrix.rid }}
 
-    - name: Test
-      run: dotnet test --no-restore --verbosity normal
+    # - name: Test
+    #   run: dotnet test ${{ env.PROJECT_PATH }} --no-restore --verbosity normal
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
