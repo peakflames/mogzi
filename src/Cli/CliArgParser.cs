@@ -62,9 +62,13 @@ public static class CliArgParser
             {
                 showVersion = true;
             }
-            else
+            else if (args[i].StartsWith('-'))
             {
                 return Result.Fail($"Invalid argument: {args[i]}");
+            }
+            else
+            {
+                userPrompt = args[i];
             }
         }
 

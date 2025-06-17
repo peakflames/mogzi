@@ -11,7 +11,7 @@
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/src/Cli/bin/Debug/net9.0/max.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/src/Cli",
+            "cwd": "~/",
             "stopAtEntry": false,
             "console": "integratedTerminal",
             "justMyCode": false
@@ -47,6 +47,18 @@
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/src/Cli/bin/Debug/net9.0/max.dll",
             "args": ["--version"],
+            "cwd": "${workspaceFolder}/src/Cli",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "CLI OneShot Default Mode",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/Cli/bin/Debug/net9.0/max.dll",
+            "args": ["what is the capital of michigan?"],
             "cwd": "${workspaceFolder}/src/Cli",
             "stopAtEntry": false,
             "console": "integratedTerminal",
