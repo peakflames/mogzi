@@ -1,4 +1,5 @@
 
+using System.Reflection;
 using FluentResults;
 
 namespace CLI;
@@ -17,6 +18,13 @@ public record CommandLineOptions
 
 public static class CliArgParser
 {
+    public static string? Version
+    {
+        get
+        {
+            return Assembly.GetExecutingAssembly().GetName().Version?.ToString();
+        }
+    }
     public static Result<CommandLineOptions> Parse(string[] args)
     {
         string defaultConfigPath = "maxbot.config.json";
@@ -72,8 +80,13 @@ public static class CliArgParser
             }
         }
 
+        if (args.Length == 0)
+        {
+            showHelp = true;
+        }
+
         configPath = ResolveConfigPath(configPath, defaultConfigPath);
-        
+
         return new CommandLineOptions
         {
             ConfigPath = configPath,
@@ -121,8 +134,9 @@ public static class CliArgParser
     {
         Console.ForegroundColor = ConsoleColor.Yellow;
         Console.WriteLine("MaxBot CLI - Chat with AI models");
+        Console.WriteLine($"v{Version}");
         Console.WriteLine();
-        Console.WriteLine("Usage: max rompt [options]");
+        Console.WriteLine("Usage: max prompt [options]");
         Console.WriteLine();
         Console.WriteLine("Options:");
         Console.WriteLine("  -c, --config <path>          Path to the configuration file (default: maxbot.config.json)");

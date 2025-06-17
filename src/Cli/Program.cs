@@ -57,8 +57,7 @@ if (options.ShowStatus)
 
 if (options.ShowVersion)
 {
-    var version = Assembly.GetExecutingAssembly().GetName().Version;
-    Console.WriteLine(version);
+    Console.WriteLine(CliArgParser.Version);
     return 0;
 }
 
