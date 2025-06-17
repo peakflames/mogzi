@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using FluentResults;
 using MaxBot;
 using Microsoft.Extensions.AI;
@@ -28,8 +27,10 @@ public class App
 
     public static void ConsoleWriteError(Result result, bool exit = true)
     {
+        var temp = Console.ForegroundColor;
         Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine($"Error: {result.Errors.First().Message}");
+        Console.WriteLine($"Error: {result.Errors.FirstOrDefault()?.Message}");
+        Console.ForegroundColor = temp;
         if (exit)
             Environment.Exit(1);
     }

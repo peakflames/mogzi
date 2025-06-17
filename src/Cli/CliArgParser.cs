@@ -11,6 +11,7 @@ public record CommandLineOptions
     public string? UserPrompt { get; init; }
     public bool ShowStatus { get; init; }
     public bool ShowHelp { get; init; }
+    public bool ShowVersion { get; init; }
 }
 
 
@@ -25,6 +26,7 @@ public static class CliArgParser
         string? userPrompt = null;
         bool showStatus = false;
         bool showHelp = false;
+        bool showVersion = false;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -52,9 +54,13 @@ public static class CliArgParser
                 userPrompt = args[i + 1];
                 i++; // Skip the next argument
             }
-            else if ((args[i] == "-s" || args[i] == "--status") && i + 1 < args.Length)
+            else if (args[i] == "-s" || args[i] == "--status")
             {
                 showStatus = true;
+            }
+            else if (args[i] == "-v" || args[i] == "--version")
+            {
+                showVersion = true;
             }
             else
             {
@@ -71,7 +77,8 @@ public static class CliArgParser
             Mode = mode,
             UserPrompt = userPrompt,
             ShowStatus = showStatus,
-            ShowHelp = showHelp
+            ShowHelp = showHelp,
+            ShowVersion = showVersion
         };
     }
 

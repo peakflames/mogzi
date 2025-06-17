@@ -31,15 +31,13 @@ Before running the application, ensure you have:
     For MacOS:
 
     ```sh
-    curl -sLO https://github.com/peakflames/maxbot/releases/latest/download/max-osx-x64 -o max && chmod +x max
-    cp max /usr/local/bin   # copy the executable to a folder in your PATH.
+    curl -sLO https://github.com/peakflames/maxbot/releases/latest/download/max-osx-x64 -o max && chmod +x max && cp max /usr/local/bin && rm ./max
     ```
 
     For Linux:
 
     ```sh
-    curl -L https://github.com/peakflames/maxbot/releases/latest/download/max-linux-x64 -o max && chmod +x max
-    cp max /usr/local/bin   # copy the executable to a folder in your PATH.
+    curl -L https://github.com/peakflames/maxbot/releases/latest/download/max-linux-x64 -o max && chmod +x max && cp max /usr/local/bin && rm ./max
     ```
 
 1. In your home directory, create a configuration file (`maxbot.config.json`) with your API provider details:

@@ -1,18 +1,17 @@
-﻿using System.Text;
+﻿using System.Reflection;
+using System.Text;
 using CLI;
 using FluentResults;
 using MaxBot;
 
 // The most important fix - set console encoding to UTF-8
-   Console.OutputEncoding = Encoding.UTF8;
-
-
+Console.OutputEncoding = Encoding.UTF8;
 
 // Parse command line arguments
-var argResult   = CliArgParser.Parse(args);
+var argResult = CliArgParser.Parse(args);
 if (argResult.IsFailed)
 {
-    Console.WriteLine(argResult.ToResult());
+    App.ConsoleWriteError(argResult.ToResult());
     return 1;
 }
 
@@ -43,18 +42,25 @@ if (!string.IsNullOrEmpty(options.Mode))
 // Show status if requested
 if (options.ShowStatus)
 {
+    var temp = Console.ForegroundColor;
     Console.ForegroundColor = ConsoleColor.Yellow;
-    Console.WriteLine("MaxBot!");
-    Console.WriteLine();
     // Display active profile and model information
     Console.Write("(");
-    Console.Write($"Mode: '{activeMode}', ");
-    Console.Write($"Profile: '{maxClient.ActiveProfile.Name}', ");
-    Console.Write($"Provider: {maxClient.ActiveProfile.ApiProvider}, ");
-    Console.Write($"Model: {maxClient.ActiveProfile.ModelId}");
+    Console.Write($"Mode='{activeMode}', ");
+    Console.Write($"Profile='{maxClient.ActiveProfile.Name}', ");
+    Console.Write($"Provider='{maxClient.ActiveProfile.ApiProvider}', ");
+    Console.Write($"Model='{maxClient.ActiveProfile.ModelId}'");
     Console.Write(")\n");
+    Console.ForegroundColor = temp;
+    return 0;
 }
 
+if (options.ShowVersion)
+{
+    var version = Assembly.GetExecutingAssembly().GetName().Version;
+    Console.WriteLine(version);
+    return 0;
+}
 
 
 return await new App(maxClient, options.ShowStatus).Run(activeMode, options.UserPrompt);
