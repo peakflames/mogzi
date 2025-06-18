@@ -24,7 +24,7 @@ Before running the application, ensure you have:
    For Windows:
 
    ```sh
-   Invoke-WebRequest -Uri https://github.com/peakflames/maxbot/releases/latest/download/max-win-x64.exe -o max.exe
+   Start-BitsTransfer -Source https://github.com/peakflames/maxbot/releases/latest/download/max-win-x64.exe -Destination max.exe;
    cp max.exe %USERPROFILE%\AppData\Local\Microsoft\WindowsApps   # copy the executable to a folder in your PATH.
    ```
 
