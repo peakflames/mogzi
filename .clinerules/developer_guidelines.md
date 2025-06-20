@@ -67,3 +67,21 @@ This document outlines the coding conventions, rules, and patterns used in this 
 
 - **NuGet dependencies:** Be mindful of NuGet package dependencies and version conflicts.
 - **Update packages:** When updating packages, ensure that all related packages are updated to compatible versions.
+
+## Development
+
+### Building the Project
+
+To build the project, run the following command from the root directory:
+
+```sh
+dotnet build src/MaxBot.sln
+```
+
+### Running Tests
+
+To run the integration tests, run the following command from the root directory:
+
+```sh
+dotnet test test/Cli.Tests/Cli.Tests.csproj
+```

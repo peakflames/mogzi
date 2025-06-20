@@ -146,3 +146,7 @@ To exit the application:
 - Type `exit` or `quit`
 - Press Enter with an empty message
 - The application will cleanly terminate
+
+## Contributing 🤝
+
+Contributions are welcome! Please read the [developer guidelines](.clinerules/developer_guidelines.md) for more information on how to build the project and run tests.
