@@ -75,6 +75,16 @@ This document outlines the coding conventions, rules, and patterns used in this 
 
 ## Development
 
+### Acceptance Testing
+
+To ensure the CLI works as expected from an end-user perspective, run the local acceptance test script:
+
+```sh
+./test/local_exe_acceptance.ps1
+```
+
+This script publishes the executable and runs a series of tests against it. If the script exits with a non-zero status code, the tests have failed.
+
 ### Building the Project
 
 To build the project, run the following command from the root directory:
@@ -83,10 +93,24 @@ To build the project, run the following command from the root directory:
 dotnet build src/MaxBot.sln
 ```
 
+### Publishing maxbox
+
+```sh
+dotnet publish ./src/Cli\Cli.csproj -r {{RUNTIME_IDENTIFIER}} -o ./dist
+```
+
+
 ### Running Tests
 
 To run the integration tests, run the following command from the root directory:
 
 ```sh
 dotnet test test/Cli.Tests/Cli.Tests.csproj
+```
+
+To run acceptacne tests the
+
+```sh
+./test/local_exe_acceptance.ps1 # This script will publish the exe to ./dist and exerceise a sample of the feature switches
+#if it exist non-zero than it is a fail otherwise pass
 ```

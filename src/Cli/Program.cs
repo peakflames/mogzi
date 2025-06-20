@@ -15,7 +15,7 @@ public partial class Program
     internal static async Task<int> Run(string[] args, ChatClient? chatClient = null)
     {
         // Parse command line arguments
-        var argResult = CliArgParser.Parse(args);
+        var argResult = await CliArgParser.ParseAsync(args);
         if (argResult.IsFailed)
         {
             App.ConsoleWriteError(argResult.ToResult());
@@ -35,7 +35,17 @@ public partial class Program
         {
             // This is a valid case, but we don't want to show help.
         }
-        else if (string.IsNullOrEmpty(options.UserPrompt) && options.Mode == "oneshot")
+        else if (args.Length == 1 && options.ShowVersion)
+        {
+            Console.WriteLine(CliArgParser.Version);
+            return 0;
+        }
+        else if (args.Length == 1 && options.ShowVersion)
+        {
+            Console.WriteLine(CliArgParser.Version);
+            return 0;
+        }
+        else if (string.IsNullOrEmpty(options.UserPrompt) && options.Mode == "oneshot" && !options.ShowStatus)
         {
             CliArgParser.DisplayHelp();
             return 0;
@@ -52,10 +62,10 @@ public partial class Program
             chatClient = clientResult.Value;
         }
         
-    var maxClient = chatClient;
+        var maxClient = chatClient;
 
-    // Show status if requested
-    if (options.ShowStatus)
+        // Show status if requested
+        if (options.ShowStatus)
         {
             var temp = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.Yellow;

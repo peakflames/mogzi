@@ -67,4 +67,27 @@ public class BlackBoxTests
         var response = output.ToString();
         response.Should().Contain("Hello, world!");
     }
+
+    [Fact]
+    public async Task Run_WithPipedInput_ShouldReturnExpectedResponse()
+    {
+        // Arrange
+        var args = new string[] { "summarize" };
+        var pipedInput = "This is piped input.";
+        var input = new StringReader(pipedInput);
+        Console.SetIn(input);
+        var output = new StringWriter();
+        Console.SetOut(output);
+        var testChatClient = new TestChatClient("Piped input summarized.");
+        var clientResult = ChatClient.Create(testChatClient, "maxbot.config.json");
+        clientResult.IsFailed.Should().Be(false);
+
+        // Act
+        var exitCode = await Program.Run(args, clientResult.Value);
+
+        // Assert
+        exitCode.Should().Be(0);
+        var response = output.ToString();
+        response.Should().Contain("Piped input summarized.");
+    }
 }

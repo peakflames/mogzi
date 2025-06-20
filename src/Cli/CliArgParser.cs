@@ -25,7 +25,7 @@ public static class CliArgParser
             return Assembly.GetExecutingAssembly().GetName().Version?.ToString();
         }
     }
-    public static Result<CommandLineOptions> Parse(string[] args)
+    public static async Task<Result<CommandLineOptions>> ParseAsync(string[] args)
     {
         string defaultConfigPath = "maxbot.config.json";
         string configPath = defaultConfigPath;
@@ -75,12 +75,29 @@ public static class CliArgParser
             }
         }
 
-        if (remainingArgs.Count > 0)
+        if (mode == "oneshot" && Console.IsInputRedirected)
         {
-            userPrompt = string.Join(" ", remainingArgs);
+            var pipedInput = await Console.In.ReadToEndAsync();
+            if (!string.IsNullOrWhiteSpace(pipedInput))
+            {
+                userPrompt = pipedInput;
+            }
         }
 
-        if (args.Length == 0)
+        if (remainingArgs.Count > 0)
+        {
+            var promptFromArgs = string.Join(" ", remainingArgs);
+            if (!string.IsNullOrWhiteSpace(userPrompt))
+            {
+                userPrompt += Environment.NewLine + promptFromArgs;
+            }
+            else
+            {
+                userPrompt = promptFromArgs;
+            }
+        }
+
+        if (args.Length == 0 && string.IsNullOrWhiteSpace(userPrompt))
         {
             showHelp = true;
         }

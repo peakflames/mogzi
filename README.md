@@ -123,6 +123,28 @@ max --chat -p Sonnet
 max "Translate 'hello' to Spanish" -p R1 -c custom-config.json
 ```
 
+### Piping Input ቧ
+
+You can send a prompt directly to standard input like this:.
+```bash
+cat "Who makes the best pizza?" | max
+```
+
+If you send text to standard input and provide arguments, the resulting prompt will consist of the piped content followed by the arguments:
+
+```bash
+cat README.md | max "Summarize this document"
+```
+Will run a prompt of:
+
+```
+<contents>
+...contents from standard intput
+<contents>
+Based on the content, Summarize this document
+```
+
+
 ### Chat Interface 💬
 
 - Start typing your messages after the `🤖 %` prompt
