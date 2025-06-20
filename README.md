@@ -125,8 +125,8 @@ max --chat [options]
 ### Chat Interface 💬
 
 - Start typing your messages after the  prompt
-- AI responses will stream in real-time with green text ✨
-- Exit the chat by typing `exit`, `quit`, or pressing Enter with no message 👋
+- AI responses will stream in real-time with green text
+- Exit the chat by typing `exit`, `quit`, or pressing Enter with no message
 
 ### Configuration ⚙️
 
