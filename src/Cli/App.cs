@@ -25,14 +25,12 @@ public class App
         Console.ForegroundColor = originalColor;
     }
 
-    public static void ConsoleWriteError(Result result, bool exit = true)
+    public static void ConsoleWriteError(Result result)
     {
         var temp = Console.ForegroundColor;
         Console.ForegroundColor = ConsoleColor.Red;
         Console.WriteLine($"Error: {result.Errors.FirstOrDefault()?.Message}");
         Console.ForegroundColor = temp;
-        if (exit)
-            Environment.Exit(1);
     }
 
     public async Task<int> Run(string activeMode, string? userPrompt = null)

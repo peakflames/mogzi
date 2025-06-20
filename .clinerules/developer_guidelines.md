@@ -55,3 +55,15 @@ This document outlines the coding conventions, rules, and patterns used in this 
 - **Expression-bodied members:** Use expression-bodied members for simple methods and properties.
 - **`IAsyncEnumerable<T>`:** Use `IAsyncEnumerable<T>` for streaming asynchronous data.
 - **`nameof` operator:** Use the `nameof` operator to get the name of a variable, type, or member as a string.
+
+## Testing
+
+- **Black-box testing:** Prefer black-box testing for integration tests.
+- **Invoke `Program.Main`:** Invoke the `Program.Main` method directly from tests to simulate running the CLI.
+- **Redirect Console I/O:** Use `Console.SetIn` and `Console.SetOut` to redirect console input and output for testing.
+- **Test `ChatClient`:** Create a test implementation of `ChatClient` to return predictable responses.
+
+## Package Management
+
+- **NuGet dependencies:** Be mindful of NuGet package dependencies and version conflicts.
+- **Update packages:** When updating packages, ensure that all related packages are updated to compatible versions.

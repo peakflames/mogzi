@@ -67,6 +67,12 @@ public partial class ChatClient
     
     public static Result<ChatClient> Create(string configFilePath, string? profileName = null, Action<string>? llmResponseDetailsCallback = null)
     {
+        var result = Create(null, configFilePath, profileName, llmResponseDetailsCallback);
+        return result;
+    }
+
+    public static Result<ChatClient> Create(IChatClient? chatClient, string configFilePath, string? profileName = null, Action<string>? llmResponseDetailsCallback = null)
+    {
         string jsonContent;
         try
         {
@@ -126,17 +132,22 @@ public partial class ChatClient
         string baseUrl = apiProvider.BaseUrl;
         string modelId = profile.ModelId;
 
-        var chatClient = new OpenAIClient(
-            new ApiKeyCredential(apiKey),
-            new OpenAIClientOptions { 
-                Endpoint = new(baseUrl)
-            })
-            .AsChatClient(modelId)
+        if (chatClient == null)
+        {
+            chatClient = new OpenAI.Chat.ChatClient(
+                modelId,
+                new ApiKeyCredential(apiKey),
+                new OpenAIClientOptions
+                {
+                    Endpoint = new(baseUrl)
+                })
+                .AsIChatClient()
                 .AsBuilder()
                     .UseFunctionInvocation()
                     .Build();
+        }
 
-        
+
         return new ChatClient(chatClient, maxbotConfig, profile, apiProvider, llmResponseDetailsCallback);
     }
 

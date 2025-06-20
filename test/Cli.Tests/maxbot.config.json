@@ -1,0 +1,21 @@
+{
+    "maxbotConfig": {
+        "defaultMode": "chat",
+        "apiProviders": [
+            {
+                "name": "TestProvider",
+                "type": "OpenAI-Compatible",
+                "apiKey": "test-key",
+                "baseUrl": "https://test.com"
+            }
+        ],
+        "profiles": [
+            {
+                "default": true,
+                "name": "Default",
+                "apiProvider": "TestProvider",
+                "modelId": "test-model"
+            }
+        ]
+    }
+}

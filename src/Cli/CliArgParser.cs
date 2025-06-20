@@ -146,7 +146,6 @@ public static class CliArgParser
         Console.WriteLine("  -s, --status                 Report the current status (i.e. active config, etc)");
         Console.WriteLine("  -h, --help                   Display this help message");
         Console.ResetColor();
-        Environment.Exit(0);
     }
 }
 
