@@ -69,13 +69,40 @@ public partial class Program
         {
             var temp = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.Yellow;
+
             // Display active profile and model information
-            Console.Write("(");
+            Console.WriteLine("Active Configuration:");
+            Console.Write("  (");
             Console.Write($"Mode='{options.Mode}', ");
             Console.Write($"Profile='{maxClient.ActiveProfile.Name}', ");
             Console.Write($"Provider='{maxClient.ActiveProfile.ApiProvider}', ");
             Console.Write($"Model='{maxClient.ActiveProfile.ModelId}'");
-            Console.Write(")\n");
+            Console.Write(")\n\n");
+
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("Available Providers:");
+            Console.ForegroundColor = temp;
+            foreach (var provider in maxClient.Config.ApiProviders)
+            {
+                Console.WriteLine($"  - {provider.Name}");
+            }
+
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("\nAvailable Profiles:");
+            Console.ForegroundColor = temp;
+
+            // Table Header
+            Console.WriteLine($"  {"Name",-20} {"Provider",-15} {"Model ID",-30} {"Active",-8} {"Default",-8}");
+            Console.WriteLine($"  {"----",-20} {"--------",-15} {"--------",-30} {"------",-8} {"-------",-8}");
+
+            foreach (var profile in maxClient.Config.Profiles)
+            {
+                var isActive = profile.Name == maxClient.ActiveProfile.Name ? "Yes" : "";
+                var isDefault = profile.Default ? "Yes" : "";
+                Console.WriteLine($"  {profile.Name,-20} {profile.ApiProvider,-15} {profile.ModelId,-30} {isActive,-8} {isDefault,-8}");
+            }
+
+            Console.WriteLine();
             Console.ForegroundColor = temp;
             return 0;
         }
