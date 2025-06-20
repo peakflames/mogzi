@@ -10,6 +10,19 @@ An interactive command-line chat application that leverages multiple AI provider
 - Profile-based configuration for easy switching between providers and models 🔄
 - Cross-platform support (Windows, MacOS, Linux) 💻🍎🐧
 
+### Examples 💡
+
+```bash
+# oneshot request
+max "Which is the tallest pokemon?"
+
+# start full chat using your 'Sonnet' profile
+max --chat -p Sonnet
+
+# translate a README.md to portugese
+cat README.md | max "Translate to portugese"
+```
+
 ## Prerequisites ✅
 
 Before running the application, ensure you have:
@@ -107,20 +120,6 @@ To start a chat session, use the `--chat` option:
 ```bash
 max --chat [options]
 ```
-
-### Examples 💡
-
-```bash
-# oneshot request
-max "Which is the tallest pokemon?"
-
-# start full chat using your 'Sonnet' profile
-max --chat -p Sonnet
-
-# translate a README.md to portugese
-cat README.md | max "Translate to portugese"
-```
-
 
 ### Chat Interface 💬
 
