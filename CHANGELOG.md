@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2025-06-20
+
+__Changed__:
+
+- The `--status` command now displays a detailed table of all available providers and profiles, in addition to the active configuration.
+
+## [1.1.0] - 2025-06-20
+
+__Added__:
+
+- Ability to pipe standard input into the CLI as part of the prompt.
+- Acceptance test script (`test/local_exe_acceptance.ps1`) to automate testing of the published executable.
+- Cline workflow for generating releases (`.clinerules/workflows/generate_release.md`).
+
+__Changed__:
+
+- Updated developer guidelines and workflow rules.
+
 ## [0.3.0] - 2025-03-31
 
 __Changed__:
