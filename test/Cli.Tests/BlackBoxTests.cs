@@ -23,14 +23,14 @@ public class BlackBoxTests
         // Assert
         exitCode.Should().Be(0);
         var response = output.ToString();
-        response.Should().Contain("Usage: max prompt [options]");
+        response.Should().Contain("Usage: max [prompt] [options]");
     }
 
     [Fact]
     public async Task Run_WithOneShotPrompt_ShouldReturnExpectedResponse()
     {
         // Arrange
-        var args = new string[] { "--mode", "oneshot", "--userPrompt", "hello" };
+        var args = new string[] { "hello" };
         var output = new StringWriter();
         Console.SetOut(output);
         var testChatClient = new TestChatClient("Hello, world!");
@@ -50,13 +50,14 @@ public class BlackBoxTests
     public async Task Run_WithChatMode_ShouldReturnExpectedResponse()
     {
         // Arrange
-        var args = new string[] { "--mode", "chat" };
+        var args = new string[] { "--chat" };
         var input = new StringReader("hello\nexit\n");
         Console.SetIn(input);
         var output = new StringWriter();
         Console.SetOut(output);
         var testChatClient = new TestChatClient("Hello, world!");
         var clientResult = ChatClient.Create(testChatClient, "maxbot.config.json");
+        clientResult.IsFailed.Should().Be(false);
 
         // Act
         var exitCode = await Program.Run(args, clientResult.Value);

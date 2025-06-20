@@ -99,11 +99,18 @@ Before running the application, ensure you have:
 ## Usage 📝
 
 ```bash
-maxbot [options]
+max [prompt] [options]
+```
+
+To start a chat session, use the `--chat` option:
+
+```bash
+max --chat [options]
 ```
 
 ### Options 🔧
 
+- `--chat`: Start a chat session
 - `-h, --help`: Show help message ℹ️
 - `-c, --config <path>`: Specify a custom configuration file path (default: maxbot.config.json) 📄
 - `-p, --profile <n>`: Specify a profile name to use (overrides default profile in config) 👤
@@ -111,10 +118,9 @@ maxbot [options]
 ### Examples 💡
 
 ```bash
-maxbot                                                # Start a chat using ~/maxbot.config.json and its default profile
-maxbot -m oneshot -u "Which is the tallest pokemon?"  # Ask a oneshot question using ~/maxbot.config.json and its default profile
-maxbot -p "Sonnet"                                    # Start a chat using local ./maxbot.config.json and the Sonnet profile
-maxbot -c custom-config.json -p "R1"                  # Start a chat using custom-config.json and the R1 profile
+max "Which is the tallest pokemon?"
+max --chat -p Sonnet
+max "Translate 'hello' to Spanish" -p R1 -c custom-config.json
 ```
 
 ### Chat Interface 💬

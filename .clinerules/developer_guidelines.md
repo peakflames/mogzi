@@ -56,12 +56,17 @@ This document outlines the coding conventions, rules, and patterns used in this 
 - **`IAsyncEnumerable<T>`:** Use `IAsyncEnumerable<T>` for streaming asynchronous data.
 - **`nameof` operator:** Use the `nameof` operator to get the name of a variable, type, or member as a string.
 
+## CLI Design
+
+- **Finalize command structure:** Before implementation, ensure that the command structure is finalized to avoid rework.
+
 ## Testing
 
 - **Black-box testing:** Prefer black-box testing for integration tests.
 - **Invoke `Program.Main`:** Invoke the `Program.Main` method directly from tests to simulate running the CLI.
 - **Redirect Console I/O:** Use `Console.SetIn` and `Console.SetOut` to redirect console input and output for testing.
 - **Test `ChatClient`:** Create a test implementation of `ChatClient` to return predictable responses.
+- **Keep tests in sync:** Always update tests to reflect the latest changes in the CLI's behavior.
 
 ## Package Management
 

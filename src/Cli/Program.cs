@@ -31,6 +31,16 @@ public partial class Program
             return 0;
         }
 
+        if (args.Length == 1 && args[0] == "chat")
+        {
+            // This is a valid case, but we don't want to show help.
+        }
+        else if (string.IsNullOrEmpty(options.UserPrompt) && options.Mode == "oneshot")
+        {
+            CliArgParser.DisplayHelp();
+            return 0;
+        }
+
         if (chatClient == null)
         {
             var clientResult = ChatClient.Create(options.ConfigPath, options.ProfileName, App.ConsoleWriteLLMResponseDetails);
@@ -42,23 +52,16 @@ public partial class Program
             chatClient = clientResult.Value;
         }
         
-        var maxClient = chatClient;
+    var maxClient = chatClient;
 
-        // Handle the active mode
-        var activeMode = maxClient.Config.DefaultMode;
-        if (!string.IsNullOrEmpty(options.Mode))
-        {
-            activeMode = options.Mode;
-        }
-
-        // Show status if requested
-        if (options.ShowStatus)
+    // Show status if requested
+    if (options.ShowStatus)
         {
             var temp = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.Yellow;
             // Display active profile and model information
             Console.Write("(");
-            Console.Write($"Mode='{activeMode}', ");
+            Console.Write($"Mode='{options.Mode}', ");
             Console.Write($"Profile='{maxClient.ActiveProfile.Name}', ");
             Console.Write($"Provider='{maxClient.ActiveProfile.ApiProvider}', ");
             Console.Write($"Model='{maxClient.ActiveProfile.ModelId}'");
@@ -73,6 +76,6 @@ public partial class Program
             return 0;
         }
 
-        return await new App(maxClient, options.ShowStatus).Run(activeMode, options.UserPrompt);
+        return await new App(maxClient, options.ShowStatus).Run(options.Mode, options.UserPrompt);
     }
 }

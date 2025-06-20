@@ -71,31 +71,6 @@ public class CliArgParserTests
         result.Value.ConfigPath.Should().Be("test-config.json");
     }
 
-    [Fact]
-    public void Parse_WithModeArgument_ShouldSetMode()
-    {
-        // Arrange
-        var args = new string[] { "--mode", "oneshot" };
-
-        // Act
-        var result = CliArgParser.Parse(args);
-
-        // Assert
-        result.Value.Mode.Should().Be("oneshot");
-    }
-
-    [Fact]
-    public void Parse_WithUserPromptArgument_ShouldSetUserPrompt()
-    {
-        // Arrange
-        var args = new string[] { "--userPrompt", "hello" };
-
-        // Act
-        var result = CliArgParser.Parse(args);
-
-        // Assert
-        result.Value.UserPrompt.Should().Be("hello");
-    }
 
     [Fact]
     public void Parse_WithStatusArgument_ShouldSetShowStatus()
