@@ -44,6 +44,11 @@ This document outlines the coding conventions, rules, and patterns used in this 
 
 - **LINQ:** Use LINQ for querying collections.
 
+## Changelog Management
+
+- **Unreleased Changes:** Add new changes under a `[TBD]` or `[Unreleased]` heading at the top of the `CHANGELOG.md`.
+- **Follow Keep a Changelog:** Adhere to the conventions outlined in [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
 ## Command-line Argument Parsing
 
 - **Manual parsing:** Arguments are parsed manually.
