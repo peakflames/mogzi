@@ -13,6 +13,7 @@ public record CommandLineOptions
     public bool ShowStatus { get; init; }
     public bool ShowHelp { get; init; }
     public bool ShowVersion { get; init; }
+    public string? ToolApprovals { get; init; }
 }
 
 
@@ -35,6 +36,7 @@ public static class CliArgParser
         bool showStatus = false;
         bool showHelp = false;
         bool showVersion = false;
+        string? toolApprovals = null;
         var remainingArgs = new List<string>();
 
         for (int i = 0; i < args.Length; i++)
@@ -64,6 +66,15 @@ public static class CliArgParser
             else if (args[i] == "-v" || args[i] == "--version")
             {
                 showVersion = true;
+            }
+            else if ((args[i] == "-ta" || args[i] == "--tool-approvals") && i + 1 < args.Length)
+            {
+                toolApprovals = args[i + 1];
+                if (toolApprovals != "readonly" && toolApprovals != "all")
+                {
+                    return Result.Fail("Invalid value for --tool-approvals. Must be 'readonly' or 'all'.");
+                }
+                i++; // Skip the next argument
             }
             else if (args[i].StartsWith('-'))
             {
@@ -112,7 +123,8 @@ public static class CliArgParser
             UserPrompt = userPrompt,
             ShowStatus = showStatus,
             ShowHelp = showHelp,
-            ShowVersion = showVersion
+            ShowVersion = showVersion,
+            ToolApprovals = toolApprovals
         };
     }
 
@@ -160,6 +172,7 @@ public static class CliArgParser
         Console.WriteLine("  -c, --config <path>          Path to the configuration file (default: maxbot.config.json)");
         Console.WriteLine("  -p, --profile <name>         Name of the profile to use (overrides default profile in config)");
         Console.WriteLine("  -s, --status                 Report the current status (i.e. active config, etc)");
+        Console.WriteLine("  -ta, --tool-approvals <mode> Override the tool approval setting (readonly|all)");
         Console.WriteLine("  -h, --help                   Display this help message");
         Console.ResetColor();
     }

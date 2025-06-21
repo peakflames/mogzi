@@ -100,4 +100,35 @@ public class CliArgParserTests
         // Assert
         result.Value.UserPrompt.Should().Be($"{pipedInput}{Environment.NewLine}summarize");
     }
+
+    [Theory]
+    [InlineData("--tool-approvals", "readonly")]
+    [InlineData("-ta", "readonly")]
+    [InlineData("--tool-approvals", "all")]
+    [InlineData("-ta", "all")]
+    public async Task Parse_WithToolApprovalsArgument_ShouldSetToolApprovals(string flag, string value)
+    {
+        // Arrange
+        var args = new string[] { flag, value };
+
+        // Act
+        var result = await CliArgParser.ParseAsync(args);
+
+        // Assert
+        result.Value.ToolApprovals.Should().Be(value);
+    }
+
+    [Fact]
+    public async Task Parse_WithInvalidToolApprovalsArgument_ShouldFail()
+    {
+        // Arrange
+        var args = new string[] { "--tool-approvals", "invalid" };
+
+        // Act
+        var result = await CliArgParser.ParseAsync(args);
+
+        // Assert
+        result.IsFailed.Should().BeTrue();
+        result.Errors.First().Message.Should().Be("Invalid value for --tool-approvals. Must be 'readonly' or 'all'.");
+    }
 }

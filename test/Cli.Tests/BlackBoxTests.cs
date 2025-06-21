@@ -111,7 +111,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
 
-        var clientResult = ChatClient.Create("maxbot.config.json", profileName, App.ConsoleWriteLLMResponseDetails);
+        var clientResult = ChatClient.Create("maxbot.config.json", profileName, null, "oneshot", App.ConsoleWriteLLMResponseDetails);
         clientResult.IsFailed.Should().Be(false);
 
         // Act
@@ -143,7 +143,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
 
-        var clientResult = ChatClient.Create("maxbot.config.json", profileName, App.ConsoleWriteLLMResponseDetails);
+        var clientResult = ChatClient.Create("maxbot.config.json", profileName, null, "oneshot", App.ConsoleWriteLLMResponseDetails);
         clientResult.IsFailed.Should().Be(false);
 
         // Act
@@ -160,33 +160,30 @@ public class BlackBoxTests
         File.Delete(tempFile);
     }
 
+
     [Theory]
     [InlineData("gpt")]
     [InlineData("gemini")]
     [InlineData("sonnet")]
-    public async Task Run_WriteFile_WithReadOnlyMode_ShouldFail(string profileName)
+    public async Task Run_WriteFile_WithToolApprovalsReadOnly_ShouldFail(string profileName)
     {
         // Arrange
         var tempFile = Path.GetTempFileName();
         var fileContent = "This is a test file for the write_file scenario.";
 
-        var args = new string[] { $"Write the following content to the file at {tempFile}: {fileContent}" };
+        var args = new string[] { $"Write the following content to the file at {tempFile}: {fileContent}", "--tool-approvals", "readonly", "-p", profileName };
 
         var output = new StringWriter();
         Console.SetOut(output);
 
-        var clientResult = ChatClient.Create("maxbot.config.json", profileName, App.ConsoleWriteLLMResponseDetails);
-        clientResult.IsFailed.Should().Be(false);
-
-        clientResult.Value.Config.ToolApprovals = "readonly";
         // Act
-        var exitCode = await Program.Run(args, clientResult.Value);
+        var exitCode = await Program.Run(args);
 
         // Assert
         exitCode.Should().Be(0);
         var response = output.ToString().ToLower();
         response.Should().MatchRegex("read-?only");
-        response.Should().MatchRegex("unable to write|can't write|not write");
+        response.Should().MatchRegex("tool approval setting|not allowed");
 
         // Clean up the temporary files.
         File.Delete(tempFile);

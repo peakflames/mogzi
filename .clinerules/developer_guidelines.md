@@ -74,6 +74,7 @@ This document outlines the coding conventions, rules, and patterns used in this 
 - **Keep tests in sync:** Always update tests to reflect the latest changes in the CLI's behavior.
 - **Test LLM interactions flexibly:** When testing interactions with LLMs, avoid asserting for exact string matches. Instead, use regular expressions or keyword checks to verify that the response contains the key information or intent, accommodating the conversational nature of AI.
 - **Refine tests on failure:** When a black-box test fails, especially one involving an LLM, do not immediately revert to a mocked implementation. First, analyze the failure to understand if the test's assertions are too brittle. If the core behavior is correct but the output is conversational, adapt the test to be more flexible before considering a change in testing strategy.
+- **Ensure test isolation:** Tests should not depend on shared state. Each test should create its own required state (e.g., configuration files, temporary directories) to ensure it can run independently and produce consistent results.
 
 ## Package Management
 

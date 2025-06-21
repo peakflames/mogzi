@@ -27,7 +27,7 @@ public partial class ChatClient
 
     private FileSystemTools FileSystemTools { get; init; }
 
-    private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, Action<string>? llmResponseDetailsCallback = null)
+    private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string>? llmResponseDetailsCallback = null)
     {
         ChatClientMEAI = chatClient;
         Config = config;
@@ -54,7 +54,8 @@ public partial class ChatClient
                                                    Username,
                                                    Hostname,
                                                    Directory.GetCurrentDirectory(),
-                                                   config);
+                                                   config,
+                                                   mode);
 
         FileSystemTools = new FileSystemTools(config, llmResponseDetailsCallback);
         ChatOptions = new ChatOptions{
@@ -67,13 +68,13 @@ public partial class ChatClient
     }
 
     
-    public static Result<ChatClient> Create(string configFilePath, string? profileName = null, Action<string>? llmResponseDetailsCallback = null)
+    public static Result<ChatClient> Create(string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string>? llmResponseDetailsCallback = null)
     {
-        var result = Create(null, configFilePath, profileName, llmResponseDetailsCallback);
+        var result = Create(null, configFilePath, profileName, toolApprovals, mode, llmResponseDetailsCallback);
         return result;
     }
 
-    public static Result<ChatClient> Create(IChatClient? chatClient, string configFilePath, string? profileName = null, Action<string>? llmResponseDetailsCallback = null)
+    public static Result<ChatClient> Create(IChatClient? chatClient, string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string>? llmResponseDetailsCallback = null)
     {
         string jsonContent;
         try
@@ -101,6 +102,11 @@ public partial class ChatClient
         if (maxbotConfig is null)
         {
             return Result.Fail($"While reading the config '{configFilePath}', was not able to find the 'maxbotConfig' section.");
+        }
+
+        if (!string.IsNullOrEmpty(toolApprovals))
+        {
+            maxbotConfig.ToolApprovals = toolApprovals;
         }
 
 
@@ -170,7 +176,7 @@ public partial class ChatClient
         //             .Build();
 
 
-        return new ChatClient(chatClient, maxbotConfig, profile, apiProvider, llmResponseDetailsCallback);
+        return new ChatClient(chatClient, maxbotConfig, profile, apiProvider, mode, llmResponseDetailsCallback);
     }
 
 }

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0]
+
+__Added__:
+
+- Command-line argument `--tool-approvals` (alias `-ta`) to override the tool approval setting from the configuration file.
+
+__Changed__:
+
+- The `FileSystemTools` now respect the `ToolApprovals` setting from the configuration.
+- The system prompt now includes the active mode.
+
 ## [1.1.1] - 2025-06-20
 
 __Changed__:

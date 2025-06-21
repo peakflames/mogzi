@@ -17,7 +17,7 @@ public class FileSystemTools
         _llmResponseDetailsCallback = llmResponseDetailsCallback;
     }
 
-    [Description("Request to list files and directories within the specified directory. If recursive is true, it will list all files and directories recursively. If recursive is false or not provided, it will only list the top-level contents. Do not use this tool to confirm the existence of files you may have created, as the user will let you know if the files were created successfully or not.")]
+    [Description("A read-only tool to list files and directories within the specified directory. If recursive is true, it will list all files and directories recursively. If recursive is false or not provided, it will only list the top-level contents. Do not use this tool to confirm the existence of files you may have created, as the user will let you know if the files were created successfully or not.")]
     public string ListFiles(
         [Description("The path of the directory to list contents for (relative to the current working directory)")]
         string path,
@@ -88,7 +88,7 @@ public class FileSystemTools
         return $"success";
     }
 
-    [Description("Request to read the contents of a file at the specified path. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. Automatically extracts raw text from PDF and DOCX files. May not be suitable for other types of binary files, as it returns the raw content as a string")]
+    [Description("A read-only tool to read the contents of a file at the specified path. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. Automatically extracts raw text from PDF and DOCX files. May not be suitable for other types of binary files, as it returns the raw content as a string")]
     public string ReadFile(
         [Description("The path of the file to read (relative to the current working directory)")]
         string path)
