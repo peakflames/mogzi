@@ -73,7 +73,19 @@
             "args": ["summarize this"],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,
-            "console": "internalConsole",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "C#: CLI oneshot write file",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/Cli/bin/Debug/net9.0/max.dll",
+            "args": ["write 3 dad jokes to the file ./junk.md", "-ta", "all"],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
             "justMyCode": false
         }
     ]

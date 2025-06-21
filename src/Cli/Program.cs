@@ -53,7 +53,7 @@ public partial class Program
 
         if (chatClient == null)
         {
-            var clientResult = ChatClient.Create(options.ConfigPath, options.ProfileName, App.ConsoleWriteLLMResponseDetails);
+            var clientResult = ChatClient.Create(options.ConfigPath, options.ProfileName, options.ToolApprovals, options.Mode, App.ConsoleWriteLLMResponseDetails);
             if (clientResult.IsFailed)
             {
                 App.ConsoleWriteError(clientResult.ToResult());

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using MaxBot.Domain;
+using System.ClientModel.Primitives;
 
 
 namespace MaxBot;
@@ -26,7 +27,7 @@ public partial class ChatClient
 
     private FileSystemTools FileSystemTools { get; init; }
 
-    private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, Action<string>? llmResponseDetailsCallback = null)
+    private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string>? llmResponseDetailsCallback = null)
     {
         ChatClientMEAI = chatClient;
         Config = config;
@@ -52,9 +53,11 @@ public partial class ChatClient
                                                    DefaultShell,
                                                    Username,
                                                    Hostname,
-                                                   Directory.GetCurrentDirectory());
+                                                   Directory.GetCurrentDirectory(),
+                                                   config,
+                                                   mode);
 
-        FileSystemTools = new FileSystemTools(llmResponseDetailsCallback);
+        FileSystemTools = new FileSystemTools(config, llmResponseDetailsCallback);
         ChatOptions = new ChatOptions{
             Tools = [
                 AIFunctionFactory.Create(FileSystemTools.WriteFile),
@@ -65,13 +68,13 @@ public partial class ChatClient
     }
 
     
-    public static Result<ChatClient> Create(string configFilePath, string? profileName = null, Action<string>? llmResponseDetailsCallback = null)
+    public static Result<ChatClient> Create(string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string>? llmResponseDetailsCallback = null)
     {
-        var result = Create(null, configFilePath, profileName, llmResponseDetailsCallback);
+        var result = Create(null, configFilePath, profileName, toolApprovals, mode, llmResponseDetailsCallback);
         return result;
     }
 
-    public static Result<ChatClient> Create(IChatClient? chatClient, string configFilePath, string? profileName = null, Action<string>? llmResponseDetailsCallback = null)
+    public static Result<ChatClient> Create(IChatClient? chatClient, string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string>? llmResponseDetailsCallback = null)
     {
         string jsonContent;
         try
@@ -99,6 +102,11 @@ public partial class ChatClient
         if (maxbotConfig is null)
         {
             return Result.Fail($"While reading the config '{configFilePath}', was not able to find the 'maxbotConfig' section.");
+        }
+
+        if (!string.IsNullOrEmpty(toolApprovals))
+        {
+            maxbotConfig.ToolApprovals = toolApprovals;
         }
 
 
@@ -134,21 +142,28 @@ public partial class ChatClient
 
         if (chatClient == null)
         {
-            chatClient = new OpenAI.Chat.ChatClient(
-                modelId,
-                new ApiKeyCredential(apiKey),
-                new OpenAIClientOptions
-                {
-                    Endpoint = new(baseUrl)
-                })
-                .AsIChatClient()
-                .AsBuilder()
-                    .UseFunctionInvocation()
-                    .Build();
+            chatClient = new OpenAIClient(
+                    new ApiKeyCredential(apiKey),
+                    new OpenAIClientOptions
+                    {
+                        Endpoint = new(baseUrl),
+                        RetryPolicy = new ClientRetryPolicy(3),
+                        NetworkTimeout = TimeSpan.FromSeconds(600),
+                        UserAgentApplicationId = "maxbot"
+                    }
+                )
+                .GetChatClient(modelId)
+                .AsIChatClient();
+
+            chatClient = ChatClientBuilderChatClientExtensions.AsBuilder(chatClient)
+                .ConfigureOptions(options => options.MaxOutputTokens = 16000)
+                .ConfigureOptions(options => options.Temperature = 0.0f)
+                .UseFunctionInvocation()
+                .Build();
         }
+        
 
-
-        return new ChatClient(chatClient, maxbotConfig, profile, apiProvider, llmResponseDetailsCallback);
+        return new ChatClient(chatClient, maxbotConfig, profile, apiProvider, mode ?? "oneshot", llmResponseDetailsCallback);
     }
 
 }

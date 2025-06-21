@@ -21,9 +21,12 @@ public class MaxbotConfiguration
 
     [JsonPropertyName("apiProviders")]
     public List<ApiProvider> ApiProviders { get; set; } = [];
-    
+
     [JsonPropertyName("profiles")]
     public List<Profile> Profiles { get; set; } = [];
+
+    [JsonPropertyName("tool_approvals")]
+    public string ToolApprovals { get; set; } = "readonly";
 }
 
 public class ApiProvider
