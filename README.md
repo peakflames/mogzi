@@ -144,6 +144,37 @@ The application uses a JSON configuration file with the following structure:
   - **apiProvider**: Name of the API provider to use (must match a provider name)
   - **modelId**: Model ID to use for chat completion
 
+### Tool Approval
+
+MaxBot includes a tool approval feature to provide control over file system operations. This setting can be configured in your `maxbot.config.json` file or overridden at runtime with a command-line argument.
+
+**Configuration:**
+
+To set the default tool approval mode, add the `tool_approvals` property to your `maxbot.config.json`:
+
+```json
+{
+    "maxbotConfig": {
+        "tool_approvals": "readonly",
+        "apiProviders": [ ... ],
+        "profiles": [ ... ]
+    }
+}
+```
+
+**Command-Line Override:**
+
+You can override the configuration file setting using the `--tool-approvals` or `-ta` argument:
+
+```bash
+max "Create a new file" -ta all
+```
+
+**Modes:**
+
+*   `readonly`: (Default) MaxBot will ask for your permission before performing any write operations (e.g., creating or modifying files).
+*   `all`: MaxBot is pre-approved to perform any file system operation without asking for confirmation.
+
 ## Contributing 🤝
 
 Contributions are welcome! Please read the [developer guidelines](.clinerules/developer_guidelines.md) for more information on how to build the project and run tests.
@@ -155,5 +186,3 @@ Copyright (c) 2025 Todd Schavey
 This work is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License.
 To view a copy of this license, visit http://creativecommons.org/licenses/by-nc/4.0/ or send a letter
 to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
-
-
