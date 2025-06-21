@@ -56,7 +56,7 @@ public partial class ChatClient
                                                    Directory.GetCurrentDirectory(),
                                                    config);
 
-        FileSystemTools = new FileSystemTools(llmResponseDetailsCallback);
+        FileSystemTools = new FileSystemTools(config, llmResponseDetailsCallback);
         ChatOptions = new ChatOptions{
             Tools = [
                 AIFunctionFactory.Create(FileSystemTools.WriteFile),

@@ -72,6 +72,8 @@ This document outlines the coding conventions, rules, and patterns used in this 
 - **Redirect Console I/O:** Use `Console.SetIn` and `Console.SetOut` to redirect console input and output for testing.
 - **Test `ChatClient`:** Create a test implementation of `ChatClient` to return predictable responses.
 - **Keep tests in sync:** Always update tests to reflect the latest changes in the CLI's behavior.
+- **Test LLM interactions flexibly:** When testing interactions with LLMs, avoid asserting for exact string matches. Instead, use regular expressions or keyword checks to verify that the response contains the key information or intent, accommodating the conversational nature of AI.
+- **Refine tests on failure:** When a black-box test fails, especially one involving an LLM, do not immediately revert to a mocked implementation. First, analyze the failure to understand if the test's assertions are too brittle. If the core behavior is correct but the output is conversational, adapt the test to be more flexible before considering a change in testing strategy.
 
 ## Package Management
 
