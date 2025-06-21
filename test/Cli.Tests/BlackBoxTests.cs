@@ -81,7 +81,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
         var testChatClient = new TestChatClient("Piped input summarized.");
-        var clientResult = ChatClient.Create(testChatClient, "maxbot.config.json");
+        var clientResult = ChatClient.Create(testChatClient, "maxbot.config.json", null, "oneshot");
         clientResult.IsFailed.Should().Be(false);
 
         // Act
