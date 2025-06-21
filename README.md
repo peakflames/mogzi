@@ -98,7 +98,7 @@ Before running the application, ensure you have:
                {
                     "name": "Gemini",
                     "apiProvider": "RequestyAI",
-                    "modelId": "coding/gemini-2.5-pro"
+                    "modelId": "google/gemini-2.5-pro"
                 },
                 {
                     "name": "V3",
