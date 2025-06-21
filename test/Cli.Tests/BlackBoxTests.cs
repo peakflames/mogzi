@@ -127,4 +127,36 @@ public class BlackBoxTests
         // Clean up the temporary file.
         File.Delete(tempFile);
     }
+
+    [Theory]
+    [InlineData("gpt")]
+    [InlineData("gemini")]
+    [InlineData("sonnet")]
+    public async Task Run_WriteFile_WithLiveLlm_ShouldSucceed(string profileName)
+    {
+        // Arrange
+        var tempFile = Path.GetTempFileName();
+        var fileContent = "This is a test file for the write_file scenario.";
+
+        var args = new string[] { $"Write the following content to the file at {tempFile}: {fileContent}" };
+
+        var output = new StringWriter();
+        Console.SetOut(output);
+
+        var clientResult = ChatClient.Create("maxbot.config.json", profileName, App.ConsoleWriteLLMResponseDetails);
+        clientResult.IsFailed.Should().Be(false);
+
+        // Act
+        var exitCode = await Program.Run(args, clientResult.Value);
+
+        // Assert
+        exitCode.Should().Be(0);
+        
+        // Check that the file was created and has the correct content.
+        var createdFileContent = await File.ReadAllTextAsync(tempFile);
+        createdFileContent.Should().Be(fileContent);
+
+        // Clean up the temporary file.
+        File.Delete(tempFile);
+    }
 }
