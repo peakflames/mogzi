@@ -163,20 +163,7 @@ public partial class ChatClient
         }
         
 
-        // chatClient ??= new OpenAI.Chat.ChatClient(
-        //         modelId,
-        //         new ApiKeyCredential(apiKey),
-        //         new OpenAIClientOptions
-        //         {
-        //             Endpoint = new(baseUrl)
-        //         })
-        //         .AsIChatClient()
-        //         .AsBuilder()
-        //             .UseFunctionInvocation()
-        //             .Build();
-
-
-        return new ChatClient(chatClient, maxbotConfig, profile, apiProvider, mode, llmResponseDetailsCallback);
+        return new ChatClient(chatClient, maxbotConfig, profile, apiProvider, mode ?? "oneshot", llmResponseDetailsCallback);
     }
 
 }
