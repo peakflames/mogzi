@@ -4,6 +4,8 @@ using FluentAssertions;
 using System.IO;
 using System;
 using MaxBot;
+using System.Text.RegularExpressions;
+using CLI;
 
 namespace Cli.Tests;
 
@@ -89,5 +91,40 @@ public class BlackBoxTests
         exitCode.Should().Be(0);
         var response = output.ToString();
         response.Should().Contain("Piped input summarized.");
+    }
+
+    [Theory]
+    [InlineData("gpt")]
+    [InlineData("gemini")]
+    [InlineData("sonnet")]
+    public async Task Run_ReadFile_WithLiveLlm_ShouldSucceedWithSingleApproval(string profileName)
+    {
+        // Arrange
+        var tempFile = Path.GetTempFileName();
+        var fileContent = "This is a test file for the read_file scenario.";
+        await File.WriteAllTextAsync(tempFile, fileContent);
+
+        var args = new string[] { $"Read the content of the file at {tempFile} and tell me what it says." };
+        // var input = new StringReader("y\n");
+        // Console.SetIn(input);
+
+        var output = new StringWriter();
+        Console.SetOut(output);
+
+        var clientResult = ChatClient.Create("maxbot.config.json", profileName, App.ConsoleWriteLLMResponseDetails);
+        clientResult.IsFailed.Should().Be(false);
+
+        // Act
+        var exitCode = await Program.Run(args, clientResult.Value);
+
+        // Assert
+        exitCode.Should().Be(0);
+        var response = output.ToString();
+
+        // Check that the file content is in the response.
+        response.Should().Contain(fileContent);
+
+        // Clean up the temporary file.
+        File.Delete(tempFile);
     }
 }

@@ -35,13 +35,15 @@ public class App
 
     public async Task<int> Run(string activeMode, string? userPrompt = null)
     {
+        var retval = 0;
+
         if (activeMode == "chat")
         {
-            await StartChatAsync();
+            retval = await StartChatAsync();
         }
         else if (activeMode == "oneshot")
         {
-            await StartOneShotAsync(userPrompt);
+            retval = await StartOneShotAsync(userPrompt);
         }
         else
         {
@@ -49,10 +51,10 @@ public class App
             return 1;
         }
 
-        return 0;
+        return retval;
     }
 
-    public async Task StartChatAsync()
+    public async Task<int> StartChatAsync()
     {
         try
         {
@@ -108,25 +110,25 @@ public class App
         {
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"Error: {ex.Message}");
-            Environment.Exit(1);
+            return 1;
         }
 
-
+        return 0;
     }
 
-    public async Task StartOneShotAsync(string? userPrompt)
+    public async Task<int> StartOneShotAsync(string? userPrompt)
     {
         try
         {
             List<ChatMessage> chatHistory =
             [
                 new(ChatRole.System, maxClient.SystemPrompt),
-            ];  
-            
+            ];
+
             // if the user prompt is empty, "exit", or "quit", then exit the chat loop
             if (string.IsNullOrWhiteSpace(userPrompt) || userPrompt.ToLower() == "exit" || userPrompt.ToLower() == "quit")
             {
-                return;
+                return 0;
             }
 
             chatHistory.Add(new ChatMessage(ChatRole.User, userPrompt));
@@ -144,14 +146,15 @@ public class App
             {
                 WriteTokenMetrics(chatHistory);
             }
-            
         }
         catch (Exception ex)
         {
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"Error: {ex.Message}");
-            Environment.Exit(1);
+            return 1;
         }
+
+        return 0;
     }
 
     private static void WriteTokenMetrics(List<ChatMessage> chatHistory)

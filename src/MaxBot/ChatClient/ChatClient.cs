@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using MaxBot.Domain;
+using System.ClientModel.Primitives;
 
 
 namespace MaxBot;
@@ -52,7 +53,8 @@ public partial class ChatClient
                                                    DefaultShell,
                                                    Username,
                                                    Hostname,
-                                                   Directory.GetCurrentDirectory());
+                                                   Directory.GetCurrentDirectory(),
+                                                   config);
 
         FileSystemTools = new FileSystemTools(llmResponseDetailsCallback);
         ChatOptions = new ChatOptions{
@@ -134,18 +136,38 @@ public partial class ChatClient
 
         if (chatClient == null)
         {
-            chatClient = new OpenAI.Chat.ChatClient(
-                modelId,
-                new ApiKeyCredential(apiKey),
-                new OpenAIClientOptions
-                {
-                    Endpoint = new(baseUrl)
-                })
-                .AsIChatClient()
-                .AsBuilder()
-                    .UseFunctionInvocation()
-                    .Build();
+            chatClient = new OpenAIClient(
+                    new ApiKeyCredential(apiKey),
+                    new OpenAIClientOptions
+                    {
+                        Endpoint = new(baseUrl),
+                        RetryPolicy = new ClientRetryPolicy(3),
+                        NetworkTimeout = TimeSpan.FromSeconds(600),
+                        UserAgentApplicationId = "maxbot"
+                    }
+                )
+                .GetChatClient(modelId)
+                .AsIChatClient();
+
+            chatClient = ChatClientBuilderChatClientExtensions.AsBuilder(chatClient)
+                .ConfigureOptions(options => options.MaxOutputTokens = 16000)
+                .ConfigureOptions(options => options.Temperature = 0.0f)
+                .UseFunctionInvocation()
+                .Build();
         }
+        
+
+        // chatClient ??= new OpenAI.Chat.ChatClient(
+        //         modelId,
+        //         new ApiKeyCredential(apiKey),
+        //         new OpenAIClientOptions
+        //         {
+        //             Endpoint = new(baseUrl)
+        //         })
+        //         .AsIChatClient()
+        //         .AsBuilder()
+        //             .UseFunctionInvocation()
+        //             .Build();
 
 
         return new ChatClient(chatClient, maxbotConfig, profile, apiProvider, llmResponseDetailsCallback);
