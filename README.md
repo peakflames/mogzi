@@ -33,7 +33,7 @@ Before running the application, ensure you have:
 
 ## Setup 🛠️
 
-1. Download the latest release from the [Releases](https://github.com/tschavey/MaxBot/releases) page.
+1. Download the latest release following the steps below.
 
    For Windows:
 
