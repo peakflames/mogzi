@@ -87,7 +87,46 @@ public class App
             Console.WriteLine();
             Console.ResetColor();
             
+            // Create a list to hold session info for sorting
+            var sessionInfoList = new List<(string SessionPath, string LastUpdatedAt)>();
+            
+            // Collect session info for sorting
             foreach (var session in sessions)
+            {
+                string sessionPath = session;
+                string filePath = Path.Combine(sessionPath, "chatHistory.json");
+                string lastUpdatedAt = "0"; // Default for sorting if we can't read the file
+                
+                // Try to read the last updated date from the chat history file
+                if (File.Exists(filePath))
+                {
+                    try
+                    {
+                        string jsonContent = File.ReadAllText(filePath);
+                        var historyRoot = JsonSerializer.Deserialize(jsonContent, ChatHistoryContext.Default.ChatHistoryRoot);
+                        
+                        if (historyRoot != null && !string.IsNullOrEmpty(historyRoot.LastUpdatedAt))
+                        {
+                            lastUpdatedAt = historyRoot.LastUpdatedAt;
+                        }
+                    }
+                    catch
+                    {
+                        // If there's an error reading the file, just use the default value
+                    }
+                }
+                
+                sessionInfoList.Add((sessionPath, lastUpdatedAt));
+            }
+            
+            // Sort sessions by LastUpdatedAt in descending order
+            var sortedSessions = sessionInfoList
+                .OrderBy(s => s.LastUpdatedAt)
+                .Select(s => s.SessionPath)
+                .ToList();
+            
+            // Display sessions in sorted order
+            foreach (var session in sortedSessions)
             {
                 string sessionId = Path.GetFileName(session);
                 string sessionPath = session;

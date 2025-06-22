@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `/help` - Display available slash commands
 - Fixed bug where changing tool approval setting with `/tool-approval` command wasn't reflected in the system prompt
 - Added `--debug` flag to enable detailed tool logging in the console
+- Improved session listing to order sessions by last update date, with most recently used sessions appearing last
 
 ## [1.3.0]
 
