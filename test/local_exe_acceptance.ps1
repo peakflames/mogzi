@@ -108,6 +108,11 @@ $testCases = @(
         PipedInput = "state only the word 'bruh' in all lowercase"
         Args = @("summarize this")
         ExpectedOutput = "bruh"
+    },
+    @{
+        Name = "Execute command"
+        Args = @("execute the command 'echo acceptance test'", "--tool-approvals", "all")
+        ExpectedOutput = "acceptance test"
     }
 )
 

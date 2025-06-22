@@ -60,6 +60,8 @@ This document outlines the coding conventions, rules, and patterns used in this 
 - **Expression-bodied members:** Use expression-bodied members for simple methods and properties.
 - **`IAsyncEnumerable<T>`:** Use `IAsyncEnumerable<T>` for streaming asynchronous data.
 - **`nameof` operator:** Use the `nameof` operator to get the name of a variable, type, or member as a string.
+- **Assume Cross-Platform:** All code that interacts with the operating system (e.g., file paths, processes, environment variables) **must** be written and tested for Windows, macOS, and Linux compatibility from the start. Use `System.Runtime.InteropServices.RuntimeInformation` for OS-specific logic.
+- **Verify AOT Compatibility:** This is an AOT-compiled project. Before adding any new NuGet package or using a .NET API, you **must** verify it is compatible with Native AOT compilation to avoid significant rework.
 
 ## CLI Design
 
@@ -75,6 +77,7 @@ This document outlines the coding conventions, rules, and patterns used in this 
 - **Test LLM interactions flexibly:** When testing interactions with LLMs, avoid asserting for exact string matches. Instead, use regular expressions or keyword checks to verify that the response contains the key information or intent, accommodating the conversational nature of AI.
 - **Refine tests on failure:** When a black-box test fails, especially one involving an LLM, do not immediately revert to a mocked implementation. First, analyze the failure to understand if the test's assertions are too brittle. If the core behavior is correct but the output is conversational, adapt the test to be more flexible before considering a change in testing strategy.
 - **Ensure test isolation:** Tests should not depend on shared state. Each test should create its own required state (e.g., configuration files, temporary directories) to ensure it can run independently and produce consistent results.
+- **Test Against Defaults:** Acceptance and integration tests should verify feature behavior against the application's default, secure-by-default configuration (e.g., `tool_approvals: readonly`). Tests should only override these settings when explicitly testing a less secure mode.
 
 ## Package Management
 
@@ -221,6 +224,21 @@ Phase 1 Critical requirements (12 TORs) must be implemented first:
 - Update verification status in traceability matrix upon completion
 
 ## Development
+
+### Requirements-Driven Workflow
+
+All new feature development or modification must follow a "requirements-first" black-box testing workflow. This process ensures that every piece of code is directly traceable to a requirement and is verified against that requirement from the outset.
+
+1.  **Step 1: Create a Test Skeleton:** Before writing any implementation code, the developer **MUST** create or update the relevant test file with skeleton test cases.
+    -   These tests must be derived directly from the system requirements (TORs).
+    -   Each test should represent a specific, verifiable aspect of the requirement.
+    -   The tests can be initially empty or marked with `[Fact(Skip = "Skeleton only")]`. Their purpose is to serve as a contract for what the implementation needs to achieve.
+
+2.  **Step 2: Implement the Feature:** With the test contract defined, write the production code necessary to satisfy the requirements.
+
+3.  **Step 3: Complete and Pass the Tests:** Flesh out the logic for the skeleton tests created in Step 1. The feature is not considered complete until all requirements-based tests are passing.
+
+This workflow is mandatory and is the primary method for ensuring quality and traceability.
 
 ### Acceptance Testing
 

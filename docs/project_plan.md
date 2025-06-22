@@ -34,7 +34,7 @@ This table summarizes the implementation status of the tools anticipated by the 
 | `replace_in_file` | TOR-3.1, TOR-3.2 | ✅ Implemented | Core file modification capability. |
 | `list_files` | TOR-3.1 | ✅ Implemented | Lists files and directories. |
 | `ask_followup_question` | TOR-2.1 | ✅ Implemented | Part of the core conversational loop. |
-| `execute_command` | TOR-4.2, TOR-7.1 | ❌ Not Implemented | **Priority 1 for Phase 1.** |
+| `execute_command` | TOR-4.2, TOR-7.1 | ✅ Implemented | Cross-platform and AOT-safe. |
 | `write_to_file` (with permissions) | TOR-3.3 | ❌ Not Implemented | **Priority 2 for Phase 1.** |
 | `replace_in_file` (with permissions) | TOR-3.3 | ❌ Not Implemented | **Priority 2 for Phase 1.** |
 | `attempt_completion` | TOR-5.2 | ❌ Not Implemented | Slated for Phase 2. |
@@ -206,11 +206,10 @@ This table summarizes the implementation status of the tools anticipated by the 
 
 ### Short-term Goals (Phase 1 Completion)
 
-The following tasks are required to complete Phase 1, listed in order of priority:
+With the `execute_command` tool now implemented, the following tasks are required to complete Phase 1, listed in order of priority:
 
-1.  **Implement Safe Command Execution (TOR-4.2)**: Introduce the `execute_command` tool with robust safeguards to prevent unintended system-level changes. This is the highest priority as it unlocks critical new capabilities securely.
-2.  **Implement File Permission Checks (TOR-3.3)**: Enhance all file system tools (`write_to_file`, `replace_in_file`) to proactively check for and respect user and file system permissions before attempting operations.
-3.  **Improve Graceful Error Handling (TOR-8.2)**: Refine error handling mechanisms across the application to ensure failures are handled gracefully, preventing data loss and providing clear, actionable feedback to the user.
+1.  **Implement File Permission Checks (TOR-3.3)**: Enhance all file system tools (`write_to_file`, `replace_in_file`) to proactively check for and respect user and file system permissions before attempting operations. This is the next critical security feature.
+2.  **Improve Graceful Error Handling (TOR-8.2)**: Refine error handling mechanisms across the application to ensure failures are handled gracefully, preventing data loss and providing clear, actionable feedback to the user.
 
 ### Medium-term Goals (Phase 2-3)
 1. Develop comprehensive test suites for each implemented requirement

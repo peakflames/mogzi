@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.2] - 2025-MM-DD
 
-- TBD
+- **Added `execute_command` tool** to allow the AI to run shell commands, satisfying TOR-4.2.
+  - The tool is cross-platform, automatically using `cmd.exe` on Windows, `zsh` on macOS, and `bash` on Linux.
+  - It respects the `tool_approvals` configuration, providing a security layer for potentially destructive operations (TOR-7.1).
+
 
 ## [1.3.1] - 2025-06-22
 

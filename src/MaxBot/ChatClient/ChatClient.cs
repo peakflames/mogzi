@@ -36,6 +36,7 @@ public partial class ChatClient
     public ChatOptions ChatOptions { get; init; }
 
     private FileSystemTools FileSystemTools { get; init; }
+    private SystemTools SystemTools { get; init; }
 
     private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string>? llmResponseDetailsCallback = null)
     {
@@ -62,9 +63,15 @@ public partial class ChatClient
         // SystemPrompt is now a computed property, so we don't need to set it here
 
         FileSystemTools = new FileSystemTools(config, llmResponseDetailsCallback);
+        SystemTools = new SystemTools(config, llmResponseDetailsCallback);
+        
+        var allTools = new List<AITool>();
+        allTools.AddRange(FileSystemTools.GetTools().Cast<AITool>());
+        allTools.AddRange(SystemTools.GetTools().Cast<AITool>());
+
         ChatOptions = new ChatOptions
         {
-            Tools = FileSystemTools.GetTools().Cast<AITool>().ToList()
+            Tools = allTools
         };
     }
 

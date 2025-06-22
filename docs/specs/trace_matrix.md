@@ -39,7 +39,7 @@
 | TOR ID | Requirement | Tool Specifications | Implementation Components | Test Cases | Verification Status |
 |--------|-------------|-------------------|--------------------------|------------|-------------------|
 | TOR-4.1 | MaxBot integration | [All tool specs](tools/_index.md) | `Cli.Program`, `Cli.App` | `test/local_exe_acceptance.ps1` | 🟡 Demonstrable |
-| TOR-4.2 | Safe command execution | [execute_command_tool_spec.md](tools/execute_command_tool_spec.md) | To be implemented | To be developed | ❌ Not Verified |
+| TOR-4.2 | Safe command execution | [execute_command_tool_spec.md](tools/execute_command_tool_spec.md) | `MaxBot.Tools.SystemTools.ExecuteCommand` | `test/MaxBot.Tests/Tools/SystemToolTests.cs` | ✅ Verified |
 | TOR-4.3 | Browser automation | [browser_action_tool_spec.md](tools/browser_action_tool_spec.md) | To be implemented | To be developed | ❌ Not Verified |
 
 ### TOR-5: Task Management and Workflow
@@ -62,7 +62,7 @@
 
 | TOR ID | Requirement | Tool Specifications | Implementation Components | Test Cases | Verification Status |
 |--------|-------------|-------------------|--------------------------|------------|-------------------|
-| TOR-7.1 | Approval for destructive ops | [All file tools](tools/_index.md) | `MaxbotConfiguration.ToolApprovals`, `CliArgParser` | `test/Cli.Tests/CliArgParserTests.cs` | ✅ Verified |
+| TOR-7.1 | Approval for destructive ops | [All file tools](tools/_index.md), [execute_command_tool_spec.md](tools/execute_command_tool_spec.md) | `MaxbotConfiguration.ToolApprovals`, `CliArgParser`, `MaxBot.Tools.SystemTools.ExecuteCommand` | `test/Cli.Tests/CliArgParserTests.cs`, `test/MaxBot.Tests/Tools/SystemToolTests.cs` | ✅ Verified |
 | TOR-7.2 | Working directory constraints | [All file tools](tools/_index.md) | FileSystemTools.IsPathInWorkingDirectory() | test/MaxBot.Tests/Tools/FileSystemToolTests.cs | ✅ Verified |
 | TOR-7.3 | Input/output validation | [All tool specs](tools/_index.md) | To be implemented | To be developed | ❌ Not Verified |
 
