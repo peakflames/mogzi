@@ -120,10 +120,19 @@ jobs:
           
   create-develop-prerelease:
     needs: build
-    if: (github.ref == 'refs/heads/develop' && github.event_name == 'workflow_dispatch' && github.event.inputs.create_prerelease == true)
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.create_prerelease == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.ref || github.ref }}
+      
+      - name: Debug workflow information
+        run: |
+          echo "GitHub Ref: ${{ github.ref }}"
+          echo "Event Name: ${{ github.event_name }}"
+          echo "Create Pre-release Input: ${{ github.event.inputs.create_prerelease }}"
+          echo "Pre-release Name Input: ${{ github.event.inputs.prerelease_name }}"
       
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -139,12 +148,23 @@ jobs:
       - name: Extract version from project file
         id: project_version
         run: |
-          VERSION=$(grep -o '<Version>.*</Version>' ${{ env.PROJECT_PATH }} | sed 's/<Version>\(.*\)<\/Version>/\1/')
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          if [ -f "${{ env.PROJECT_PATH }}" ]; then
+            VERSION=$(grep -o '<Version>[^<]*</Version>' ${{ env.PROJECT_PATH }} | sed 's/<Version>\(.*\)<\/Version>/\1/')
+            if [ -z "$VERSION" ]; then
+              VERSION="1.0.0"
+              echo "Could not extract version from project file, using default: $VERSION"
+            fi
+            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+            echo "Extracted version: $VERSION"
+          else
+            echo "Project file not found: ${{ env.PROJECT_PATH }}"
+            echo "VERSION=1.0.0" >> $GITHUB_OUTPUT
+          fi
       
       - name: Set develop version
         run: |
           echo "DEV_VERSION=${{ steps.project_version.outputs.VERSION }}-dev.${{ steps.date.outputs.DATE }}.${{ steps.sha.outputs.SHA }}" >> $GITHUB_ENV
+          echo "Using develop version: ${{ steps.project_version.outputs.VERSION }}-dev.${{ steps.date.outputs.DATE }}.${{ steps.sha.outputs.SHA }}"
       
       - name: Rename executables for pre-release
         run: |
