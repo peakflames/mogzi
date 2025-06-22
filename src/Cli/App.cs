@@ -218,13 +218,14 @@ public class App
                 const int maxWidth = 55;
                 const string promptPrefix = "│ First Prompt: \"";
                 const string continuationPrefix = "│               ";
+                const string rightBorder = "│";
                 
                 // Display the first line with the "First Prompt:" prefix
                 if (firstPrompt.Length <= maxWidth - promptPrefix.Length - 2) // -2 for the quotes
                 {
                     // Short prompt fits on one line
                     int padding = Math.Max(0, 45 - firstPrompt.Length - 2);
-                    Console.WriteLine($"{promptPrefix}{firstPrompt}\"{new string(' ', padding)} │");
+                    Console.WriteLine($"{promptPrefix}{firstPrompt}\"{new string(' ', padding)} {rightBorder}");
                 }
                 else
                 {
@@ -253,7 +254,7 @@ public class App
                     
                     // Output the first line with proper right-aligned pipe
                     int firstLinePadding = Math.Max(0, 45 - firstLineBuilder.Length - 1);
-                    Console.WriteLine($"{promptPrefix}{firstLineBuilder}{new string(' ', firstLinePadding)} │");
+                    Console.WriteLine($"{promptPrefix}{firstLineBuilder}{new string(' ', firstLinePadding)} {rightBorder}");
                     
                     // Process remaining words for continuation lines
                     if (wordIndex < words.Length)
@@ -283,11 +284,13 @@ public class App
                             {
                                 // Last line, add the closing quote
                                 int padding = Math.Max(0, 45 - lineBuilder.Length - 1);
-                                Console.WriteLine($"{continuationPrefix}{lineBuilder}\"{new string(' ', padding)} │");
+                                Console.WriteLine($"{continuationPrefix}{lineBuilder}\"{new string(' ', padding)} {rightBorder}");
                             }
                             else
                             {
-                                Console.WriteLine($"{continuationPrefix}{lineBuilder} │");
+                                // Add proper spacing before the right border
+                                int padding = Math.Max(0, 45 - lineBuilder.Length);
+                                Console.WriteLine($"{continuationPrefix}{lineBuilder}{new string(' ', padding)} {rightBorder}");
                             }
                         }
                     }
