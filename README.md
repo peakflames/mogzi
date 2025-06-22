@@ -15,15 +15,21 @@ An interactive command-line chat application featuring streaming responses and s
 
 ## Available Tools 🛠️
 
-MaxBot is equipped with a powerful set of tools to interact with your local system. Here is a summary of the currently implemented tools:
+MaxBot is equipped with a powerful set of tools to interact with your local system. Here is a summary of the currently implemented and upcoming tools:
 
-| Tool Name           | Notes                                                              | Safety/Security Features                                                                                                                            |
-| ------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `list_files`        | Lists files and directories, supports recursive listing.           | Read-only operation. Constrained to the working directory.                                                                                          |
-| `read_file`         | Reads the content of a specified file.                             | Read-only operation. Constrained to the working directory.                                                                                          |
-| `write_file`        | Creates a new file or overwrites an existing one.                  | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic writes with backups and checksums.<br>- Respects read-only file attributes. |
-| `replace_in_file`   | Performs targeted search and replace operations within a file.     | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic writes with backups and checksums.<br>- Respects read-only file attributes. |
-| `execute_command`   | Executes shell commands.                                           | - Requires `--tool-approvals all` by default.<br>- Cross-platform aware (uses `cmd`, `zsh`, `bash` appropriately).                                     |
+| Tool Name           | Status | Notes                                                              | Safety/Security Features                                                                                                                            |
+| ------------------- | ------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_files`        | ✅ Implemented | Lists files and directories, supports recursive listing.           | Read-only operation. Constrained to the working directory.                                                                                          |
+| `read_file`         | ✅ Implemented | Reads the content of a specified file.                             | Read-only operation. Constrained to the working directory.                                                                                          |
+| `write_file`        | ✅ Implemented | Creates a new file or overwrites an existing one.                  | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic writes with backups and checksums.<br>- Respects read-only file attributes. |
+| `replace_in_file`   | ✅ Implemented | Performs targeted search and replace operations within a file.     | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic writes with backups and checksums.<br>- Respects read-only file attributes. |
+| `execute_command`   | ✅ Implemented | Executes shell commands.                                           | - Requires `--tool-approvals all` by default.<br>- Cross-platform aware (uses `cmd`, `zsh`, `bash` appropriately).                                     |
+| `ask_followup_question` | ✅ Implemented | Allows the AI to ask clarifying questions during conversations.    | Read-only operation. Part of the core conversational interface.                                                                                     |
+| `search_files`      | 🎯 Next Priority | Regex-based search across files for enhanced code analysis.        | Read-only operation. Constrained to the working directory. Supports pattern matching across file contents.                                          |
+| `attempt_completion` | 🔄 Coming Soon | Signals task completion and presents results to the user.          | Read-only operation. Provides structured completion feedback and optional demonstration commands.                                                    |
+| `list_code_definition_names` | 📋 Planned | Lists code definitions (classes, functions, methods) in source files. | Read-only operation. Constrained to the working directory. Provides code structure analysis.                                                        |
+| `browser_action`    | 🌐 Future | Web browser automation for testing and interaction.                | Sandboxed browser operations. Requires explicit approval for navigation and interactions.                                                           |
+| `mcp_tools`         | 🔄 Coming Soon | Model Context Protocol support for external integrations.          | Configurable approval requirements. Enables integration with external services and APIs.                                                            |
 
 
 ### Examples 💡
