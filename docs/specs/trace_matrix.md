@@ -15,7 +15,7 @@
 | TOR ID | Requirement | Tool Specifications | Implementation Components | Test Cases | Verification Status |
 |--------|-------------|-------------------|--------------------------|------------|-------------------|
 | TOR-1.1 | AI code analysis and generation | [All tool specs](tools/_index.md) | To be implemented | To be developed | ❌ Not Verified |
-| TOR-1.2 | Context maintenance | [workflow_management_tools_spec.md](tools/workflow_management_tools_spec.md) | To be implemented | To be developed | ❌ Not Verified |
+| TOR-1.2 | Context maintenance | [workflow_management_tools_spec.md](workflow_management_tools_spec.md) | To be implemented | To be developed | ❌ Not Verified |
 | TOR-1.3 | Action explanations | [All tool specs](tools/_index.md) | To be implemented | To be developed | ❌ Not Verified |
 
 ### TOR-2: User Interface and Interaction
@@ -23,7 +23,7 @@
 | TOR ID | Requirement | Tool Specifications | Implementation Components | Test Cases | Verification Status |
 |--------|-------------|-------------------|--------------------------|------------|-------------------|
 | TOR-2.1 | Conversational interface | [ask_followup_question_tool_spec.md](tools/ask_followup_question_tool_spec.md) | To be implemented | To be developed | ❌ Not Verified |
-| TOR-2.2 | Planning/execution modes | [workflow_management_tools_spec.md](tools/workflow_management_tools_spec.md) | To be implemented | To be developed | ❌ Not Verified |
+| TOR-2.2 | Planning/execution modes | [workflow_management_tools_spec.md](workflow_management_tools_spec.md) | To be implemented | To be developed | ❌ Not Verified |
 | TOR-2.3 | Clear operation feedback | [attempt_completion_tool_spec.md](tools/attempt_completion_tool_spec.md) | To be implemented | To be developed | ❌ Not Verified |
 
 ### TOR-3: File System Integration
@@ -48,7 +48,7 @@
 |--------|-------------|-------------------|--------------------------|------------|-------------------|
 | TOR-5.1 | Iterative execution | [All tool specs](tools/_index.md) | To be implemented | To be developed | ❌ Not Verified |
 | TOR-5.2 | Completion verification | [attempt_completion_tool_spec.md](tools/attempt_completion_tool_spec.md) | To be implemented | To be developed | ❌ Not Verified |
-| TOR-5.3 | Context preservation | [workflow_management_tools_spec.md](tools/workflow_management_tools_spec.md) | To be implemented | To be developed | ❌ Not Verified |
+| TOR-5.3 | Context preservation | [workflow_management_tools_spec.md](workflow_management_tools_spec.md) | ChatHistoryService.SaveChatHistoryAsync(), ChatHistoryService.LoadChatHistoryAsync() | test/MaxBot.Tests/Domain/ChatHistoryServiceTests.cs | ✅ Verified |
 
 ### TOR-6: Extensibility and Integration
 
@@ -100,15 +100,15 @@
 | [ask_followup_question_tool_spec.md](tools/ask_followup_question_tool_spec.md) | TOR-2.1, TOR-2.3 | TOR-1.3, TOR-5.1 |
 | [attempt_completion_tool_spec.md](tools/attempt_completion_tool_spec.md) | TOR-5.2, TOR-2.3 | TOR-1.3, TOR-8.2 |
 | [mcp_tools_spec.md](tools/mcp_tools_spec.md) | TOR-6.1, TOR-6.2 | TOR-6.3, TOR-8.2 |
-| [workflow_management_tools_spec.md](tools/workflow_management_tools_spec.md) | TOR-2.2, TOR-5.3 | TOR-1.2, TOR-5.1 |
+| [workflow_management_tools_spec.md](workflow_management_tools_spec.md) | TOR-2.2, TOR-5.3 | TOR-1.2, TOR-5.1 |
 
 ## 4. Verification Status Summary
 
 ### Overall Verification Status
 - **Total Requirements**: 24
-- **Verified**: 1 (4%)
+- **Verified**: 2 (8%)
 - **Partially Verified**: 0 (0%)
-- **Not Verified**: 23 (96%)
+- **Not Verified**: 22 (92%)
 - **Verification Pending**: 0 (0%)
 
 ### Verification Methods Planned
@@ -120,13 +120,14 @@
 *Note: Some requirements use multiple verification methods*
 
 ### Critical Requirements Status
-11 of 12 Critical priority requirements require implementation and verification:
+10 of 12 Critical priority requirements require implementation and verification:
 - TOR-1.1, TOR-1.2 ❌
 - TOR-2.1 ❌
 - TOR-3.1, TOR-3.3 ❌
 - TOR-3.2 ✅ (Verified)
 - TOR-4.1, TOR-4.2 ❌
 - TOR-5.1 ❌
+- TOR-5.3 ✅ (Verified)
 - TOR-7.1, TOR-7.2 ❌
 - TOR-8.2 ❌
 o

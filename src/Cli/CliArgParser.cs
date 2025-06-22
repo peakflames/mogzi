@@ -14,6 +14,7 @@ public record CommandLineOptions
     public bool ShowHelp { get; init; }
     public bool ShowVersion { get; init; }
     public string? ToolApprovals { get; init; }
+    public string? LoadSession { get; init; }
 }
 
 
@@ -37,6 +38,7 @@ public static class CliArgParser
         bool showHelp = false;
         bool showVersion = false;
         string? toolApprovals = null;
+        string? loadSession = null;
         var remainingArgs = new List<string>();
 
         for (int i = 0; i < args.Length; i++)
@@ -44,6 +46,10 @@ public static class CliArgParser
             if (args[i] == "--chat")
             {
                 mode = "chat";
+            }
+            else if (args[i] == "--list-sessions" || args[i] == "--sessions")
+            {
+                mode = "list-sessions";
             }
             else if (args[i] == "-h" || args[i] == "--help")
             {
@@ -74,6 +80,11 @@ public static class CliArgParser
                 {
                     return Result.Fail("Invalid value for --tool-approvals. Must be 'readonly' or 'all'.");
                 }
+                i++; // Skip the next argument
+            }
+            else if ((args[i] == "-l" || args[i] == "--load-session") && i + 1 < args.Length)
+            {
+                loadSession = args[i + 1];
                 i++; // Skip the next argument
             }
             else if (args[i].StartsWith('-'))
@@ -124,7 +135,8 @@ public static class CliArgParser
             ShowStatus = showStatus,
             ShowHelp = showHelp,
             ShowVersion = showVersion,
-            ToolApprovals = toolApprovals
+            ToolApprovals = toolApprovals,
+            LoadSession = loadSession
         };
     }
 
@@ -167,12 +179,15 @@ public static class CliArgParser
         Console.WriteLine();
         Console.WriteLine("Usage: max [prompt] [options]");
         Console.WriteLine("       max chat [options]");
+        Console.WriteLine("       max --list-sessions");
         Console.WriteLine();
         Console.WriteLine("Options:");
         Console.WriteLine("  -c, --config <path>          Path to the configuration file (default: maxbot.config.json)");
         Console.WriteLine("  -p, --profile <name>         Name of the profile to use (overrides default profile in config)");
         Console.WriteLine("  -s, --status                 Report the current status (i.e. active config, etc)");
         Console.WriteLine("  -ta, --tool-approvals <mode> Override the tool approval setting (readonly|all)");
+        Console.WriteLine("  -l, --load-session <id>      Load a previous chat session by ID (timestamp format: YYYYMMDD_HHMMSS)");
+        Console.WriteLine("  --list-sessions, --sessions  List all available chat sessions");
         Console.WriteLine("  -h, --help                   Display this help message");
         Console.ResetColor();
     }

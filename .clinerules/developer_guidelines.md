@@ -224,3 +224,7 @@ To run acceptacne tests the
 ./test/local_exe_acceptance.ps1 # This script will publish the exe to ./dist and exerceise a sample of the feature switches
 #if it exist non-zero than it is a fail otherwise pass
 ```
+
+## Microsoft.Extensions.AI Developer Docs
+
+- docs\llmctx\usage-of-microsoft-extensions-ai.md

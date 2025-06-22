@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Corrected the test execution command in the developer guidelines.
 - Updated `FileSystemTools` to use `AIFunctionFactoryOptions` to provide snake_case names for tools to the LLM, aligning with tool specifications.
 - Added an architecture section with Mermaid diagrams to the developer guidelines.
+- Implemented TOR-5.3: Chat history persistence to disk with session management
+- Added ability to list and load previous chat sessions
+- Added filtering of system messages when saving chat history
+- Added injection of current system prompt when loading chat history
+- Added comprehensive tests for chat history service
 
 ## [1.2.0]
 

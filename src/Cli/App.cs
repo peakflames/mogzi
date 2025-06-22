@@ -1,6 +1,8 @@
 using FluentResults;
 using MaxBot;
+using MaxBot.Domain;
 using Microsoft.Extensions.AI;
+using System.IO;
 
 namespace CLI;
 
@@ -8,6 +10,8 @@ public class App
 {
     private ChatClient maxClient;
     private bool showStatus;
+    private readonly ChatHistoryService _chatHistoryService;
+    private string? _currentSessionPath;
     // private string aiName = "Max";
 
 
@@ -15,6 +19,7 @@ public class App
     {
         this.showStatus = showStatus;
         this.maxClient = maxClient;
+        _chatHistoryService = new ChatHistoryService();
     }
 
     public static void ConsoleWriteLLMResponseDetails(string response)
@@ -33,17 +38,21 @@ public class App
         Console.ForegroundColor = temp;
     }
 
-    public async Task<int> Run(string activeMode, string? userPrompt = null)
+    public async Task<int> Run(string activeMode, string? userPrompt = null, string? loadSession = null)
     {
         var retval = 0;
 
         if (activeMode == "chat")
         {
-            retval = await StartChatAsync();
+            retval = await StartChatAsync(loadSession);
         }
         else if (activeMode == "oneshot")
         {
             retval = await StartOneShotAsync(userPrompt);
+        }
+        else if (activeMode == "list-sessions")
+        {
+            retval = ListChatSessions();
         }
         else
         {
@@ -53,17 +62,143 @@ public class App
 
         return retval;
     }
+    
+    public int ListChatSessions()
+    {
+        try
+        {
+            var sessions = _chatHistoryService.GetChatSessions();
+            
+            if (sessions.Count == 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("No chat sessions found.");
+                Console.WriteLine($"Sessions are stored in: {_chatHistoryService.GetBasePath()}");
+                Console.ResetColor();
+                return 0;
+            }
+            
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"Found {sessions.Count} chat sessions:");
+            Console.WriteLine($"Sessions are stored in: {_chatHistoryService.GetBasePath()}");
+            Console.WriteLine();
+            Console.ResetColor();
+            
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($"{"Session ID",-20} {"Created",-20}");
+            Console.WriteLine($"{"----------",-20} {"-------",-20}");
+            Console.ResetColor();
+            
+            foreach (var session in sessions)
+            {
+                string sessionId = Path.GetFileName(session);
+                
+                // Try to parse the timestamp from the session ID
+                string createdDate = "Unknown";
+                if (sessionId.Length >= 15) // Format: YYYYMMDD_HHMMSS
+                {
+                    try
+                    {
+                        string year = sessionId.Substring(0, 4);
+                        string month = sessionId.Substring(4, 2);
+                        string day = sessionId.Substring(6, 2);
+                        string hour = sessionId.Substring(9, 2);
+                        string minute = sessionId.Substring(11, 2);
+                        string second = sessionId.Substring(13, 2);
+                        
+                        createdDate = $"{year}-{month}-{day} {hour}:{minute}:{second}";
+                    }
+                    catch
+                    {
+                        // If parsing fails, use the default "Unknown"
+                    }
+                }
+                
+                Console.WriteLine($"{sessionId,-20} {createdDate,-20}");
+            }
+            
+            Console.WriteLine();
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("To load a session, use: max chat -l <Session ID>");
+            Console.ResetColor();
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"Error listing chat sessions: {ex.Message}");
+            Console.ResetColor();
+            return 1;
+        }
+        
+        return 0;
+    }
 
-    public async Task<int> StartChatAsync()
+    public async Task<int> StartChatAsync(string? sessionId = null)
     {
         try
         {
             var robotEmoji = char.ConvertFromUtf32(0x1F916);  // 🤖
             var folderEmoji = char.ConvertFromUtf32(0x1F4C2); // 📂
+            
+            // Initialize chat history with system prompt
             List<ChatMessage> chatHistory =
             [
                 new(ChatRole.System, maxClient.SystemPrompt),
-            ];  
+            ];
+            
+            // Try to load a previous session if specified
+            if (!string.IsNullOrEmpty(sessionId))
+            {
+                string sessionPath = Path.Combine(_chatHistoryService.GetBasePath(), sessionId);
+                if (Directory.Exists(sessionPath))
+                {
+                    _currentSessionPath = sessionPath;
+                    // Pass the system prompt to be injected as the first message
+                    var loadedHistory = await _chatHistoryService.LoadChatHistoryAsync(sessionPath, maxClient.SystemPrompt);
+                    
+                    if (loadedHistory != null && loadedHistory.Count > 0)
+                    {
+                        // Use the loaded history with the system prompt already injected
+                        chatHistory = loadedHistory;
+                        
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"Loaded chat session: {sessionId}");
+                        Console.WriteLine($"Loaded {chatHistory.Count} messages from previous session");
+                        Console.ResetColor();
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"Could not load chat history from session: {sessionId}");
+                        Console.WriteLine("Starting a new session instead.");
+                        Console.ResetColor();
+                        
+                        // Create a new session since we couldn't load the specified one
+                        _currentSessionPath = _chatHistoryService.CreateChatSession();
+                    }
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"Session not found: {sessionId}");
+                    Console.WriteLine("Starting a new session instead.");
+                    Console.ResetColor();
+                    
+                    // Create a new session since the specified one doesn't exist
+                    _currentSessionPath = _chatHistoryService.CreateChatSession();
+                }
+            }
+            else
+            {
+                // Create a new chat session
+                _currentSessionPath = _chatHistoryService.CreateChatSession();
+            }
+            
+            // Display chat session information
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"Chat session: {Path.GetFileName(_currentSessionPath)}");
+            Console.WriteLine($"Chat history will be saved to: {_currentSessionPath}");
+            Console.ResetColor();
 
             // -------------------------------------------------------------------------------------------
             // Conversational Chat with the AI
@@ -104,6 +239,18 @@ public class App
                 {
                     WriteTokenMetrics(chatHistory);
                 }
+                
+                // Save chat history after each interaction
+                await _chatHistoryService.SaveChatHistoryAsync(_currentSessionPath, chatHistory);
+            }
+            
+            // Final save of chat history before exiting
+            if (_currentSessionPath != null)
+            {
+                await _chatHistoryService.SaveChatHistoryAsync(_currentSessionPath, chatHistory);
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"Chat history saved to: {_currentSessionPath}");
+                Console.ResetColor();
             }
         }
         catch (Exception ex)

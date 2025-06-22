@@ -113,6 +113,6 @@ public partial class Program
             return 0;
         }
 
-        return await new App(maxClient, options.ShowStatus).Run(options.Mode, options.UserPrompt);
+        return await new App(maxClient, options.ShowStatus).Run(options.Mode, options.UserPrompt, options.LoadSession);
     }
 }

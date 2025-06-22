@@ -9,6 +9,8 @@ An interactive command-line chat application featuring streaming responses and s
 - Profile-based configuration for easy switching between providers and models
 - Cross-platform support (Windows, MacOS, Linux)
 - LLM can read and write files as well obtain directory listings to learn about your repository (Beta)
+- Chat history persistence to continue conversations across sessions
+- Session management to list and load previous chat sessions
 - MCP-Support coming soon
 
 ### Examples 💡
@@ -22,6 +24,12 @@ max --chat -p Sonnet
 
 # translate a README.md to portugese
 cat README.md | max "Translate to portugese"
+
+# list all saved chat sessions
+max --list-sessions
+
+# load a previous chat session
+max --chat -l 20250621_230940
 ```
 
 ## Prerequisites ✅
@@ -124,9 +132,11 @@ max --chat [options]
 
 ### Chat Interface 💬
 
-- Start typing your messages after the  prompt
+- Start typing your messages after the prompt
 - AI responses will stream in real-time with green text
 - Exit the chat by typing `exit`, `quit`, or pressing Enter with no message
+- Chat history is automatically saved to disk for future sessions
+- Access previous chat sessions using the `--list-sessions` and `--chat -l <session_id>` commands
 
 ### Configuration ⚙️
 
