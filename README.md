@@ -154,7 +154,7 @@ The application uses a JSON configuration file with the following structure:
   - **apiProvider**: Name of the API provider to use (must match a provider name)
   - **modelId**: Model ID to use for chat completion
 
-### Tool Approval
+### Tool Approval 🔒
 
 MaxBot includes a tool approval feature to provide control over file system operations. This setting can be configured in your `maxbot.config.json` file or overridden at runtime with a command-line argument.
 
@@ -185,7 +185,7 @@ max "Create a new file" -ta all
 *   `readonly`: (Default) MaxBot will ask for your permission before performing any write operations (e.g., creating or modifying files).
 *   `all`: MaxBot is pre-approved to perform any file system operation without asking for confirmation.
 
-### Session Management
+### Session Management 💾
 
 MaxBot automatically saves your chat history to disk, allowing you to continue conversations across multiple sessions. Each chat session is stored in a timestamped directory in your user profile.
 
@@ -243,7 +243,7 @@ All chat sessions are stored in the `.maxbot/chats` directory in your user profi
 
 Contributions are welcome! Please read the [developer guidelines](.clinerules/developer_guidelines.md) for more information on how to build the project and run tests.
 
-## Copyright
+## Copyright ©️
 
 Copyright (c) 2025 Todd Schavey
 
