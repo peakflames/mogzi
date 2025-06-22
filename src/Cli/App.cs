@@ -16,11 +16,13 @@ public class App
     private readonly IAppService _appService;
     private readonly bool _showStatus;
     private string? _currentSessionPath;
+    private readonly string _activeProfileName;
 
     public App(ChatClient maxClient, bool showStatus)
     {
         _showStatus = showStatus;
         _appService = new AppService(maxClient);
+        _activeProfileName = maxClient.ActiveProfile.Name;
     }
 
     public static void ConsoleWriteLLMResponseDetails(string response)
@@ -277,6 +279,7 @@ public class App
         {
             var robotEmoji = char.ConvertFromUtf32(0x1F916);  // 🤖
             var folderEmoji = char.ConvertFromUtf32(0x1F4C2); // 📂
+            var catHeartEyesEmoji = char.ConvertFromUtf32(0x1F63B); // 😻
             
             // Initialize chat history with system prompt
             List<ChatMessage> chatHistory =
@@ -316,7 +319,7 @@ public class App
                             {
                                 // Display user message
                                 Console.ForegroundColor = ConsoleColor.Yellow;
-                                Console.Write($"\n{robotEmoji} Max | {folderEmoji} {Directory.GetCurrentDirectory()}\n% ");
+                                Console.Write($"\n{catHeartEyesEmoji} Max | {folderEmoji} {Directory.GetCurrentDirectory()} | {robotEmoji}: {_activeProfileName}\n% ");
                                 Console.ForegroundColor = ConsoleColor.White;
                                 Console.WriteLine(message.Text);
                                 Console.WriteLine();
@@ -384,7 +387,7 @@ public class App
                 // Get the name of the current working directory, but just the final part of the path
                 var cwd = Directory.GetCurrentDirectory();
 
-                Console.Write($"\n{robotEmoji} Max | {folderEmoji} {cwd}\n% ");    
+                Console.Write($"\n{catHeartEyesEmoji} Max | {folderEmoji} {cwd} | {robotEmoji}: {_activeProfileName}\n% ");    
                 Console.ForegroundColor = ConsoleColor.White;
                 var userPrompt = Console.ReadLine();
                 Console.WriteLine();

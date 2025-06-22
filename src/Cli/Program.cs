@@ -76,7 +76,8 @@ public partial class Program
             Console.Write($"Mode='{options.Mode}', ");
             Console.Write($"Profile='{maxClient.ActiveProfile.Name}', ");
             Console.Write($"Provider='{maxClient.ActiveProfile.ApiProvider}', ");
-            Console.Write($"Model='{maxClient.ActiveProfile.ModelId}'");
+            Console.Write($"Model='{maxClient.ActiveProfile.ModelId}', ");
+            Console.Write($"ToolApprovals='{maxClient.Config.ToolApprovals}'");
             Console.Write(")\n\n");
 
             Console.ForegroundColor = ConsoleColor.Cyan;

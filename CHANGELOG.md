@@ -7,7 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.1]
 
-- TBD
+- Add active profile name to the CLI interface prompt and update the emoji styling. 
+- Display tool approvals setting in startup information to improve visibility of the current configuration.
 
 ## [1.3.0]
 
