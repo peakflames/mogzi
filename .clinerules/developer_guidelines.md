@@ -81,6 +81,69 @@ This document outlines the coding conventions, rules, and patterns used in this 
 - **NuGet dependencies:** Be mindful of NuGet package dependencies and version conflicts.
 - **Update packages:** When updating packages, ensure that all related packages are updated to compatible versions.
 
+## Architecture
+
+This section provides an overview of the project's architecture, including the relationship between the `Cli` and `MaxBot` projects and the key program logic flows.
+
+### Component Diagram
+
+This diagram illustrates the relationship between the `Cli` and `MaxBot` projects and their key components.
+
+```mermaid
+graph TD
+    subgraph "User Interface"
+        A[CLI]
+    end
+
+    subgraph "Application Core"
+        B[MaxBot Library]
+    end
+
+    subgraph "External Services"
+        C[OpenAI API]
+    end
+
+    A -- "Instantiates and runs" --> B
+    B -- "Sends requests to" --> C
+
+    subgraph "CLI Project"
+        direction LR
+        D[Program.cs] --> E[App.cs]
+        E --> F[CliArgParser.cs]
+    end
+
+    subgraph "MaxBot Library"
+        direction LR
+        G[ChatClient.cs] --> H[FileSystemTools.cs]
+        G --> I[Microsoft.Extensions.AI]
+    end
+
+    A --> D
+    B --> G
+```
+
+### Sequence Diagram
+
+This diagram shows the sequence of events from the user running the application to receiving a response from the AI.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Cli.Program
+    participant Cli.App
+    participant MaxBot.ChatClient
+    participant OpenAI_API
+
+    User->>Cli.Program: Executes with arguments
+    Cli.Program->>Cli.App: new App(chatClient, showStatus)
+    Cli.Program->>Cli.App: Run(mode, prompt)
+    Cli.App->>MaxBot.ChatClient: GetStreamingResponseAsync(chatHistory, options)
+    MaxBot.ChatClient->>OpenAI_API: Sends chat request
+    OpenAI_API-->>MaxBot.ChatClient: Streams response
+    MaxBot.ChatClient-->>Cli.App: Returns stream
+    Cli.App-->>User: Displays response
+```
+
 ## System Specifications and Requirements
 
 ### Documentation Standards Philosophy

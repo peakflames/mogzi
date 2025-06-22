@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added comprehensive unit tests for file system tools to ensure safe and reliable operations.
 - Updated project plan and trace matrix to reflect the completion of TOR-3.1.
 - Corrected the test execution command in the developer guidelines.
+- Updated `FileSystemTools` to use `AIFunctionFactoryOptions` to provide snake_case names for tools to the LLM, aligning with tool specifications.
+- Added an architecture section with Mermaid diagrams to the developer guidelines.
 
 ## [1.2.0]
 

@@ -1,7 +1,9 @@
 
-using System.ComponentModel;
 using System.IO;
 using System.Security.Cryptography;
+using Microsoft.Extensions.AI;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text;
 using FluentResults;
 using MaxBot.Domain;
@@ -19,7 +21,41 @@ public class FileSystemTools
         _llmResponseDetailsCallback = llmResponseDetailsCallback;
     }
 
-    [Description("A read-only tool to list files and directories within the specified directory. If recursive is true, it will list all files and directories recursively. If recursive is false or not provided, it will only list the top-level contents. Do not use this tool to confirm the existence of files you may have created, as the user will let you know if the files were created successfully or not.")]
+    public List<AIFunction> GetTools()
+    {
+        return
+        [
+            AIFunctionFactory.Create(
+                ListFiles,
+                new AIFunctionFactoryOptions
+                {
+                    Name = "list_files",
+                    Description = "A read-only tool to list files and directories within the specified directory. If recursive is true, it will list all files and directories recursively. If recursive is false or not provided, it will only list the top-level contents. Do not use this tool to confirm the existence of files you may have created, as the user will let you know if the files were created successfully or not."
+                }),
+            AIFunctionFactory.Create(
+                WriteFile,
+                new AIFunctionFactoryOptions
+                {
+                    Name = "write_file",
+                    Description = "Request to write content to a file at the specified path. If the file exists, it will be overwritten with the provided content. If the file doesn't exist, it will be created. This tool will automatically create any directories needed to write the file. Returns a string message indicating success or failure."
+                }),
+            AIFunctionFactory.Create(
+                ReadFile,
+                new AIFunctionFactoryOptions
+                {
+                    Name = "read_file",
+                    Description = "A read-only tool to read the contents of a file at the specified path. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. Automatically extracts raw text from PDF and DOCX files. May not be suitable for other types of binary files, as it returns the raw content as a string"
+                }),
+            AIFunctionFactory.Create(
+                ReplaceInFile,
+                new AIFunctionFactoryOptions
+                {
+                    Name = "replace_in_file",
+                    Description = "Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool should be used when you need to make targeted changes to specific parts of a file."
+                })
+        ];
+    }
+
     public string ListFiles(
         [Description("The path of the directory to list contents for (relative to the current working directory)")]
         string path,
@@ -54,8 +90,6 @@ public class FileSystemTools
         return result;
     }
 
-
-    [Description("Request to write content to a file at the specified path. If the file exists, it will be overwritten with the provided content. If the file doesn't exist, it will be created. This tool will automatically create any directories needed to write the file. Returns a string message indicating success or failure.")]
     public string WriteFile(
         [Description("The path of the file to write (relative to the current working directory)")]
         string path,
@@ -217,7 +251,6 @@ public class FileSystemTools
         return Convert.ToHexString(hash);
     }
 
-    [Description("A read-only tool to read the contents of a file at the specified path. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. Automatically extracts raw text from PDF and DOCX files. May not be suitable for other types of binary files, as it returns the raw content as a string")]
     public string ReadFile(
         [Description("The path of the file to read (relative to the current working directory)")]
         string path)
@@ -236,7 +269,6 @@ public class FileSystemTools
         return msg;
     }
 
-    [Description("Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool should be used when you need to make targeted changes to specific parts of a file.")]
     public string ReplaceInFile(
         [Description("The path of the file to modify (relative to the current working directory)")]
         string path,
