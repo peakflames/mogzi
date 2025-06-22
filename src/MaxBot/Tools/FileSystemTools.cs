@@ -75,20 +75,49 @@ public class FileSystemTools
             return msg;
         }
 
-        string[]? files;
+        List<string> entries = new List<string>();
 
-        if (recursive)
+        try
         {
-            files = Directory.GetFiles(filePath, "*", SearchOption.AllDirectories);
+            // Get directories
+            string[] directories;
+            if (recursive)
+            {
+                directories = Directory.GetDirectories(filePath, "*", SearchOption.AllDirectories);
+            }
+            else
+            {
+                directories = Directory.GetDirectories(filePath);
+            }
+            
+            // Add directories to the list
+            entries.AddRange(directories);
+            
+            // Get files
+            string[] files;
+            if (recursive)
+            {
+                files = Directory.GetFiles(filePath, "*", SearchOption.AllDirectories);
+            }
+            else
+            {
+                files = Directory.GetFiles(filePath);
+            }
+            
+            // Add files to the list
+            entries.AddRange(files);
+            
+            _llmResponseDetailsCallback?.Invoke($"Listed {directories.Length} directories and {files.Length} files for '{filePath}'.");
+
+            result = string.Join("\n", entries);
         }
-        else
+        catch (Exception ex)
         {
-            files = Directory.GetFiles(filePath);
+            var msg = $"ERROR: Failed to list files and directories. {ex.Message}";
+            _llmResponseDetailsCallback?.Invoke(msg);
+            return msg;
         }
-
-        _llmResponseDetailsCallback?.Invoke($"listed {files.Length} files for '{filePath}'.");
-
-        result = string.Join("\n", files);
+        
         return result;
     }
 

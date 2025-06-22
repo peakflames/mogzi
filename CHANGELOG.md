@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added filtering of system messages when saving chat history
 - Added injection of current system prompt when loading chat history
 - Added comprehensive tests for chat history service
+- Fixed list_files tool to properly list both files and directories as per specification
 
 ## [1.2.0]
 
