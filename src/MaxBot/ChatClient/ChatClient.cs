@@ -13,14 +13,25 @@ public partial class ChatClient
 {
     public IChatClient ChatClientMEAI { get; init; }
     public MaxbotConfiguration Config { get; init; }
-    public string SystemPrompt { get; init; }
     public Profile ActiveProfile { get; init; }
     public ApiProvider ActiveApiProvider { get; init; }
+    
+    // System prompt is now a computed property that regenerates each time it's accessed
+    public string SystemPrompt => Promptinator.GetSystemPrompt(
+        DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+        OperatingSystem.ToString(),
+        DefaultShell,
+        Username,
+        Hostname,
+        Directory.GetCurrentDirectory(),
+        Config,
+        _mode);
 
     public PlatformID OperatingSystem { get; init; }
     public string DefaultShell { get; init; }
     public string Username { get; init; }
     public string Hostname { get; init; }
+    private string _mode { get; init; }
 
     public ChatOptions ChatOptions { get; init; }
 
@@ -32,6 +43,7 @@ public partial class ChatClient
         Config = config;
         ActiveProfile = activeProfile;
         ActiveApiProvider = activeApiProvider;
+        _mode = mode;
 
         // Detect the current operating system, we need to handle Windows, MacOS, and Linux differently
         OperatingSystem = Environment.OSVersion.Platform;
@@ -46,15 +58,8 @@ public partial class ChatClient
 
         // Get hostname
         Hostname = System.Net.Dns.GetHostName();
-
-        SystemPrompt = Promptinator.GetSystemPrompt(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-                                                   OperatingSystem.ToString(),
-                                                   DefaultShell,
-                                                   Username,
-                                                   Hostname,
-                                                   Directory.GetCurrentDirectory(),
-                                                   config,
-                                                   mode);
+        
+        // SystemPrompt is now a computed property, so we don't need to set it here
 
         FileSystemTools = new FileSystemTools(config, llmResponseDetailsCallback);
         ChatOptions = new ChatOptions

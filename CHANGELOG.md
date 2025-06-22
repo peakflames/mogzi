@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `/sessions` - List available sessions (similar to `--list-sessions` flag)
   - `/load-session [ID]` - Load a specific chat session
   - `/help` - Display available slash commands
+- Fixed bug where changing tool approval setting with `/tool-approval` command wasn't reflected in the system prompt
 
 ## [1.3.0]
 
