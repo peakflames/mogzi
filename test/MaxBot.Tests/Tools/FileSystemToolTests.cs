@@ -16,6 +16,7 @@ public class FileSystemToolTests : IDisposable
     private readonly string _testDirectory;
     private readonly MaxbotConfiguration _config;
     private readonly FileSystemTools _fileSystemTools;
+    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
 
     public FileSystemToolTests()
     {
@@ -23,9 +24,8 @@ public class FileSystemToolTests : IDisposable
         Directory.CreateDirectory(_testDirectory);
         
         _config = new MaxbotConfiguration { ToolApprovals = "auto" };
-        _fileSystemTools = new FileSystemTools(_config);
-        
-        Environment.CurrentDirectory = _testDirectory;
+        _workingDirectoryProvider = new MockWorkingDirectoryProvider(_testDirectory);
+        _fileSystemTools = new FileSystemTools(_config, null, _workingDirectoryProvider);
     }
 
     public void Dispose()
@@ -49,9 +49,9 @@ public class FileSystemToolTests : IDisposable
     public void ReadFile_WithExistingFile_ShouldReturnContent()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "read_test.txt");
+        var testFile = "read_test.txt";
         var content = "Hello, World!";
-        File.WriteAllText(testFile, content);
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), content);
 
         // Act
         var result = _fileSystemTools.ReadFile(testFile);
@@ -64,7 +64,7 @@ public class FileSystemToolTests : IDisposable
     public void ReadFile_WithNonExistentFile_ShouldReturnError()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "non_existent_file.txt");
+        var testFile = "non_existent_file.txt";
 
         // Act
         var result = _fileSystemTools.ReadFile(testFile);
@@ -79,7 +79,7 @@ public class FileSystemToolTests : IDisposable
     public void WriteFile_ToNewFile_ShouldCreateFileWithContent()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "write_test.txt");
+        var testFile = "write_test.txt";
         var content = "This is a new file.";
 
         // Act
@@ -87,16 +87,16 @@ public class FileSystemToolTests : IDisposable
 
         // Assert
         result.Should().Be("success");
-        File.Exists(testFile).Should().BeTrue();
-        File.ReadAllText(testFile).Should().Be(content);
+        File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
+        File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(content);
     }
 
     [Fact]
     public void WriteFile_ToExistingFile_ShouldOverwriteContent()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "overwrite_test.txt");
-        File.WriteAllText(testFile, "Initial content.");
+        var testFile = "overwrite_test.txt";
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), "Initial content.");
         var newContent = "This content should overwrite the original.";
 
         // Act
@@ -104,14 +104,14 @@ public class FileSystemToolTests : IDisposable
 
         // Assert
         result.Should().Be("success");
-        File.ReadAllText(testFile).Should().Be(newContent);
+        File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(newContent);
     }
 
     [Fact]
     public void WriteFile_ToPathWithMissingDirectories_ShouldCreateThem()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "new", "nested", "dir", "test.txt");
+        var testFile = Path.Combine("new", "nested", "dir", "test.txt");
         var content = "File in a nested directory.";
 
         // Act
@@ -119,8 +119,8 @@ public class FileSystemToolTests : IDisposable
 
         // Assert
         result.Should().Be("success");
-        File.Exists(testFile).Should().BeTrue();
-        File.ReadAllText(testFile).Should().Be(content);
+        File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
+        File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(content);
     }
 
     // ReplaceInFile Tests
@@ -129,9 +129,9 @@ public class FileSystemToolTests : IDisposable
     public void ReplaceInFile_WithValidMatch_ShouldPerformReplacement()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "replace_test.txt");
+        var testFile = "replace_test.txt";
         var initialContent = "Hello, old world!";
-        File.WriteAllText(testFile, initialContent);
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), initialContent);
         var diff = "------- SEARCH\nold world\n=======\nnew world\n+++++++ REPLACE";
 
         // Act
@@ -139,16 +139,16 @@ public class FileSystemToolTests : IDisposable
 
         // Assert
         result.Should().Be("success");
-        File.ReadAllText(testFile).Should().Be("Hello, new world!");
+        File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be("Hello, new world!");
     }
 
     [Fact]
     public void ReplaceInFile_WithNoMatch_ShouldReturnError()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "replace_no_match.txt");
+        var testFile = "replace_no_match.txt";
         var initialContent = "Hello, world!";
-        File.WriteAllText(testFile, initialContent);
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), initialContent);
         var diff = "------- SEARCH\nnon-existent content\n=======\nreplacement\n+++++++ REPLACE";
 
         // Act
@@ -156,16 +156,16 @@ public class FileSystemToolTests : IDisposable
 
         // Assert
         result.Should().Contain("ERROR: Search block not found");
-        File.ReadAllText(testFile).Should().Be(initialContent); // File should be unchanged
+        File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(initialContent); // File should be unchanged
     }
 
     [Fact]
     public void ReplaceInFile_WithMultipleBlocks_ShouldPerformAllReplacements()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "replace_multiple.txt");
+        var testFile = "replace_multiple.txt";
         var initialContent = "one two three";
-        File.WriteAllText(testFile, initialContent);
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), initialContent);
         var diff = "------- SEARCH\none\n=======\n1\n+++++++ REPLACE\n" +
                    "------- SEARCH\nthree\n=======\n3\n+++++++ REPLACE";
 
@@ -174,14 +174,14 @@ public class FileSystemToolTests : IDisposable
 
         // Assert
         result.Should().Be("success");
-        File.ReadAllText(testFile).Should().Be("1 two 3");
+        File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be("1 two 3");
     }
 
     [Fact]
     public void ReplaceInFile_WithNonExistentFile_ShouldReturnError()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "non_existent_file.txt");
+        var testFile = "non_existent_file.txt";
         var diff = "------- SEARCH\na\n=======\nb\n+++++++ REPLACE";
 
         // Act
@@ -189,5 +189,60 @@ public class FileSystemToolTests : IDisposable
 
         // Assert
         result.Should().Contain("ERROR: File not found");
+    }
+
+    // TOR-7.2: Working Directory Constraint Tests
+
+    [Fact]
+    public void ReadFile_OutsideWorkingDirectory_ShouldReturnError()
+    {
+        // Arrange
+        var outsideDir = Path.Combine(Path.GetTempPath(), "MaxBotFileSystemToolTests_Outside", Guid.NewGuid().ToString());
+        Directory.CreateDirectory(outsideDir);
+        var outsideFile = Path.Combine(outsideDir, "outside_file.txt");
+        File.WriteAllText(outsideFile, "test");
+
+        // Act
+        var result = _fileSystemTools.ReadFile(outsideFile);
+
+        // Assert
+        result.Should().Contain("ERROR: Path is outside the working directory");
+        Directory.Delete(outsideDir, true);
+    }
+
+    [Fact]
+    public void WriteFile_OutsideWorkingDirectory_ShouldReturnError()
+    {
+        // Arrange
+        var outsideDir = Path.Combine(Path.GetTempPath(), "MaxBotFileSystemToolTests_Outside", Guid.NewGuid().ToString());
+        Directory.CreateDirectory(outsideDir);
+        var outsideFile = Path.Combine(outsideDir, "outside_write_test.txt");
+
+        // Act
+        var result = _fileSystemTools.WriteFile(outsideFile, "test");
+
+        // Assert
+        result.Should().Contain("ERROR: Path is outside the working directory");
+        File.Exists(outsideFile).Should().BeFalse();
+        Directory.Delete(outsideDir, true);
+    }
+
+    [Fact]
+    public void ReplaceInFile_OutsideWorkingDirectory_ShouldReturnError()
+    {
+        // Arrange
+        var outsideDir = Path.Combine(Path.GetTempPath(), "MaxBotFileSystemToolTests_Outside", Guid.NewGuid().ToString());
+        Directory.CreateDirectory(outsideDir);
+        var outsideFile = Path.Combine(outsideDir, "outside_replace_test.txt");
+        File.WriteAllText(outsideFile, "test");
+        var diff = "------- SEARCH\ntest\n=======\nnew_test\n+++++++ REPLACE";
+
+        // Act
+        var result = _fileSystemTools.ReplaceInFile(outsideFile, diff);
+
+        // Assert
+        result.Should().Contain("ERROR: Path is outside the working directory");
+        File.ReadAllText(outsideFile).Should().Be("test"); // Unchanged
+        Directory.Delete(outsideDir, true);
     }
 }

@@ -49,7 +49,7 @@
 
 #### Security Foundation
 - **TOR-7.1**: Explicit approval for potentially destructive operations
-- **TOR-7.2**: Working directory constraint enforcement
+- **TOR-7.2**: Working directory constraint enforcement ✅ **COMPLETED**
 
 #### Reliability Foundation
 - **TOR-8.2**: Graceful error handling without data loss
@@ -182,10 +182,8 @@
 4. **Test Framework**: Establish testing framework and initial test cases
 
 ### Short-term Goals (Phase 1)
-1. **NEXT PRIORITY**: Implement TOR-7.2 (Working directory constraints) - critical security enhancement
-2. Begin C# implementation of TOR-1.1 and TOR-1.2 (Core AI functionality)
-3. Begin C# implementation of TOR-1.1 and TOR-1.2 (Core AI functionality)
-4. Complete remaining file system safety controls (TOR-3.3) - TOR-3.2 ✅ Complete
+1. **NEXT PRIORITY**: Begin C# implementation of TOR-1.1 and TOR-1.2 (Core AI functionality)
+2. Complete remaining file system safety controls (TOR-3.3) - TOR-3.2 ✅ Complete
 5. Develop MaxBot integration foundation (TOR-4.1, TOR-4.2)
 6. Establish basic workflow execution (TOR-5.1)
 

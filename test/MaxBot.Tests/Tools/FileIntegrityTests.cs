@@ -19,6 +19,7 @@ public class FileIntegrityTests : IDisposable
     private readonly string _testDirectory;
     private readonly MaxbotConfiguration _config;
     private readonly FileSystemTools _fileSystemTools;
+    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
 
     public FileIntegrityTests()
     {
@@ -26,8 +27,8 @@ public class FileIntegrityTests : IDisposable
         Directory.CreateDirectory(_testDirectory);
         
         _config = new MaxbotConfiguration { ToolApprovals = "auto" };
-        _fileSystemTools = new FileSystemTools(_config);
-        
+        _workingDirectoryProvider = new MockWorkingDirectoryProvider(_testDirectory);
+        _fileSystemTools = new FileSystemTools(_config, null, _workingDirectoryProvider);
     }
 
     public void Dispose()
@@ -46,31 +47,40 @@ public class FileIntegrityTests : IDisposable
     }
 
     [Fact]
+    public void Constructor_ShouldSetCurrentDirectoryToTestDirectory()
+    {
+        // Assert
+        var expected = Path.GetFullPath(_testDirectory);
+        var actual = Path.GetFullPath(_workingDirectoryProvider.GetCurrentDirectory());
+        actual.Should().Be(expected);
+    }
+
+    [Fact]
     public void WriteFile_WhenSuccessful_ShouldPreserveFileIntegrity()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "test_integrity.txt");
+        var testFile = "test_integrity.txt";
         var originalContent = "Original content for integrity test";
         var newContent = "New content that should replace original";
 
         // Create original file
-        File.WriteAllText(testFile, originalContent);
-        var originalChecksum = CalculateFileChecksum(testFile);
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), originalContent);
+        var originalChecksum = CalculateFileChecksum(Path.Combine(_testDirectory, testFile));
 
         // Act
         var result = _fileSystemTools.WriteFile(testFile, newContent);
 
         // Assert
         result.Should().Be("success");
-        File.Exists(testFile).Should().BeTrue();
-        File.ReadAllText(testFile).Should().Be(newContent);
+        File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
+        File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(newContent);
         
         // Verify file integrity with new content
-        var newChecksum = CalculateFileChecksum(testFile);
+        var newChecksum = CalculateFileChecksum(Path.Combine(_testDirectory, testFile));
         newChecksum.Should().NotBe(originalChecksum);
         
         // Verify content matches exactly what was written
-        var actualContent = File.ReadAllText(testFile);
+        var actualContent = File.ReadAllText(Path.Combine(_testDirectory, testFile));
         actualContent.Should().Be(newContent);
     }
 
@@ -78,31 +88,31 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WhenDiskSpaceInsufficient_ShouldNotCorruptExistingFile()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "test_disk_space.txt");
+        var testFile = "test_disk_space.txt";
         var originalContent = "Original content that should be preserved";
         var largeContent = new string('X', 1024 * 1024); // 1MB content
 
         // Create original file
-        File.WriteAllText(testFile, originalContent);
-        var originalChecksum = CalculateFileChecksum(testFile);
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), originalContent);
+        var originalChecksum = CalculateFileChecksum(Path.Combine(_testDirectory, testFile));
 
         // Act - Simulate disk space issue by trying to write to a read-only file system
         // Note: This is a simplified test - in real implementation, we'd need more sophisticated disk space simulation
         var result = _fileSystemTools.WriteFile(testFile, largeContent);
 
         // Assert - File should either succeed or remain unchanged
-        File.Exists(testFile).Should().BeTrue();
+        File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         
         if (result == "success")
         {
             // If write succeeded, verify integrity of new content
-            File.ReadAllText(testFile).Should().Be(largeContent);
+            File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(largeContent);
         }
         else
         {
             // If write failed, original file should be preserved
-            File.ReadAllText(testFile).Should().Be(originalContent);
-            CalculateFileChecksum(testFile).Should().Be(originalChecksum);
+            File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(originalContent);
+            CalculateFileChecksum(Path.Combine(_testDirectory, testFile)).Should().Be(originalChecksum);
         }
     }
 
@@ -110,21 +120,21 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WhenInterrupted_ShouldNotLeavePartialFile()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "test_interruption.txt");
+        var testFile = "test_interruption.txt";
         var originalContent = "Original content";
         var newContent = "New content that might be interrupted";
 
         // Create original file
-        File.WriteAllText(testFile, originalContent);
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), originalContent);
 
         // Act
         var result = _fileSystemTools.WriteFile(testFile, newContent);
 
         // Assert
-        File.Exists(testFile).Should().BeTrue();
+        File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         
         // File should contain either complete original or complete new content, never partial
-        var actualContent = File.ReadAllText(testFile);
+        var actualContent = File.ReadAllText(Path.Combine(_testDirectory, testFile));
         actualContent.Should().BeOneOf(originalContent, newContent);
         
         // Content should not be truncated or corrupted
@@ -142,12 +152,12 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WithBackupEnabled_ShouldCreateBackupBeforeModification()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "test_backup.txt");
+        var testFile = "test_backup.txt";
         var originalContent = "Original content for backup test";
         var newContent = "New content after backup";
 
         // Create original file
-        File.WriteAllText(testFile, originalContent);
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), originalContent);
 
         // Act
         var result = _fileSystemTools.WriteFile(testFile, newContent);
@@ -156,10 +166,10 @@ public class FileIntegrityTests : IDisposable
         result.Should().Be("success");
         
         // Original file should have new content
-        File.ReadAllText(testFile).Should().Be(newContent);
+        File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(newContent);
         
         // Backup file should exist with original content
-        var backupFile = testFile + ".backup";
+        var backupFile = Path.Combine(_testDirectory, testFile) + ".backup";
         if (File.Exists(backupFile))
         {
             File.ReadAllText(backupFile).Should().Be(originalContent);
@@ -170,12 +180,12 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WhenBackupFails_ShouldNotProceedWithWrite()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "test_backup_fail.txt");
+        var testFile = "test_backup_fail.txt";
         var originalContent = "Original content";
         var newContent = "New content";
 
         // Create original file
-        File.WriteAllText(testFile, originalContent);
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), originalContent);
         
         // Create a scenario where backup might fail (e.g., read-only directory)
         // This is a simplified test - real implementation would need more sophisticated backup failure simulation
@@ -184,11 +194,11 @@ public class FileIntegrityTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, newContent);
 
         // Assert
-        File.Exists(testFile).Should().BeTrue();
+        File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         
         // If backup failed, original content should be preserved
         // If backup succeeded, new content should be written
-        var actualContent = File.ReadAllText(testFile);
+        var actualContent = File.ReadAllText(Path.Combine(_testDirectory, testFile));
         actualContent.Should().BeOneOf(originalContent, newContent);
     }
 
@@ -196,7 +206,7 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WithChecksumValidation_ShouldVerifyWrittenContent()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "test_checksum.txt");
+        var testFile = "test_checksum.txt";
         var content = "Content for checksum validation test";
 
         // Act
@@ -204,15 +214,15 @@ public class FileIntegrityTests : IDisposable
 
         // Assert
         result.Should().Be("success");
-        File.Exists(testFile).Should().BeTrue();
+        File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         
         // Verify written content matches expected content exactly
-        var writtenContent = File.ReadAllText(testFile);
+        var writtenContent = File.ReadAllText(Path.Combine(_testDirectory, testFile));
         writtenContent.Should().Be(content);
         
         // Verify checksum of written file
         var expectedChecksum = CalculateStringChecksum(content);
-        var actualChecksum = CalculateFileChecksum(testFile);
+        var actualChecksum = CalculateFileChecksum(Path.Combine(_testDirectory, testFile));
         actualChecksum.Should().Be(expectedChecksum);
     }
 
@@ -220,32 +230,32 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WhenChecksumMismatch_ShouldRollbackChanges()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "test_checksum_mismatch.txt");
+        var testFile = "test_checksum_mismatch.txt";
         var originalContent = "Original content";
         var newContent = "New content";
 
         // Create original file
-        File.WriteAllText(testFile, originalContent);
-        var originalChecksum = CalculateFileChecksum(testFile);
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), originalContent);
+        var originalChecksum = CalculateFileChecksum(Path.Combine(_testDirectory, testFile));
 
         // Act
         var result = _fileSystemTools.WriteFile(testFile, newContent);
 
         // Assert
         // In case of checksum mismatch, file should be rolled back to original state
-        File.Exists(testFile).Should().BeTrue();
+        File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         
         if (result != "success")
         {
             // If write failed due to checksum mismatch, original should be restored
-            File.ReadAllText(testFile).Should().Be(originalContent);
-            CalculateFileChecksum(testFile).Should().Be(originalChecksum);
+            File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(originalContent);
+            CalculateFileChecksum(Path.Combine(_testDirectory, testFile)).Should().Be(originalChecksum);
         }
         else
         {
             // If write succeeded, verify integrity
-            File.ReadAllText(testFile).Should().Be(newContent);
-            CalculateFileChecksum(testFile).Should().Be(CalculateStringChecksum(newContent));
+            File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(newContent);
+            CalculateFileChecksum(Path.Combine(_testDirectory, testFile)).Should().Be(CalculateStringChecksum(newContent));
         }
     }
 
@@ -253,12 +263,12 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WithAtomicOperation_ShouldNotShowPartialContentDuringWrite()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "test_atomic.txt");
+        var testFile = "test_atomic.txt";
         var originalContent = "Original content";
         var newContent = "New content for atomic write test";
 
         // Create original file
-        File.WriteAllText(testFile, originalContent);
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), originalContent);
 
         // Act
         var result = _fileSystemTools.WriteFile(testFile, newContent);
@@ -267,7 +277,7 @@ public class FileIntegrityTests : IDisposable
         result.Should().Be("success");
         
         // After atomic write, file should contain complete new content
-        var finalContent = File.ReadAllText(testFile);
+        var finalContent = File.ReadAllText(Path.Combine(_testDirectory, testFile));
         finalContent.Should().Be(newContent);
         
         // File should not contain any mixture of old and new content
@@ -278,7 +288,7 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WithLargeFile_ShouldMaintainIntegrityThroughoutOperation()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "test_large_file.txt");
+        var testFile = "test_large_file.txt";
         var largeContent = GenerateLargeContent(1024 * 100); // 100KB content
         
         // Act
@@ -286,16 +296,16 @@ public class FileIntegrityTests : IDisposable
 
         // Assert
         result.Should().Be("success");
-        File.Exists(testFile).Should().BeTrue();
+        File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         
         // Verify complete content was written correctly
-        var writtenContent = File.ReadAllText(testFile);
+        var writtenContent = File.ReadAllText(Path.Combine(_testDirectory, testFile));
         writtenContent.Should().Be(largeContent);
         writtenContent.Length.Should().Be(largeContent.Length);
         
         // Verify checksum integrity
         var expectedChecksum = CalculateStringChecksum(largeContent);
-        var actualChecksum = CalculateFileChecksum(testFile);
+        var actualChecksum = CalculateFileChecksum(Path.Combine(_testDirectory, testFile));
         actualChecksum.Should().Be(expectedChecksum);
     }
 
@@ -303,7 +313,7 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WithSpecialCharacters_ShouldPreserveEncodingIntegrity()
     {
         // Arrange
-        var testFile = Path.Combine(_testDirectory, "test_encoding.txt");
+        var testFile = "test_encoding.txt";
         var contentWithSpecialChars = "Content with special chars: áéíóú ñ 中文 🚀 \n\r\t";
 
         // Act
@@ -311,15 +321,15 @@ public class FileIntegrityTests : IDisposable
 
         // Assert
         result.Should().Be("success");
-        File.Exists(testFile).Should().BeTrue();
+        File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         
         // Verify special characters are preserved exactly
-        var writtenContent = File.ReadAllText(testFile);
+        var writtenContent = File.ReadAllText(Path.Combine(_testDirectory, testFile));
         writtenContent.Should().Be(contentWithSpecialChars);
         
         // Verify byte-level integrity
         var originalBytes = Encoding.UTF8.GetBytes(contentWithSpecialChars);
-        var writtenBytes = File.ReadAllBytes(testFile);
+        var writtenBytes = File.ReadAllBytes(Path.Combine(_testDirectory, testFile));
         writtenBytes.Should().BeEquivalentTo(originalBytes);
     }
 

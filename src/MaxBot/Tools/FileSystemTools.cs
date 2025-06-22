@@ -14,11 +14,13 @@ public class FileSystemTools
 {
     private readonly MaxbotConfiguration _config;
     private readonly Action<string>? _llmResponseDetailsCallback = null;
+    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
 
-    public FileSystemTools(MaxbotConfiguration config, Action<string>? llmResponseDetailsCallback = null)
+    public FileSystemTools(MaxbotConfiguration config, Action<string>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
     {
         _config = config;
         _llmResponseDetailsCallback = llmResponseDetailsCallback;
+        _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
     }
 
     public List<AIFunction> GetTools()
@@ -63,7 +65,7 @@ public class FileSystemTools
         bool recursive = false)
     {
         _llmResponseDetailsCallback?.Invoke($"Listing files in '{path}'{(recursive ? "recursively" : "")}.");
-        var filePath = Path.Combine(Directory.GetCurrentDirectory(), path);
+        var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
 
         var result = string.Empty;
         if (!Directory.Exists(filePath))
@@ -102,7 +104,12 @@ public class FileSystemTools
         }
         
         _llmResponseDetailsCallback?.Invoke($"Writing to file '{path}' with integrity preservation.");
-        var filePath = Path.Combine(Directory.GetCurrentDirectory(), path);
+        var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
+
+        if (!IsPathInWorkingDirectory(filePath))
+        {
+            return "ERROR: Path is outside the working directory";
+        }
 
         try
         {
@@ -217,6 +224,14 @@ public class FileSystemTools
 
             return $"ERROR: Write failed but original file restored from backup. {ex.Message}";
         }
+        finally
+        {
+            // Clean up backup file if it exists
+            if (backupPath != null && File.Exists(backupPath))
+            {
+                File.Delete(backupPath);
+            }
+        }
     }
 
     private string CreateBackup(string filePath)
@@ -231,7 +246,7 @@ public class FileSystemTools
             counter++;
         }
         
-        File.Copy(filePath, backupPath, false);
+        File.Copy(filePath, backupPath, true);
         return backupPath;
     }
 
@@ -256,17 +271,22 @@ public class FileSystemTools
         string path)
     {
         _llmResponseDetailsCallback?.Invoke($"Reading file '{path}'.");
-        var filePath = Path.Combine(Directory.GetCurrentDirectory(), path);
+        var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
 
-        if (File.Exists(filePath))
+        if (!IsPathInWorkingDirectory(filePath))
         {
-            var result = File.ReadAllText(filePath);
-            return result;
+            return "ERROR: Path is outside the working directory";
         }
 
-        var msg = $"ERROR: File not found: {filePath}";
-        _llmResponseDetailsCallback?.Invoke(msg);
-        return msg;
+        if (!File.Exists(filePath))
+        {
+            var msg = $"ERROR: File not found: {filePath}";
+            _llmResponseDetailsCallback?.Invoke(msg);
+            return msg;
+        }
+
+        var result = File.ReadAllText(filePath);
+        return result;
     }
 
     public string ReplaceInFile(
@@ -281,7 +301,12 @@ public class FileSystemTools
         }
 
         _llmResponseDetailsCallback?.Invoke($"Replacing content in file '{path}'.");
-        var filePath = Path.Combine(Directory.GetCurrentDirectory(), path);
+        var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
+
+        if (!IsPathInWorkingDirectory(filePath))
+        {
+            return "ERROR: Path is outside the working directory";
+        }
 
         if (!File.Exists(filePath))
         {
@@ -323,5 +348,22 @@ public class FileSystemTools
             _llmResponseDetailsCallback?.Invoke(msg);
             return msg;
         }
+    }
+
+    private bool IsPathInWorkingDirectory(string path)
+    {
+        var workingDirectory = Path.GetFullPath(_workingDirectoryProvider.GetCurrentDirectory());
+        var fullPath = Path.GetFullPath(path);
+
+        // Ensure workingDirectory has a trailing slash for correct comparison
+        if (!workingDirectory.EndsWith(Path.DirectorySeparatorChar.ToString()))
+        {
+            workingDirectory += Path.DirectorySeparatorChar;
+        }
+
+        // For the check to be safe, we also need to ensure the file path
+        // doesn't use parent directory traversal trickery like ".." to escape.
+        // Path.GetFullPath should resolve this, making the check below sufficient.
+        return fullPath.StartsWith(workingDirectory, StringComparison.OrdinalIgnoreCase);
     }
 }

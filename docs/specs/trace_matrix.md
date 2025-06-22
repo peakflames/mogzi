@@ -63,7 +63,7 @@
 | TOR ID | Requirement | Tool Specifications | Implementation Components | Test Cases | Verification Status |
 |--------|-------------|-------------------|--------------------------|------------|-------------------|
 | TOR-7.1 | Approval for destructive ops | [execute_command_tool_spec.md](tools/execute_command_tool_spec.md) | To be implemented | To be developed | ❌ Not Verified |
-| TOR-7.2 | Working directory constraints | [All file tools](tools/_index.md) | To be implemented | To be developed | ❌ Not Verified |
+| TOR-7.2 | Working directory constraints | [All file tools](tools/_index.md) | FileSystemTools.IsPathInWorkingDirectory() | test/MaxBot.Tests/Tools/FileSystemToolTests.cs | ✅ Verified |
 | TOR-7.3 | Input/output validation | [All tool specs](tools/_index.md) | To be implemented | To be developed | ❌ Not Verified |
 
 ### TOR-8: Performance and Reliability
