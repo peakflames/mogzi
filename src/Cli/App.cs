@@ -399,17 +399,74 @@ public class App
 
                 chatHistory.Add(new ChatMessage(ChatRole.User, userPrompt));
 
-                // Stream the AI Response and add to chat history            
-                // Console.WriteLine("Sending API Request...");
-                // Console.WriteLine($"\n{aiName}:");
-                var response = "";
-                await foreach (var item in maxClient.ChatClientMEAI.GetStreamingResponseAsync(chatHistory, maxClient.ChatOptions))
+                // Create a cancellation token source that can be used to cancel the API request
+                using var cts = new CancellationTokenSource();
+                
+                // Create a flag to track if we're currently processing an API request
+                bool isProcessingRequest = true;
+                
+                // Register a console cancel event handler to handle Ctrl+C
+                ConsoleCancelEventHandler cancelHandler = (sender, e) => {
+                    // Prevent the process from terminating
+                    e.Cancel = true;
+                    
+                    // Only try to cancel if we're still processing the request
+                    if (isProcessingRequest && !cts.IsCancellationRequested && !cts.Token.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            Console.WriteLine("\n\nCancelling API request...");
+                            cts.Cancel();
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            // Ignore if the CancellationTokenSource has been disposed
+                            Console.WriteLine("\n\nRequest already completed.");
+                        }
+                    }
+                };
+                
+                // Add the event handler
+                Console.CancelKeyPress += cancelHandler;
+                
+                try
                 {
-                    Console.Write(item.Text);
-                    response += item.Text;
+                    // Stream the AI Response and add to chat history
+                    var response = "";
+                    await foreach (var item in maxClient.ChatClientMEAI.GetStreamingResponseAsync(chatHistory, maxClient.ChatOptions, cts.Token))
+                    {
+                        Console.Write(item.Text);
+                        response += item.Text;
+                    }
+                    chatHistory.Add(new ChatMessage(ChatRole.Assistant, response));
+                    Console.WriteLine();
                 }
-                chatHistory.Add(new ChatMessage(ChatRole.Assistant, response));
-                Console.WriteLine();
+                catch (OperationCanceledException)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("\nAPI request was cancelled.");
+                    Console.ResetColor();
+                    
+                    // Add a placeholder message to the chat history
+                    chatHistory.Add(new ChatMessage(ChatRole.Assistant, "[Response was cancelled by user]"));
+                }
+                catch (Exception ex)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"\nError during API request: {ex.Message}");
+                    Console.ResetColor();
+                    
+                    // Add a placeholder message to the chat history
+                    chatHistory.Add(new ChatMessage(ChatRole.Assistant, $"[Error: {ex.Message}]"));
+                }
+                finally
+                {
+                    // Mark that we're no longer processing a request
+                    isProcessingRequest = false;
+                    
+                    // Remove the event handler
+                    Console.CancelKeyPress -= cancelHandler;
+                }
 
                 if (showStatus)
                 {
@@ -456,14 +513,74 @@ public class App
 
             chatHistory.Add(new ChatMessage(ChatRole.User, userPrompt));
 
-            var response = "";
-            await foreach (var item in maxClient.ChatClientMEAI.GetStreamingResponseAsync(chatHistory, maxClient.ChatOptions))
+            // Create a cancellation token source that can be used to cancel the API request
+            using var cts = new CancellationTokenSource();
+            
+            // Create a flag to track if we're currently processing an API request
+            bool isProcessingRequest = true;
+            
+            // Register a console cancel event handler to handle Ctrl+C
+            ConsoleCancelEventHandler cancelHandler = (sender, e) => {
+                // Prevent the process from terminating
+                e.Cancel = true;
+                
+                // Only try to cancel if we're still processing the request
+                if (isProcessingRequest && !cts.IsCancellationRequested && !cts.Token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        Console.WriteLine("\n\nCancelling API request...");
+                        cts.Cancel();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Ignore if the CancellationTokenSource has been disposed
+                        Console.WriteLine("\n\nRequest already completed.");
+                    }
+                }
+            };
+            
+            // Add the event handler
+            Console.CancelKeyPress += cancelHandler;
+            
+            try
             {
-                Console.Write(item.Text);
-                response += item.Text;
+                // Stream the AI Response and add to chat history
+                var response = "";
+                await foreach (var item in maxClient.ChatClientMEAI.GetStreamingResponseAsync(chatHistory, maxClient.ChatOptions, cts.Token))
+                {
+                    Console.Write(item.Text);
+                    response += item.Text;
+                }
+                chatHistory.Add(new ChatMessage(ChatRole.Assistant, response));
+                Console.WriteLine();
             }
-            chatHistory.Add(new ChatMessage(ChatRole.Assistant, response));
-            Console.WriteLine();
+            catch (OperationCanceledException)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("\nAPI request was cancelled.");
+                Console.ResetColor();
+                
+                // Add a placeholder message to the chat history
+                chatHistory.Add(new ChatMessage(ChatRole.Assistant, "[Response was cancelled by user]"));
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"\nError during API request: {ex.Message}");
+                Console.ResetColor();
+                
+                // Add a placeholder message to the chat history
+                chatHistory.Add(new ChatMessage(ChatRole.Assistant, $"[Error: {ex.Message}]"));
+            }
+            finally
+            {
+                // Mark that we're no longer processing a request
+                isProcessingRequest = false;
+                
+                // Remove the event handler
+                Console.CancelKeyPress -= cancelHandler;
+            }
 
             if (showStatus)
             {
