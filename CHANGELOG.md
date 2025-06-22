@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced session listing with card-like display showing session details, message count, and first user prompt
 - Improved session loading to display previous chat history when loading a session
 - Added ability to cancel API requests with Ctrl+C during chat interactions
+- Refactored application architecture to move core logic from App.cs to AppService in the MaxBot project
 - Implemented TOR-7.2: Added working directory constraints to all file system tools to enhance security.
 - Create detailed tool specifications for all 12 core MaxBot tools
 - Add requirements traceability matrix for verification tracking

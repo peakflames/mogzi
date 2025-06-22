@@ -4,10 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using MaxBot.Domain;
+using MaxBot.Services;
 using Microsoft.Extensions.AI;
 using Xunit;
 
-namespace MaxBot.Tests.Domain;
+namespace MaxBot.Tests.Services;
 
 public class ChatHistoryServiceTests : IDisposable
 {

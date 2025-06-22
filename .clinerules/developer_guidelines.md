@@ -85,6 +85,15 @@ This document outlines the coding conventions, rules, and patterns used in this 
 
 This section provides an overview of the project's architecture, including the relationship between the `Cli` and `MaxBot` projects and the key program logic flows.
 
+### Architectural Principles
+
+The project follows these key architectural principles:
+
+1. **Separation of Concerns**: UI logic (CLI) is separated from core application logic (MaxBot)
+2. **Service-Oriented Design**: Core functionality is exposed through service interfaces
+3. **Dependency Inversion**: High-level modules depend on abstractions, not concrete implementations
+4. **Single Responsibility**: Each class has a single, well-defined responsibility
+
 ### Component Diagram
 
 This diagram illustrates the relationship between the `Cli` and `MaxBot` projects and their key components.
@@ -97,13 +106,15 @@ graph TD
 
     subgraph "Application Core"
         B[MaxBot Library]
+        S[Services Layer]
     end
 
     subgraph "External Services"
         C[OpenAI API]
     end
 
-    A -- "Instantiates and runs" --> B
+    A -- "Uses" --> S
+    S -- "Uses" --> B
     B -- "Sends requests to" --> C
 
     subgraph "CLI Project"
@@ -116,10 +127,19 @@ graph TD
         direction LR
         G[ChatClient.cs] --> H[FileSystemTools.cs]
         G --> I[Microsoft.Extensions.AI]
+        
+        subgraph "Services"
+            direction TB
+            J[IAppService] <-- "implements" --> K[AppService]
+            L[ChatHistoryService]
+        end
+        
+        K --> G
+        K --> L
     end
 
     A --> D
-    B --> G
+    E --> J
 ```
 
 ### Sequence Diagram
@@ -131,18 +151,35 @@ sequenceDiagram
     participant User
     participant Cli.Program
     participant Cli.App
+    participant MaxBot.Services.AppService
     participant MaxBot.ChatClient
     participant OpenAI_API
 
     User->>Cli.Program: Executes with arguments
     Cli.Program->>Cli.App: new App(chatClient, showStatus)
     Cli.Program->>Cli.App: Run(mode, prompt)
-    Cli.App->>MaxBot.ChatClient: GetStreamingResponseAsync(chatHistory, options)
+    Cli.App->>MaxBot.Services.AppService: ProcessChatMessageAsync(chatHistory, token)
+    MaxBot.Services.AppService->>MaxBot.ChatClient: GetStreamingResponseAsync(chatHistory, options)
     MaxBot.ChatClient->>OpenAI_API: Sends chat request
     OpenAI_API-->>MaxBot.ChatClient: Streams response
-    MaxBot.ChatClient-->>Cli.App: Returns stream
+    MaxBot.ChatClient-->>MaxBot.Services.AppService: Returns stream
+    MaxBot.Services.AppService-->>Cli.App: Returns stream
     Cli.App-->>User: Displays response
 ```
+
+### Services Layer
+
+The Services layer provides a clean separation between the UI and core application logic:
+
+1. **IAppService**: Interface defining all core application operations
+2. **AppService**: Implementation of IAppService that coordinates between ChatClient and ChatHistoryService
+3. **ChatHistoryService**: Handles persistence of chat history to disk
+
+This layered architecture provides several benefits:
+- **Testability**: Core logic can be tested independently of the UI
+- **Maintainability**: Changes to the UI don't affect core logic and vice versa
+- **Extensibility**: New UIs can be built on top of the same services
+- **Separation of Concerns**: Each component has a clear, single responsibility
 
 ## System Specifications and Requirements
 

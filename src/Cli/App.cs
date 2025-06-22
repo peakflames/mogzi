@@ -1,6 +1,7 @@
 using FluentResults;
 using MaxBot;
 using MaxBot.Domain;
+using MaxBot.Services;
 using Microsoft.Extensions.AI;
 using System;
 using System.IO;
@@ -12,18 +13,14 @@ namespace CLI;
 
 public class App
 {
-    private ChatClient maxClient;
-    private bool showStatus;
-    private readonly ChatHistoryService _chatHistoryService;
+    private readonly IAppService _appService;
+    private readonly bool _showStatus;
     private string? _currentSessionPath;
-    // private string aiName = "Max";
-
 
     public App(ChatClient maxClient, bool showStatus)
     {
-        this.showStatus = showStatus;
-        this.maxClient = maxClient;
-        _chatHistoryService = new ChatHistoryService();
+        _showStatus = showStatus;
+        _appService = new AppService(maxClient);
     }
 
     public static void ConsoleWriteLLMResponseDetails(string response)
@@ -71,20 +68,20 @@ public class App
     {
         try
         {
-            var sessions = _chatHistoryService.GetChatSessions();
+            var sessions = _appService.GetChatSessions();
             
             if (sessions.Count == 0)
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine("No chat sessions found.");
-                Console.WriteLine($"Sessions are stored in: {_chatHistoryService.GetBasePath()}");
+                Console.WriteLine($"Sessions are stored in: {_appService.GetChatSessionsBasePath()}");
                 Console.ResetColor();
                 return 0;
             }
             
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"Found {sessions.Count} chat sessions:");
-            Console.WriteLine($"Sessions are stored in: {_chatHistoryService.GetBasePath()}");
+            Console.WriteLine($"Sessions are stored in: {_appService.GetChatSessionsBasePath()}");
             Console.WriteLine();
             Console.ResetColor();
             
@@ -284,18 +281,18 @@ public class App
             // Initialize chat history with system prompt
             List<ChatMessage> chatHistory =
             [
-                new(ChatRole.System, maxClient.SystemPrompt),
+                new(ChatRole.System, _appService.SystemPrompt),
             ];
             
             // Try to load a previous session if specified
             if (!string.IsNullOrEmpty(sessionId))
             {
-                string sessionPath = Path.Combine(_chatHistoryService.GetBasePath(), sessionId);
+                string sessionPath = Path.Combine(_appService.GetChatSessionsBasePath(), sessionId);
                 if (Directory.Exists(sessionPath))
                 {
                     _currentSessionPath = sessionPath;
                     // Pass the system prompt to be injected as the first message
-                    var loadedHistory = await _chatHistoryService.LoadChatHistoryAsync(sessionPath, maxClient.SystemPrompt);
+                    var loadedHistory = await _appService.LoadChatSessionAsync(sessionId, _appService.SystemPrompt);
                     
                     if (loadedHistory != null && loadedHistory.Count > 0)
                     {
@@ -331,7 +328,7 @@ public class App
                                 Console.Write(message.Text);
                                 Console.WriteLine();
                                 
-                                if (showStatus)
+                                if (_showStatus)
                                 {
                                     // Calculate tokens up to this point in the conversation
                                     var partialHistory = chatHistory.Take(i + 1).ToList();
@@ -350,7 +347,7 @@ public class App
                         Console.ResetColor();
                         
                         // Create a new session since we couldn't load the specified one
-                        _currentSessionPath = _chatHistoryService.CreateChatSession();
+                        _currentSessionPath = _appService.CreateChatSession();
                     }
                 }
                 else
@@ -361,13 +358,13 @@ public class App
                     Console.ResetColor();
                     
                     // Create a new session since the specified one doesn't exist
-                    _currentSessionPath = _chatHistoryService.CreateChatSession();
+                    _currentSessionPath = _appService.CreateChatSession();
                 }
             }
             else
             {
                 // Create a new chat session
-                _currentSessionPath = _chatHistoryService.CreateChatSession();
+                _currentSessionPath = _appService.CreateChatSession();
             }
             
             // Display chat session information
@@ -433,7 +430,7 @@ public class App
                 {
                     // Stream the AI Response and add to chat history
                     var response = "";
-                    await foreach (var item in maxClient.ChatClientMEAI.GetStreamingResponseAsync(chatHistory, maxClient.ChatOptions, cts.Token))
+                    await foreach (var item in _appService.ProcessChatMessageAsync(chatHistory, cts.Token))
                     {
                         Console.Write(item.Text);
                         response += item.Text;
@@ -468,19 +465,19 @@ public class App
                     Console.CancelKeyPress -= cancelHandler;
                 }
 
-                if (showStatus)
+                if (_showStatus)
                 {
                     WriteTokenMetrics(chatHistory);
                 }
                 
                 // Save chat history after each interaction
-                await _chatHistoryService.SaveChatHistoryAsync(_currentSessionPath, chatHistory);
+                await _appService.SaveChatHistoryAsync(_currentSessionPath, chatHistory);
             }
             
             // Final save of chat history before exiting
             if (_currentSessionPath != null)
             {
-                await _chatHistoryService.SaveChatHistoryAsync(_currentSessionPath, chatHistory);
+                await _appService.SaveChatHistoryAsync(_currentSessionPath, chatHistory);
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine($"Chat history saved to: {_currentSessionPath}");
                 Console.ResetColor();
@@ -502,7 +499,7 @@ public class App
         {
             List<ChatMessage> chatHistory =
             [
-                new(ChatRole.System, maxClient.SystemPrompt),
+                new(ChatRole.System, _appService.SystemPrompt),
             ];
 
             // if the user prompt is empty, "exit", or "quit", then exit the chat loop
@@ -547,7 +544,7 @@ public class App
             {
                 // Stream the AI Response and add to chat history
                 var response = "";
-                await foreach (var item in maxClient.ChatClientMEAI.GetStreamingResponseAsync(chatHistory, maxClient.ChatOptions, cts.Token))
+                await foreach (var item in _appService.ProcessChatMessageAsync(chatHistory, cts.Token))
                 {
                     Console.Write(item.Text);
                     response += item.Text;
@@ -582,7 +579,7 @@ public class App
                 Console.CancelKeyPress -= cancelHandler;
             }
 
-            if (showStatus)
+            if (_showStatus)
             {
                 WriteTokenMetrics(chatHistory);
             }
@@ -597,13 +594,13 @@ public class App
         return 0;
     }
 
-    private static void WriteTokenMetrics(List<ChatMessage> chatHistory)
+    private void WriteTokenMetrics(List<ChatMessage> chatHistory)
     {   
         var currentForegroundColor = Console.ForegroundColor;
         Console.ForegroundColor = ConsoleColor.Yellow;
 
         // calculate the percentage of tokens used against the 200K limit
-        var tokenCount = MaxBot.Utils.ApiMetricUtils.GetSimplisticTokenCount(chatHistory);
+        var tokenCount = _appService.CalculateTokenMetrics(chatHistory);
         var percentage = (double)tokenCount / 200000 * 100;
         // if (OPENAI_API_MODEL!.Contains("claude"))
         // {

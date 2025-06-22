@@ -4,9 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using MaxBot.Domain;
 using Microsoft.Extensions.AI;
 
-namespace MaxBot.Domain;
+namespace MaxBot.Services;
 
 /// <summary>
 /// Service for managing chat history persistence to disk
