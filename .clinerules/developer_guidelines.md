@@ -149,10 +149,10 @@ dotnet publish ./src/Cli\Cli.csproj -r {{RUNTIME_IDENTIFIER}} -o ./dist
 
 ### Running Tests
 
-To run the integration tests, run the following command from the root directory:
+To run all tests in the solution, run the following command from the root directory:
 
 ```sh
-dotnet test test/Cli.Tests/Cli.Tests.csproj
+dotnet test src/MaxBot.sln
 ```
 
 To run acceptacne tests the

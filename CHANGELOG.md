@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.1]
+## [1.3.0]
 
 - Create detailed tool specifications for all 12 core MaxBot tools
 - Add requirements traceability matrix for verification tracking
@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Create comprehensive workflow for implementing next priority tasks with TOR verification
 - Enhance workflow with iterative development, frequent validation, and comprehensive documentation
 - Complete TOR-3.2 Implementation: Enhanced FileSystemTools.WriteFile with atomic operations, backup creation, checksum validation, and rollback capabilities
+- Implemented TOR-3.1: Safe file system interaction, including `ReadFile`, `WriteFile`, and `ReplaceInFile` tools.
+- Added comprehensive unit tests for file system tools to ensure safe and reliable operations.
+- Updated project plan and trace matrix to reflect the completion of TOR-3.1.
+- Corrected the test execution command in the developer guidelines.
 
 ## [1.2.0]
 

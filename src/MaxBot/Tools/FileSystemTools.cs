@@ -231,8 +231,65 @@ public class FileSystemTools
             return result;
         }
 
-        var msg = $"ERROR: Failed to read file. The file '{filePath}' does not exist.";
+        var msg = $"ERROR: File not found: {filePath}";
         _llmResponseDetailsCallback?.Invoke(msg);
         return msg;
+    }
+
+    [Description("Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool should be used when you need to make targeted changes to specific parts of a file.")]
+    public string ReplaceInFile(
+        [Description("The path of the file to modify (relative to the current working directory)")]
+        string path,
+        [Description("One or more SEARCH/REPLACE blocks")]
+        string diff)
+    {
+        if (_config.ToolApprovals == "readonly")
+        {
+            return "ERROR: File system is in readonly mode. Write operations are disabled.";
+        }
+
+        _llmResponseDetailsCallback?.Invoke($"Replacing content in file '{path}'.");
+        var filePath = Path.Combine(Directory.GetCurrentDirectory(), path);
+
+        if (!File.Exists(filePath))
+        {
+            return $"ERROR: File not found: {filePath}";
+        }
+
+        try
+        {
+            var originalContent = File.ReadAllText(filePath);
+            var modifiedContent = originalContent;
+
+            var searchBlocks = diff.Split(new[] { "------- SEARCH" }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var block in searchBlocks)
+            {
+                var parts = block.Split(new[] { "=======" }, StringSplitOptions.None);
+                if (parts.Length != 2)
+                {
+                    return "ERROR: Invalid SEARCH/REPLACE block format.";
+                }
+
+                var search = parts[0].Trim('\r', '\n');
+                var replace = parts[1].Split(new[] { "+++++++ REPLACE" }, StringSplitOptions.None)[0].Trim('\r', '\n');
+
+                if (modifiedContent.Contains(search))
+                {
+                    modifiedContent = modifiedContent.Replace(search, replace);
+                }
+                else
+                {
+                    return "ERROR: Search block not found";
+                }
+            }
+
+            return WriteFileWithIntegrity(filePath, modifiedContent);
+        }
+        catch (Exception ex)
+        {
+            var msg = $"ERROR: Failed to replace content in file. {ex.Message}";
+            _llmResponseDetailsCallback?.Invoke(msg);
+            return msg;
+        }
     }
 }

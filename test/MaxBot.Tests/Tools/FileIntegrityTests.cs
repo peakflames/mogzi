@@ -28,8 +28,6 @@ public class FileIntegrityTests : IDisposable
         _config = new MaxbotConfiguration { ToolApprovals = "auto" };
         _fileSystemTools = new FileSystemTools(_config);
         
-        // Change to test directory for relative path operations
-        Environment.CurrentDirectory = _testDirectory;
     }
 
     public void Dispose()
@@ -51,7 +49,7 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WhenSuccessful_ShouldPreserveFileIntegrity()
     {
         // Arrange
-        var testFile = "test_integrity.txt";
+        var testFile = Path.Combine(_testDirectory, "test_integrity.txt");
         var originalContent = "Original content for integrity test";
         var newContent = "New content that should replace original";
 
@@ -80,7 +78,7 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WhenDiskSpaceInsufficient_ShouldNotCorruptExistingFile()
     {
         // Arrange
-        var testFile = "test_disk_space.txt";
+        var testFile = Path.Combine(_testDirectory, "test_disk_space.txt");
         var originalContent = "Original content that should be preserved";
         var largeContent = new string('X', 1024 * 1024); // 1MB content
 
@@ -112,7 +110,7 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WhenInterrupted_ShouldNotLeavePartialFile()
     {
         // Arrange
-        var testFile = "test_interruption.txt";
+        var testFile = Path.Combine(_testDirectory, "test_interruption.txt");
         var originalContent = "Original content";
         var newContent = "New content that might be interrupted";
 
@@ -144,7 +142,7 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WithBackupEnabled_ShouldCreateBackupBeforeModification()
     {
         // Arrange
-        var testFile = "test_backup.txt";
+        var testFile = Path.Combine(_testDirectory, "test_backup.txt");
         var originalContent = "Original content for backup test";
         var newContent = "New content after backup";
 
@@ -172,7 +170,7 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WhenBackupFails_ShouldNotProceedWithWrite()
     {
         // Arrange
-        var testFile = "test_backup_fail.txt";
+        var testFile = Path.Combine(_testDirectory, "test_backup_fail.txt");
         var originalContent = "Original content";
         var newContent = "New content";
 
@@ -198,7 +196,7 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WithChecksumValidation_ShouldVerifyWrittenContent()
     {
         // Arrange
-        var testFile = "test_checksum.txt";
+        var testFile = Path.Combine(_testDirectory, "test_checksum.txt");
         var content = "Content for checksum validation test";
 
         // Act
@@ -222,7 +220,7 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WhenChecksumMismatch_ShouldRollbackChanges()
     {
         // Arrange
-        var testFile = "test_checksum_mismatch.txt";
+        var testFile = Path.Combine(_testDirectory, "test_checksum_mismatch.txt");
         var originalContent = "Original content";
         var newContent = "New content";
 
@@ -255,7 +253,7 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WithAtomicOperation_ShouldNotShowPartialContentDuringWrite()
     {
         // Arrange
-        var testFile = "test_atomic.txt";
+        var testFile = Path.Combine(_testDirectory, "test_atomic.txt");
         var originalContent = "Original content";
         var newContent = "New content for atomic write test";
 
@@ -280,7 +278,7 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WithLargeFile_ShouldMaintainIntegrityThroughoutOperation()
     {
         // Arrange
-        var testFile = "test_large_file.txt";
+        var testFile = Path.Combine(_testDirectory, "test_large_file.txt");
         var largeContent = GenerateLargeContent(1024 * 100); // 100KB content
         
         // Act
@@ -305,7 +303,7 @@ public class FileIntegrityTests : IDisposable
     public void WriteFile_WithSpecialCharacters_ShouldPreserveEncodingIntegrity()
     {
         // Arrange
-        var testFile = "test_encoding.txt";
+        var testFile = Path.Combine(_testDirectory, "test_encoding.txt");
         var contentWithSpecialChars = "Content with special chars: áéíóú ñ 中文 🚀 \n\r\t";
 
         // Act

@@ -30,7 +30,7 @@
 
 | TOR ID | Requirement | Tool Specifications | Implementation Components | Test Cases | Verification Status |
 |--------|-------------|-------------------|--------------------------|------------|-------------------|
-| TOR-3.1 | Safe file system interaction | [read_file_tool_spec.md](tools/read_file_tool_spec.md), [write_to_file_tool_spec.md](tools/write_to_file_tool_spec.md), [replace_in_file_tool_spec.md](tools/replace_in_file_tool_spec.md) | To be implemented | To be developed | ❌ Not Verified |
+| TOR-3.1 | Safe file system interaction | [read_file_tool_spec.md](tools/read_file_tool_spec.md), [write_to_file_tool_spec.md](tools/write_to_file_tool_spec.md), [replace_in_file_tool_spec.md](tools/replace_in_file_tool_spec.md) | FileSystemTools.ReadFile(), FileSystemTools.WriteFile(), FileSystemTools.ReplaceInFile() | test/MaxBot.Tests/Tools/FileSystemToolTests.cs | ✅ Verified |
 | TOR-3.2 | File integrity preservation | [write_to_file_tool_spec.md](tools/write_to_file_tool_spec.md), [replace_in_file_tool_spec.md](tools/replace_in_file_tool_spec.md) | FileSystemTools.WriteFileWithIntegrity() | test/MaxBot.Tests/Tools/FileIntegrityTests.cs | ✅ Verified |
 | TOR-3.3 | Permission respect | [All file tools](tools/_index.md) | To be implemented | To be developed | ❌ Not Verified |
 
@@ -129,7 +129,7 @@
 - TOR-5.1 ❌
 - TOR-7.1, TOR-7.2 ❌
 - TOR-8.2 ❌
-
+o
 ## 5. Gap Analysis
 
 ### Coverage Analysis
