@@ -396,6 +396,17 @@ public class App
                 // if the user prompt is empty, "exit", or "quit", then exit the chat loop
                 if (string.IsNullOrWhiteSpace(userPrompt) || userPrompt.ToLower() == "exit" || userPrompt.ToLower() == "quit")
                     break;
+                
+                // Check if the input is a slash command
+                if (userPrompt.StartsWith("/"))
+                {
+                    // Handle slash command
+                    if (HandleSlashCommand(userPrompt, chatHistory))
+                    {
+                        // Command was handled, continue to next iteration
+                        continue;
+                    }
+                }
 
                 chatHistory.Add(new ChatMessage(ChatRole.User, userPrompt));
 
@@ -614,5 +625,199 @@ public class App
         Console.WriteLine($"[Tokens Used: {tokenCount}]");
         // }
         Console.ForegroundColor = currentForegroundColor;
+    }
+
+    /// <summary>
+    /// Handles slash commands in chat mode
+    /// </summary>
+    /// <param name="command">The command string (including the slash)</param>
+    /// <param name="chatHistory">The current chat history</param>
+    /// <returns>True if the command was handled, false otherwise</returns>
+    private bool HandleSlashCommand(string command, List<ChatMessage> chatHistory)
+    {
+        // Split the command into parts (command and arguments)
+        var parts = command.Split(' ', 2);
+        var cmd = parts[0].ToLower();
+        var args = parts.Length > 1 ? parts[1] : string.Empty;
+
+        switch (cmd)
+        {
+            case "/status":
+                DisplayStatus();
+                return true;
+            case "/tool-approval":
+                SetToolApproval(args);
+                return true;
+            case "/sessions":
+                ListSessions();
+                return true;
+            case "/load-session":
+                LoadSession(args, chatHistory);
+                return true;
+            case "/help":
+                DisplayHelp();
+                return true;
+            default:
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"Unknown command: {cmd}. Type /help for available commands.");
+                Console.ResetColor();
+                return true;
+        }
+    }
+
+    /// <summary>
+    /// Displays the current status (similar to --status flag)
+    /// </summary>
+    private void DisplayStatus()
+    {
+        var temp = Console.ForegroundColor;
+        Console.ForegroundColor = ConsoleColor.Yellow;
+
+        var chatClient = _appService.ChatClient;
+
+        // Display active profile and model information
+        Console.WriteLine("Active Configuration:");
+        Console.Write("  (");
+        Console.Write($"Mode='chat', ");
+        Console.Write($"Profile='{_activeProfileName}', ");
+        Console.Write($"Provider='{chatClient.ActiveProfile.ApiProvider}', ");
+        Console.Write($"Model='{chatClient.ActiveProfile.ModelId}', ");
+        Console.Write($"ToolApprovals='{chatClient.Config.ToolApprovals}'");
+        Console.Write(")\n\n");
+
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine("Available Providers:");
+        Console.ForegroundColor = temp;
+        foreach (var provider in chatClient.Config.ApiProviders)
+        {
+            Console.WriteLine($"  - {provider.Name}");
+        }
+
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine("\nAvailable Profiles:");
+        Console.ForegroundColor = temp;
+
+        // Table Header
+        Console.WriteLine($"  {"Name",-20} {"Provider",-15} {"Model ID",-30} {"Active",-8} {"Default",-8}");
+        Console.WriteLine($"  {"----",-20} {"--------",-15} {"--------",-30} {"------",-8} {"-------",-8}");
+
+        foreach (var profile in chatClient.Config.Profiles)
+        {
+            var isActive = profile.Name == chatClient.ActiveProfile.Name ? "Yes" : "";
+            var isDefault = profile.Default ? "Yes" : "";
+            Console.WriteLine($"  {profile.Name,-20} {profile.ApiProvider,-15} {profile.ModelId,-30} {isActive,-8} {isDefault,-8}");
+        }
+
+        Console.WriteLine();
+        Console.ForegroundColor = temp;
+    }
+
+    /// <summary>
+    /// Sets the tool approval setting
+    /// </summary>
+    /// <param name="args">The arguments (readonly or all)</param>
+    private void SetToolApproval(string args)
+    {
+        if (string.IsNullOrWhiteSpace(args) || (args != "readonly" && args != "all"))
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("Invalid value. Usage: /tool-approval [readonly|all]");
+            Console.ResetColor();
+            return;
+        }
+
+        var chatClient = _appService.ChatClient;
+        
+        // Update the tool approval setting
+        chatClient.Config.ToolApprovals = args;
+        
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine($"Tool approval setting updated to '{args}'");
+        Console.ResetColor();
+    }
+
+    /// <summary>
+    /// Lists available chat sessions
+    /// </summary>
+    private void ListSessions()
+    {
+        ListChatSessions();
+    }
+
+    /// <summary>
+    /// Loads a chat session
+    /// </summary>
+    /// <param name="sessionId">The session ID to load</param>
+    /// <param name="chatHistory">The current chat history</param>
+    private void LoadSession(string sessionId, List<ChatMessage> chatHistory)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("Invalid session ID. Usage: /load-session [ID]");
+            Console.ResetColor();
+            return;
+        }
+
+        // Check if the session exists
+        string sessionPath = Path.Combine(_appService.GetChatSessionsBasePath(), sessionId);
+        if (!Directory.Exists(sessionPath))
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"Session not found: {sessionId}");
+            Console.ResetColor();
+            return;
+        }
+
+        // Save current session
+        if (_currentSessionPath != null)
+        {
+            _appService.SaveChatHistoryAsync(_currentSessionPath, chatHistory).Wait();
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"Current session saved to: {_currentSessionPath}");
+        }
+
+        // Load the new session
+        _currentSessionPath = sessionPath;
+        var loadedHistory = _appService.LoadChatSessionAsync(sessionId, _appService.SystemPrompt).Result;
+        
+        if (loadedHistory != null && loadedHistory.Count > 0)
+        {
+            // Clear the current chat history and add the loaded messages
+            chatHistory.Clear();
+            foreach (var message in loadedHistory)
+            {
+                chatHistory.Add(message);
+            }
+            
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"Loaded chat session: {sessionId}");
+            Console.WriteLine($"Loaded {chatHistory.Count} messages from session");
+            Console.ResetColor();
+        }
+        else
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"Could not load chat history from session: {sessionId}");
+            Console.ResetColor();
+        }
+    }
+
+    /// <summary>
+    /// Displays help for slash commands
+    /// </summary>
+    private void DisplayHelp()
+    {
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine("Available Slash Commands:");
+        Console.WriteLine("  /status                 - Display current configuration");
+        Console.WriteLine("  /tool-approval [mode]   - Set tool approval mode (readonly|all)");
+        Console.WriteLine("  /sessions               - List available chat sessions");
+        Console.WriteLine("  /load-session [ID]      - Load a specific chat session");
+        Console.WriteLine("  /help                   - Display this help message");
+        Console.WriteLine();
+        Console.WriteLine("Other Commands:");
+        Console.WriteLine("  exit, quit              - Exit the chat");
+        Console.ResetColor();
     }
 }

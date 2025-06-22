@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using MaxBot;
 
 namespace MaxBot.Services;
 
@@ -21,6 +22,11 @@ public interface IAppService
     /// Gets the chat options
     /// </summary>
     ChatOptions ChatOptions { get; }
+    
+    /// <summary>
+    /// Gets the chat client
+    /// </summary>
+    ChatClient ChatClient { get; }
 
     /// <summary>
     /// Creates a new chat session

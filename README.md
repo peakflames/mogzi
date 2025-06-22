@@ -138,6 +138,30 @@ max --chat [options]
 - Chat history is automatically saved to disk for future sessions
 - Access previous chat sessions using the `--list-sessions` and `--chat -l <session_id>` commands
 
+#### Slash Commands
+
+While in chat mode, you can use the following slash commands for quick actions:
+
+- `/status` - Display current configuration (similar to `--status` flag)
+- `/tool-approval [readonly|all]` - Change tool approval setting on the fly
+- `/sessions` - List available chat sessions (similar to `--list-sessions` flag)
+- `/load-session [ID]` - Load a specific chat session without exiting chat mode
+- `/help` - Display available slash commands
+
+Example:
+```
+% /tool-approval all
+Tool approval setting updated to 'all'
+
+% /help
+Available Slash Commands:
+  /status                 - Display current configuration
+  /tool-approval [mode]   - Set tool approval mode (readonly|all)
+  /sessions               - List available chat sessions
+  /load-session [ID]      - Load a specific chat session
+  /help                   - Display this help message
+```
+
 ### Configuration ⚙️
 
 The application uses a JSON configuration file with the following structure:

@@ -27,6 +27,11 @@ public class AppService : IAppService
     /// Gets the chat options
     /// </summary>
     public ChatOptions ChatOptions => _chatClient.ChatOptions;
+    
+    /// <summary>
+    /// Gets the chat client
+    /// </summary>
+    public ChatClient ChatClient => _chatClient;
 
     /// <summary>
     /// Initializes a new instance of the AppService class

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add active profile name to the CLI interface prompt and update the emoji styling. 
 - Display tool approvals setting in startup information to improve visibility of the current configuration.
+- Added slash commands in chat mode:
+  - `/status` - Display current configuration (similar to `--status` flag)
+  - `/tool-approval [readonly|all]` - Change tool approval setting
+  - `/sessions` - List available sessions (similar to `--list-sessions` flag)
+  - `/load-session [ID]` - Load a specific chat session
+  - `/help` - Display available slash commands
 
 ## [1.3.0]
 
