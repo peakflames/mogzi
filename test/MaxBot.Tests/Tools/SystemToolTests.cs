@@ -1,6 +1,7 @@
 using MaxBot.Domain;
 using MaxBot.Tools;
 using Xunit;
+using FluentAssertions;
 
 namespace MaxBot.Tests.Tools;
 
@@ -69,5 +70,21 @@ public class SystemToolTests
 
         // Assert
         Assert.Contains("all mode test", result);
+    }
+
+    [Fact]
+    public async Task ExecuteCommand_WithNonExistentCommand_ShouldReturnShellError()
+    {
+        // Arrange
+        var nonExistentCommand = Guid.NewGuid().ToString("N");
+        _systemTools = new SystemTools(_config);
+
+        // Act
+        var result = await _systemTools.ExecuteCommand(nonExistentCommand, requiresApproval: false);
+
+        // Assert
+        result.Should().Contain("Error:");
+        // Check for common "command not found" messages across platforms
+        result.Should().MatchRegex("not recognized|command not found");
     }
 }

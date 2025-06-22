@@ -76,8 +76,7 @@ public class BlackBoxTests
         // Arrange
         var args = new string[] { "summarize" };
         var pipedInput = "This is piped input.";
-        var input = new StringReader(pipedInput);
-        Console.SetIn(input);
+        Console.SetIn(new StringReader(pipedInput));
         var output = new StringWriter();
         Console.SetOut(output);
         var testChatClient = new TestChatClient("Piped input summarized.");
@@ -192,6 +191,43 @@ public class BlackBoxTests
         response.Should().MatchRegex("read-?only|cannot write|disabled|not allowed");
 
         // Clean up the temporary files.
+        Directory.Delete(tempDir, true);
+    }
+
+    [Fact]
+    public async Task Run_WithInvalidApiKey_ShouldReturnGracefulError()
+    {
+        // Arrange
+        var tempDir = Path.Combine(Directory.GetCurrentDirectory(), "temp");
+        Directory.CreateDirectory(tempDir);
+        var tempConfigPath = Path.Combine(tempDir, "invalid_config.json");
+        
+        // Create a config file with an invalid API key
+        var invalidConfig = """
+        {
+            "maxbotConfig": {
+                "apiProviders": [ { "name": "TestProvider", "type": "OpenAI-Compatible", "apiKey": "invalid-key", "baseUrl": "https://api.openai.com/v1" } ],
+                "profiles": [ { "default": true, "name": "Default", "apiProvider": "TestProvider", "modelId": "gpt-3.5-turbo" } ]
+            }
+        }
+        """;
+        await File.WriteAllTextAsync(tempConfigPath, invalidConfig);
+
+        var args = new string[] { "hello", "--config", tempConfigPath };
+        var output = new StringWriter();
+        Console.SetOut(output);
+
+        // Act
+        var exitCode = await Program.Run(args);
+
+        // Assert
+        // The program should not crash, and should return a non-zero exit code to indicate failure.
+        exitCode.Should().Be(1); 
+        var response = output.ToString().ToLower();
+        response.Should().Contain("error");
+        response.Should().MatchRegex("api request|authentication|api key");
+
+        // Clean up
         Directory.Delete(tempDir, true);
     }
 }

@@ -71,7 +71,7 @@
 | TOR ID | Requirement | Tool Specifications | Implementation Components | Test Cases | Verification Status |
 |--------|-------------|-------------------|--------------------------|------------|-------------------|
 | TOR-8.1 | Response time limits | [All tool specs](tools/_index.md) | To be implemented | To be developed | ❌ Not Verified |
-| TOR-8.2 | Graceful error handling | [All tool specs](tools/_index.md) | `Cli.App` (Ctrl+C handling), `FileSystemTools` (atomic writes) | `test/MaxBot.Tests/Tools/FileIntegrityTests.cs` | 🟡 Partially Verified |
+| TOR-8.2 | Graceful error handling | [All tool specs](tools/_index.md) | `Cli.App`, `MaxBot.Tools.SystemTools` | `test/Cli.Tests/BlackBoxTests.cs`, `test/MaxBot.Tests/Tools/SystemToolTests.cs` | ✅ Verified |
 | TOR-8.3 | System load tolerance | [All tool specs](tools/_index.md) | To be implemented | To be developed | ❌ Not Verified |
 
 ## 3. Backward Traceability Matrix

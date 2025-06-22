@@ -7,12 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.2] - 2025-MM-DD
 
-- **Added `execute_command` tool** to allow the AI to run shell commands, satisfying TOR-4.2.
+- **Completed Phase 1 Implementation**
+- **Graceful Error Handling (TOR-8.2):** Implemented comprehensive `try-catch` blocks in the main application loop and tool execution to prevent crashes and provide user-friendly error messages for API failures and tool errors.
+- **`execute_command` tool (TOR-4.2 & TOR-7.1):** Added a new tool to execute shell commands.
   - The tool is cross-platform, automatically using `cmd.exe` on Windows, `zsh` on macOS, and `bash` on Linux.
-  - It respects the `tool_approvals` configuration, providing a security layer for potentially destructive operations (TOR-7.1).
-- **Enhanced File System Tools** to respect read-only permissions, satisfying **TOR-3.3**.
-  - `write_file` and `replace_in_file` now check if a file is read-only before attempting to modify it.
-
+  - It respects the `tool_approvals` configuration, providing a security layer for potentially destructive operations.
+- **File Permission Checks (TOR-3.3):** Enhanced `write_file` and `replace_in_file` to respect read-only file attributes, preventing errors when trying to modify locked files.
+- **Updated Developer Guidelines:**
+  - Mandated a "Requirements-Driven Workflow" that requires creating skeleton tests before implementation.
+  - Reinforced the need to assume cross-platform compatibility for all OS-level interactions.
+  - Added a requirement to verify Native AOT compatibility for all new dependencies.
+  - Added a guideline to test against the application's secure-by-default settings.
 
 ## [1.3.1] - 2025-06-22
 

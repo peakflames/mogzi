@@ -479,6 +479,7 @@ public class App
                     
                     // Add a placeholder message to the chat history
                     chatHistory.Add(new ChatMessage(ChatRole.Assistant, $"[Error: {ex.Message}]"));
+                    return 1;
                 }
                 finally
                 {
@@ -593,6 +594,7 @@ public class App
                 
                 // Add a placeholder message to the chat history
                 chatHistory.Add(new ChatMessage(ChatRole.Assistant, $"[Error: {ex.Message}]"));
+                return 1;
             }
             finally
             {
