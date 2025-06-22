@@ -55,7 +55,7 @@ Before running the application, ensure you have:
     - Download loads max and moves it to your `/usr/local/bin`
   
     ```sh
-    sudo curl -L -o max https://github.com/peakflames/maxbot/releases/latest/download/max-osx-x64 && chmod +x max && mv max /usr/local/bin && rm ./max
+    sudo curl -L -o max https://github.com/peakflames/maxbot/releases/latest/download/max-osx-x64 && -o max && sudo chmod +x max && sudo mv -f max /usr/local/bin
     ```
 
     For Linux (sudo)
