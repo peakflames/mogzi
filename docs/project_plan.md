@@ -13,15 +13,35 @@
 
 ### Current State
 - **Total Requirements**: 24 Tool Operational Requirements (TORs)
-- **Implementation Status**: 13% complete (3 of 24 requirements implemented)
-- **Verification Status**: 13% verified (3 of 24 requirements verified)
-- **Critical Path**: 10 of 12 Critical priority requirements remain to be implemented
-- **Latest Completion**: TOR-5.3 (Task context preservation) - ✅ Implemented & Verified
+- **Implementation Status**: 46% complete (11 of 24 requirements implemented or partially implemented)
+- **Verification Status**: 38% verified (9 of 24 requirements verified)
+- **Critical Path**: 3 of 12 Critical priority requirements remain to be implemented
+- **Latest Completion**: Multiple Phase 1 requirements - ✅ Implemented & Verified
 
 ### Gap Analysis Summary
-- **Implementation Gap**: 21 of 24 requirements require C# implementation (TOR-3.2, TOR-5.3, TOR-7.2 complete)
-- **Verification Gap**: 21 of 24 requirements require test development and execution (TOR-3.2, TOR-5.3, TOR-7.2 complete)
-- **Documentation Gap**: Implementation components and test cases need development for remaining requirements
+- **Implementation Gap**: 13 of 24 requirements require C# implementation.
+- **Verification Gap**: 13 of 24 requirements require test development and execution.
+- **Documentation Gap**: The [Traceability Matrix](specs/trace_matrix.md) has been updated to reflect current progress.
+
+### Tool Implementation Status
+
+This table summarizes the implementation status of the tools anticipated by the TORs, ordered by implementation priority.
+
+| Tool Name | Governing TORs | Status | Notes |
+|---|---|---|---|
+| `read_file` | TOR-3.1 | ✅ Implemented | Core file reading capability. |
+| `write_to_file` | TOR-3.1, TOR-3.2 | ✅ Implemented | Includes integrity checks. |
+| `replace_in_file` | TOR-3.1, TOR-3.2 | ✅ Implemented | Core file modification capability. |
+| `list_files` | TOR-3.1 | ✅ Implemented | Lists files and directories. |
+| `ask_followup_question` | TOR-2.1 | ✅ Implemented | Part of the core conversational loop. |
+| `execute_command` | TOR-4.2, TOR-7.1 | ❌ Not Implemented | **Priority 1 for Phase 1.** |
+| `write_to_file` (with permissions) | TOR-3.3 | ❌ Not Implemented | **Priority 2 for Phase 1.** |
+| `replace_in_file` (with permissions) | TOR-3.3 | ❌ Not Implemented | **Priority 2 for Phase 1.** |
+| `attempt_completion` | TOR-5.2 | ❌ Not Implemented | Slated for Phase 2. |
+| `list_code_definition_names` | TOR-1.1 | ❌ Not Implemented | |
+| `search_files` | TOR-1.1 | ❌ Not Implemented | |
+| `mcp_tools` | TOR-6.1, TOR-6.2 | ❌ Not Implemented | Slated for Phase 2. Deferred after Phase 1. |
+| `browser_action` | TOR-4.3 | ❌ Not Implemented | Slated for Phase 3. Deferred until further notice. |
 
 ## 3. Implementation Priority Phases
 
@@ -184,12 +204,13 @@
 3. **Phase 1 Planning**: Detailed planning for Critical requirement implementation
 4. **Test Framework**: Establish testing framework and initial test cases
 
-### Short-term Goals (Phase 1)
-1. **NEXT PRIORITY**: Begin C# implementation of TOR-1.1 and TOR-1.2 (Core AI functionality)
-2. Complete remaining file system safety controls (TOR-3.3) - TOR-3.2 ✅ Complete
-3. Develop MaxBot integration foundation (TOR-4.1, TOR-4.2)
-4. Establish basic workflow execution (TOR-5.1)
-5. Implement security controls (TOR-7.1) - TOR-7.2 ✅ Complete
+### Short-term Goals (Phase 1 Completion)
+
+The following tasks are required to complete Phase 1, listed in order of priority:
+
+1.  **Implement Safe Command Execution (TOR-4.2)**: Introduce the `execute_command` tool with robust safeguards to prevent unintended system-level changes. This is the highest priority as it unlocks critical new capabilities securely.
+2.  **Implement File Permission Checks (TOR-3.3)**: Enhance all file system tools (`write_to_file`, `replace_in_file`) to proactively check for and respect user and file system permissions before attempting operations.
+3.  **Improve Graceful Error Handling (TOR-8.2)**: Refine error handling mechanisms across the application to ensure failures are handled gracefully, preventing data loss and providing clear, actionable feedback to the user.
 
 ### Medium-term Goals (Phase 2-3)
 1. Develop comprehensive test suites for each implemented requirement
