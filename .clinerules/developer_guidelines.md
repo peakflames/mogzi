@@ -81,6 +81,145 @@ This document outlines the coding conventions, rules, and patterns used in this 
 - **NuGet dependencies:** Be mindful of NuGet package dependencies and version conflicts.
 - **Update packages:** When updating packages, ensure that all related packages are updated to compatible versions.
 
+## Architecture
+
+This section provides an overview of the project's architecture, including the relationship between the `Cli` and `MaxBot` projects and the key program logic flows.
+
+### Architectural Principles
+
+The project follows these key architectural principles:
+
+1. **Separation of Concerns**: UI logic (CLI) is separated from core application logic (MaxBot)
+2. **Service-Oriented Design**: Core functionality is exposed through service interfaces
+3. **Dependency Inversion**: High-level modules depend on abstractions, not concrete implementations
+4. **Single Responsibility**: Each class has a single, well-defined responsibility
+
+### Component Diagram
+
+This diagram illustrates the relationship between the `Cli` and `MaxBot` projects and their key components.
+
+```mermaid
+graph TD
+    subgraph "User Interface"
+        A[CLI]
+    end
+
+    subgraph "Application Core"
+        B[MaxBot Library]
+        S[Services Layer]
+    end
+
+    subgraph "External Services"
+        C[OpenAI API]
+    end
+
+    A -- "Uses" --> S
+    S -- "Uses" --> B
+    B -- "Sends requests to" --> C
+
+    subgraph "CLI Project"
+        direction LR
+        D[Program.cs] --> E[App.cs]
+        E --> F[CliArgParser.cs]
+    end
+
+    subgraph "MaxBot Library"
+        direction LR
+        G[ChatClient.cs] --> H[FileSystemTools.cs]
+        G --> I[Microsoft.Extensions.AI]
+        
+        subgraph "Services"
+            direction TB
+            J[IAppService] <-- "implements" --> K[AppService]
+            L[ChatHistoryService]
+        end
+        
+        K --> G
+        K --> L
+    end
+
+    A --> D
+    E --> J
+```
+
+### Sequence Diagram
+
+This diagram shows the sequence of events from the user running the application to receiving a response from the AI.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Cli.Program
+    participant Cli.App
+    participant MaxBot.Services.AppService
+    participant MaxBot.ChatClient
+    participant OpenAI_API
+
+    User->>Cli.Program: Executes with arguments
+    Cli.Program->>Cli.App: new App(chatClient, showStatus)
+    Cli.Program->>Cli.App: Run(mode, prompt)
+    Cli.App->>MaxBot.Services.AppService: ProcessChatMessageAsync(chatHistory, token)
+    MaxBot.Services.AppService->>MaxBot.ChatClient: GetStreamingResponseAsync(chatHistory, options)
+    MaxBot.ChatClient->>OpenAI_API: Sends chat request
+    OpenAI_API-->>MaxBot.ChatClient: Streams response
+    MaxBot.ChatClient-->>MaxBot.Services.AppService: Returns stream
+    MaxBot.Services.AppService-->>Cli.App: Returns stream
+    Cli.App-->>User: Displays response
+```
+
+### Services Layer
+
+The Services layer provides a clean separation between the UI and core application logic:
+
+1. **IAppService**: Interface defining all core application operations
+2. **AppService**: Implementation of IAppService that coordinates between ChatClient and ChatHistoryService
+3. **ChatHistoryService**: Handles persistence of chat history to disk
+
+This layered architecture provides several benefits:
+- **Testability**: Core logic can be tested independently of the UI
+- **Maintainability**: Changes to the UI don't affect core logic and vice versa
+- **Extensibility**: New UIs can be built on top of the same services
+- **Separation of Concerns**: Each component has a clear, single responsibility
+
+## System Specifications and Requirements
+
+### Documentation Standards Philosophy
+The MaxBot system follows DO-178C/DO-330 aerospace documentation standards as a process framework to ensure systematic development and comprehensive traceability. While MaxBot is not safety-critical software, these regulatory standards provide proven methodologies for:
+
+- **Rigorous Requirements Management**: Clear, traceable, and verifiable requirements
+- **Systematic Development Process**: Structured approach to implementation and verification
+- **Professional Documentation**: Industry-standard documentation practices
+- **Quality Assurance**: Comprehensive verification and validation processes
+
+### Requirements Documentation
+The MaxBot system is governed by comprehensive requirements documentation:
+
+- **[System Requirements](../docs/specs/_index.md)**: Complete Tool Operational Requirements (TORs) specification with 24 requirements organized into 8 functional categories
+- **[Traceability Matrix](../docs/specs/trace_matrix.md)**: Requirements traceability and verification status mapping
+- **[Project Implementation Plan](../docs/project_plan.md)**: Phased development approach with milestones and success criteria
+
+### Development Approach
+All development must follow the requirements-driven approach:
+
+1. **Requirements Traceability**: Every implementation component must trace to specific TORs
+2. **Verification Requirements**: Each TOR specifies verification methods (Test, Analysis, Demonstration, Inspection)
+3. **Phase-Based Implementation**: Follow the 3-phase priority approach defined in the project plan
+4. **Documentation Updates**: Update traceability matrix as implementation progresses
+
+### Critical Requirements Priority
+Phase 1 Critical requirements (12 TORs) must be implemented first:
+- Core AI functionality (TOR-1.1, TOR-1.2)
+- File system operations (TOR-3.1, TOR-3.2, TOR-3.3)
+- Development environment integration (TOR-4.1, TOR-4.2)
+- Security controls (TOR-7.1, TOR-7.2)
+- Error handling (TOR-8.2)
+
+### Verification Standards
+- All implementations must include corresponding test cases
+- Critical requirements require comprehensive testing
+- Maintain 100% traceability from requirements to verification
+- Update verification status in traceability matrix upon completion
+
 ## Development
 
 ### Acceptance Testing
@@ -110,10 +249,10 @@ dotnet publish ./src/Cli\Cli.csproj -r {{RUNTIME_IDENTIFIER}} -o ./dist
 
 ### Running Tests
 
-To run the integration tests, run the following command from the root directory:
+To run all tests in the solution, run the following command from the root directory:
 
 ```sh
-dotnet test test/Cli.Tests/Cli.Tests.csproj
+dotnet test src/MaxBot.sln
 ```
 
 To run acceptacne tests the
@@ -122,3 +261,7 @@ To run acceptacne tests the
 ./test/local_exe_acceptance.ps1 # This script will publish the exe to ./dist and exerceise a sample of the feature switches
 #if it exist non-zero than it is a fail otherwise pass
 ```
+
+## Microsoft.Extensions.AI Developer Docs
+
+- docs\llmctx\usage-of-microsoft-extensions-ai.md

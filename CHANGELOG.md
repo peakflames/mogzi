@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0]
+
+- Enhanced session listing with card-like display showing session details, message count, and first user prompt
+- Improved session loading to display previous chat history when loading a session
+- Added ability to cancel API requests with Ctrl+C during chat interactions
+- Refactored application architecture to move core logic from App.cs to AppService in the MaxBot project
+- Implemented TOR-7.2: Added working directory constraints to all file system tools to enhance security.
+- Create detailed tool specifications for all 12 core MaxBot tools
+- Add requirements traceability matrix for verification tracking
+- Establish 3-phase project implementation plan with priority-based approach
+- Update developer guidelines with requirements-driven development standards
+- Add workflow for generating AI assistant repository instructions
+- Create comprehensive workflow for implementing next priority tasks with TOR verification
+- Enhance workflow with iterative development, frequent validation, and comprehensive documentation
+- Complete TOR-3.2 Implementation: Enhanced FileSystemTools.WriteFile with atomic operations, backup creation, checksum validation, and rollback capabilities
+- Implemented TOR-3.1: Safe file system interaction, including `ReadFile`, `WriteFile`, and `ReplaceInFile` tools.
+- Added comprehensive unit tests for file system tools to ensure safe and reliable operations.
+- Updated project plan and trace matrix to reflect the completion of TOR-3.1.
+- Corrected the test execution command in the developer guidelines.
+- Updated `FileSystemTools` to use `AIFunctionFactoryOptions` to provide snake_case names for tools to the LLM, aligning with tool specifications.
+- Added an architecture section with Mermaid diagrams to the developer guidelines.
+- Implemented TOR-5.3: Chat history persistence to disk with session management
+- Added ability to list and load previous chat sessions
+- Added filtering of system messages when saving chat history
+- Added injection of current system prompt when loading chat history
+- Added comprehensive tests for chat history service
+- Fixed list_files tool to properly list both files and directories as per specification
+
 ## [1.2.0]
 
 __Added__:

@@ -6,9 +6,8 @@ using System.Linq;
 using System.Text.Json;
 using MaxBot.Domain;
 using System.ClientModel.Primitives;
-
-
-namespace MaxBot;
+using MaxBot.Tools;
+using Microsoft.Extensions.AI;
 
 public partial class ChatClient
 {
@@ -58,12 +57,9 @@ public partial class ChatClient
                                                    mode);
 
         FileSystemTools = new FileSystemTools(config, llmResponseDetailsCallback);
-        ChatOptions = new ChatOptions{
-            Tools = [
-                AIFunctionFactory.Create(FileSystemTools.WriteFile),
-                AIFunctionFactory.Create(FileSystemTools.ReadFile),
-                AIFunctionFactory.Create(FileSystemTools.ListFiles),
-            ]
+        ChatOptions = new ChatOptions
+        {
+            Tools = FileSystemTools.GetTools().Cast<AITool>().ToList()
         };
     }
 

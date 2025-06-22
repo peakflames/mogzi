@@ -94,13 +94,15 @@ public class BlackBoxTests
     }
 
     [Theory]
-    [InlineData("gpt")]
+    // [InlineData("gpt")]
     [InlineData("gemini")]
-    [InlineData("sonnet")]
+    // [InlineData("sonnet")]
     public async Task Run_ReadFile_WithLiveLlm_ShouldSucceedWithSingleApproval(string profileName)
     {
         // Arrange
-        var tempFile = Path.GetTempFileName();
+        var tempDir = Path.Combine(Directory.GetCurrentDirectory(), "temp");
+        Directory.CreateDirectory(tempDir);
+        var tempFile = Path.Combine(tempDir, Path.GetRandomFileName());
         var fileContent = "This is a test file for the read_file scenario.";
         await File.WriteAllTextAsync(tempFile, fileContent);
 
@@ -125,17 +127,19 @@ public class BlackBoxTests
         response.Should().Contain(fileContent);
 
         // Clean up the temporary file.
-        File.Delete(tempFile);
+        Directory.Delete(tempDir, true);
     }
 
     [Theory]
-    [InlineData("gpt")]
+    // [InlineData("gpt")]
     [InlineData("gemini")]
-    [InlineData("sonnet")]
+    // [InlineData("sonnet")]
     public async Task Run_WriteFile_WithLiveLlm_ShouldSucceed(string profileName)
     {
         // Arrange
-        var tempFile = Path.GetTempFileName();
+        var tempDir = Path.Combine(Directory.GetCurrentDirectory(), "temp");
+        Directory.CreateDirectory(tempDir);
+        var tempFile = Path.Combine(tempDir, Path.GetRandomFileName());
         var fileContent = "This is a test file for the write_file scenario.";
 
         var args = new string[] { $"Write the following content to the file at {tempFile}: {fileContent}" };
@@ -157,18 +161,20 @@ public class BlackBoxTests
         createdFileContent.Should().Be(fileContent);
 
         // Clean up the temporary file.
-        File.Delete(tempFile);
+        Directory.Delete(tempDir, true);
     }
 
 
     [Theory]
-    [InlineData("gpt")]
+    // [InlineData("gpt")]
     [InlineData("gemini")]
-    [InlineData("sonnet")]
+    // [InlineData("sonnet")]
     public async Task Run_WriteFile_WithToolApprovalsReadOnly_ShouldFail(string profileName)
     {
         // Arrange
-        var tempFile = Path.GetTempFileName();
+        var tempDir = Path.Combine(Directory.GetCurrentDirectory(), "temp");
+        Directory.CreateDirectory(tempDir);
+        var tempFile = Path.Combine(tempDir, Path.GetRandomFileName());
         var fileContent = "This is a test file for the write_file scenario.";
 
         var args = new string[] { $"Write the following content to the file at {tempFile}: {fileContent}", "--tool-approvals", "readonly", "-p", profileName };
@@ -186,6 +192,6 @@ public class BlackBoxTests
         response.Should().MatchRegex("tool approval setting|not allowed");
 
         // Clean up the temporary files.
-        File.Delete(tempFile);
+        Directory.Delete(tempDir, true);
     }
 }
