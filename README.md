@@ -185,6 +185,60 @@ max "Create a new file" -ta all
 *   `readonly`: (Default) MaxBot will ask for your permission before performing any write operations (e.g., creating or modifying files).
 *   `all`: MaxBot is pre-approved to perform any file system operation without asking for confirmation.
 
+### Session Management
+
+MaxBot automatically saves your chat history to disk, allowing you to continue conversations across multiple sessions. Each chat session is stored in a timestamped directory in your user profile.
+
+**Listing Sessions:**
+
+To view all your saved chat sessions:
+
+```bash
+max --list-sessions
+```
+
+This command displays a card-like view of each session, including:
+- Session ID (timestamp)
+- Creation date
+- Last updated date
+- Number of messages
+- First user prompt (to help identify the conversation)
+
+Example output:
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Session: 20250621_230940                                    │
+├─────────────────────────────────────────────────────────────┤
+│ Created:      2025-06-21 23:09:40                           │
+│ Last Updated: 2025-06-21 23:15:22                           │
+│ Messages:     8 entries                                     │
+├─────────────────────────────────────────────────────────────┤
+│ First Prompt: "How can I implement a binary search tree     │
+│               in C#?"                                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Loading a Session:**
+
+To continue a previous conversation, use the `--chat` option with the `-l` or `--load` flag followed by the session ID:
+
+```bash
+max --chat -l 20250621_230940
+```
+
+This will:
+1. Load the entire conversation history
+2. Display the previous messages so you can see the context
+3. Allow you to continue the conversation from where you left off
+
+All chat sessions are stored in the `.maxbot/chats` directory in your user profile. Each session is a separate directory containing a `chatHistory.json` file with the conversation data.
+
+**Session Storage Location:**
+
+- Windows: `C:\Users\<username>\.maxbot\chats\`
+- macOS: `/Users/<username>/.maxbot/chats/`
+- Linux: `/home/<username>/.maxbot/chats/`
+
 ## Contributing 🤝
 
 Contributions are welcome! Please read the [developer guidelines](.clinerules/developer_guidelines.md) for more information on how to build the project and run tests.
