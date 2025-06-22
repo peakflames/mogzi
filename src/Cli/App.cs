@@ -306,6 +306,41 @@ public class App
                         Console.WriteLine($"Loaded chat session: {sessionId}");
                         Console.WriteLine($"Loaded {chatHistory.Count} messages from previous session");
                         Console.ResetColor();
+                        
+                        // Display the loaded chat history to make it look like you just had those chats
+                        Console.WriteLine("\n--- Chat History ---");
+                        
+                        // Skip the system message when displaying
+                        for (int i = 1; i < chatHistory.Count; i++)
+                        {
+                            var message = chatHistory[i];
+                            
+                            if (message.Role == ChatRole.User)
+                            {
+                                // Display user message
+                                Console.ForegroundColor = ConsoleColor.Yellow;
+                                Console.Write($"\n{robotEmoji} Max | {folderEmoji} {Directory.GetCurrentDirectory()}\n% ");
+                                Console.ForegroundColor = ConsoleColor.White;
+                                Console.WriteLine(message.Text);
+                                Console.WriteLine();
+                            }
+                            else if (message.Role == ChatRole.Assistant)
+                            {
+                                // Display assistant message
+                                Console.ForegroundColor = ConsoleColor.Blue;
+                                Console.Write(message.Text);
+                                Console.WriteLine();
+                                
+                                if (showStatus)
+                                {
+                                    // Calculate tokens up to this point in the conversation
+                                    var partialHistory = chatHistory.Take(i + 1).ToList();
+                                    WriteTokenMetrics(partialHistory);
+                                }
+                            }
+                        }
+                        
+                        Console.WriteLine("\n--- End of History ---\n");
                     }
                     else
                     {
