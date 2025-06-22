@@ -86,7 +86,7 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, content);
 
         // Assert
-        result.Should().Be("success");
+        result.Should().Contain("Successfully wrote the contents to the file");
         File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(content);
     }
@@ -103,7 +103,7 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, newContent);
 
         // Assert
-        result.Should().Be("success");
+        result.Should().Contain("Successfully wrote the contents to the file");
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(newContent);
     }
 
@@ -118,7 +118,7 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, content);
 
         // Assert
-        result.Should().Be("success");
+        result.Should().Contain("Successfully wrote the contents to the file");
         File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(content);
     }
@@ -138,7 +138,7 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReplaceInFile(testFile, diff);
 
         // Assert
-        result.Should().Be("success");
+        result.Should().Contain("Successfully wrote the contents to the file");
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be("Hello, new world!");
     }
 
@@ -173,7 +173,7 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReplaceInFile(testFile, diff);
 
         // Assert
-        result.Should().Be("success");
+        result.Should().Contain("Successfully wrote the contents to the file");
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be("1 two 3");
     }
 

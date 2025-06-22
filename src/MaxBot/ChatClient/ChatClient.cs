@@ -69,22 +69,12 @@ public partial class ChatClient
     }
 
     
-    public static Result<ChatClient> Create(string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string>? llmResponseDetailsCallback = null)
-    {
-        var result = Create(null, configFilePath, profileName, toolApprovals, mode, llmResponseDetailsCallback);
-        return result;
-    }
-    
     public static Result<ChatClient> Create(string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string>? llmResponseDetailsCallback = null, bool debug = false)
     {
         var result = Create(null, configFilePath, profileName, toolApprovals, mode, llmResponseDetailsCallback, debug);
         return result;
     }
 
-    public static Result<ChatClient> Create(IChatClient? chatClient, string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string>? llmResponseDetailsCallback = null)
-    {
-        return Create(chatClient, configFilePath, profileName, toolApprovals, mode, llmResponseDetailsCallback, false);
-    }
 
     public static Result<ChatClient> Create(IChatClient? chatClient, string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string>? llmResponseDetailsCallback = null, bool debug = false)
     {
