@@ -167,12 +167,19 @@ This workflow automates the implementation of the next priority task from the pr
    - Create a quick reference guide for the new functionality if applicable.
    - Document any new dependencies or configuration changes.
 
-5. Use the `attempt_completion` tool to present the final results.
+5. Update project documentation with next priority task.
+   - Use the `replace_in_file` tool to update `docs/project_plan.md`.
+   - Mark the completed task as "✅ **COMPLETED**" in the Phase sections.
+   - Update the "Short-term Goals" section to clearly mark the "**NEXT PRIORITY**" task.
+   - Update implementation and verification status percentages.
+   - Ensure the next recommended task is clearly documented for future sessions.
+
+6. Use the `attempt_completion` tool to present the final results.
    - Include the path to the generated summary report.
    - Provide a concise overview of what was accomplished.
    - Include key metrics (tests added, files modified, TORs satisfied).
    - Reference any relevant terminal output or test results.
-   - Suggest the next logical task to implement if apparent.
+   - Clearly state where the next priority task is documented for future reference.
 
 </detailed_sequence_steps>
 
