@@ -15,6 +15,7 @@ public record CommandLineOptions
     public bool ShowVersion { get; init; }
     public string? ToolApprovals { get; init; }
     public string? LoadSession { get; init; }
+    public bool Debug { get; init; }
 }
 
 
@@ -39,6 +40,7 @@ public static class CliArgParser
         bool showVersion = false;
         string? toolApprovals = null;
         string? loadSession = null;
+        bool debug = false;
         var remainingArgs = new List<string>();
 
         for (int i = 0; i < args.Length; i++)
@@ -86,6 +88,10 @@ public static class CliArgParser
             {
                 loadSession = args[i + 1];
                 i++; // Skip the next argument
+            }
+            else if (args[i] == "--debug")
+            {
+                debug = true;
             }
             else if (args[i].StartsWith('-'))
             {
@@ -136,7 +142,8 @@ public static class CliArgParser
             ShowHelp = showHelp,
             ShowVersion = showVersion,
             ToolApprovals = toolApprovals,
-            LoadSession = loadSession
+            LoadSession = loadSession,
+            Debug = debug
         };
     }
 
@@ -188,6 +195,7 @@ public static class CliArgParser
         Console.WriteLine("  -ta, --tool-approvals <mode> Override the tool approval setting (readonly|all)");
         Console.WriteLine("  -l, --load-session <id>      Load a previous chat session by ID (timestamp format: YYYYMMDD_HHMMSS)");
         Console.WriteLine("  --list-sessions, --sessions  List all available chat sessions");
+        Console.WriteLine("  --debug                      Enable debug mode with detailed tool logging");
         Console.WriteLine("  -h, --help                   Display this help message");
         Console.ResetColor();
     }

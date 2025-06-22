@@ -53,7 +53,14 @@ public partial class Program
 
         if (chatClient == null)
         {
-            var clientResult = ChatClient.Create(options.ConfigPath, options.ProfileName, options.ToolApprovals, options.Mode, App.ConsoleWriteLLMResponseDetails);
+            // Set debug flag in config if specified
+            var clientResult = ChatClient.Create(
+                options.ConfigPath, 
+                options.ProfileName, 
+                options.ToolApprovals, 
+                options.Mode, 
+                options.Debug ? App.ConsoleWriteLLMResponseDetails : null, 
+                options.Debug);
             if (clientResult.IsFailed)
             {
                 App.ConsoleWriteError(clientResult.ToResult());

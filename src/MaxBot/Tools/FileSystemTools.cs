@@ -64,14 +64,20 @@ public class FileSystemTools
         [Description("(optional) Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.")]
         bool recursive = false)
     {
-        _llmResponseDetailsCallback?.Invoke($"Listing files in '{path}'{(recursive ? "recursively" : "")}.");
+        if (_config.Debug)
+        {
+            _llmResponseDetailsCallback?.Invoke($"Listing files in '{path}'{(recursive ? "recursively" : "")}.");
+        }
         var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
 
         var result = string.Empty;
         if (!Directory.Exists(filePath))
         {
             var msg = $"ERROR: Failed to list files. The directory '{filePath}' does not exist.";
-            _llmResponseDetailsCallback?.Invoke(msg);
+            if (_config.Debug)
+            {
+                _llmResponseDetailsCallback?.Invoke(msg);
+            }
             return msg;
         }
 
@@ -107,14 +113,20 @@ public class FileSystemTools
             // Add files to the list
             entries.AddRange(files);
             
-            _llmResponseDetailsCallback?.Invoke($"Listed {directories.Length} directories and {files.Length} files for '{filePath}'.");
+            if (_config.Debug)
+            {
+                _llmResponseDetailsCallback?.Invoke($"Listed {directories.Length} directories and {files.Length} files for '{filePath}'.");
+            }
 
             result = string.Join("\n", entries);
         }
         catch (Exception ex)
         {
             var msg = $"ERROR: Failed to list files and directories. {ex.Message}";
-            _llmResponseDetailsCallback?.Invoke(msg);
+            if (_config.Debug)
+            {
+                _llmResponseDetailsCallback?.Invoke(msg);
+            }
             return msg;
         }
         
@@ -132,7 +144,10 @@ public class FileSystemTools
             return "ERROR: File system is in readonly mode. Write operations are disabled.";
         }
         
-        _llmResponseDetailsCallback?.Invoke($"Writing to file '{path}' with integrity preservation.");
+        if (_config.Debug)
+        {
+            _llmResponseDetailsCallback?.Invoke($"Writing to file '{path}' with integrity preservation.");
+        }
         var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
 
         if (!IsPathInWorkingDirectory(filePath))
@@ -142,12 +157,20 @@ public class FileSystemTools
 
         try
         {
-            return WriteFileWithIntegrity(filePath, content);
+            var response = WriteFileWithIntegrity(filePath, content);
+            if (_config.Debug)
+            {
+                _llmResponseDetailsCallback?.Invoke(response);
+            }
+            return response;
         }
         catch (Exception ex)
         {
             var msg = $"ERROR: Failed to write file with integrity preservation. {ex.Message}";
-            _llmResponseDetailsCallback?.Invoke(msg);
+            if (_config.Debug)
+            {
+                _llmResponseDetailsCallback?.Invoke(msg);
+            }
             return msg;
         }
     }
@@ -165,6 +188,9 @@ public class FileSystemTools
         string? backupPath = null;
         string? tempPath = null;
         bool fileExisted = File.Exists(filePath);
+        var response = new StringBuilder();
+        response.AppendLine("<tool_response>");
+        var responseText = "";
 
         try
         {
@@ -173,14 +199,16 @@ public class FileSystemTools
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory);
-                _llmResponseDetailsCallback?.Invoke($"Created directory: {directory}");
+                responseText = $"Created directory: {directory}";
+                response.AppendLine(responseText);
             }
 
             // Step 1: Create backup if file exists
             if (fileExisted)
             {
                 backupPath = CreateBackup(filePath);
-                _llmResponseDetailsCallback?.Invoke($"Created backup: {backupPath}");
+                responseText = $"Created backup: {backupPath}";
+                response.AppendLine(responseText);
             }
 
             // Step 2: Write to temporary file first (atomic operation)
@@ -188,18 +216,20 @@ public class FileSystemTools
             // Use UTF8 without BOM to avoid checksum mismatches
             var utf8WithoutBom = new UTF8Encoding(false);
             File.WriteAllText(tempPath, content, utf8WithoutBom);
-            _llmResponseDetailsCallback?.Invoke($"Wrote content to temporary file: {tempPath}");
+            responseText = $"Wrote content to temporary file: {tempPath}";
+            response.AppendLine(responseText);
 
             // Step 3: Validate written content integrity
             var expectedChecksum = CalculateStringChecksum(content);
             var actualChecksum = CalculateFileChecksum(tempPath);
-            
+
             if (expectedChecksum != actualChecksum)
             {
                 throw new InvalidOperationException($"Checksum mismatch. Expected: {expectedChecksum}, Actual: {actualChecksum}");
             }
-            
-            _llmResponseDetailsCallback?.Invoke($"Checksum validation passed: {actualChecksum}");
+
+            responseText = $"Checksum validation passed: {actualChecksum}";
+            response.AppendLine(responseText);
 
             // Step 4: Atomic move from temp to final location
             if (fileExisted)
@@ -207,7 +237,8 @@ public class FileSystemTools
                 File.Delete(filePath);
             }
             File.Move(tempPath, filePath);
-            _llmResponseDetailsCallback?.Invoke($"Atomically moved temporary file to final location");
+            responseText = $"Atomically moved temporary file to final location";
+            response.AppendLine(responseText);
 
             // Step 5: Final integrity verification
             var finalChecksum = CalculateFileChecksum(filePath);
@@ -218,21 +249,27 @@ public class FileSystemTools
 
             // Step 6: Clean up backup (keep it for now as a safety measure)
             // We could optionally delete the backup here, but keeping it provides additional safety
-            
-            _llmResponseDetailsCallback?.Invoke($"File integrity preservation completed successfully");
-            return "success";
+
+            responseText = $"File integrity preservation completed successfully";
+            response.AppendLine(responseText);
+
+            response.AppendLine($"Successfully wrote the contents to the file '{filePath}'.");
+            response.AppendLine("</tool_response>");
+            return response.ToString();
         }
         catch (Exception ex)
         {
-            _llmResponseDetailsCallback?.Invoke($"Error during file write, attempting rollback: {ex.Message}");
-            
+            responseText = $"Error during file write, attempting rollback: {ex.Message}";
+            response.AppendLine(responseText);
+
             // Rollback: Restore from backup if it exists
             try
             {
                 if (tempPath != null && File.Exists(tempPath))
                 {
                     File.Delete(tempPath);
-                    _llmResponseDetailsCallback?.Invoke($"Cleaned up temporary file: {tempPath}");
+                    responseText = $"Cleaned up temporary file: {tempPath}";
+                    response.AppendLine(responseText);
                 }
 
                 if (backupPath != null && File.Exists(backupPath))
@@ -242,16 +279,22 @@ public class FileSystemTools
                         File.Delete(filePath);
                     }
                     File.Move(backupPath, filePath);
-                    _llmResponseDetailsCallback?.Invoke($"Restored original file from backup");
+                    responseText = $"Restored original file from backup";
+                    response.AppendLine(responseText);
                 }
             }
             catch (Exception rollbackEx)
             {
-                _llmResponseDetailsCallback?.Invoke($"ERROR: Rollback failed: {rollbackEx.Message}");
-                return $"ERROR: Write failed and rollback failed. Original error: {ex.Message}. Rollback error: {rollbackEx.Message}";
+                responseText = $"ERROR: Rollback failed: {rollbackEx.Message}";
+                response.AppendLine(responseText);
+                response.AppendLine($"ERROR: Write failed and rollback failed. Original error: {ex.Message}. Rollback error: {rollbackEx.Message}");
+                response.AppendLine("</tool_response>");
+                return response.ToString();
             }
 
-            return $"ERROR: Write failed but original file restored from backup. {ex.Message}";
+            response.AppendLine($"ERROR: Write failed but original file restored from backup. {ex.Message}");
+            response.AppendLine("</tool_response>");
+            return response.ToString();
         }
         finally
         {
@@ -299,7 +342,10 @@ public class FileSystemTools
         [Description("The path of the file to read (relative to the current working directory)")]
         string path)
     {
-        _llmResponseDetailsCallback?.Invoke($"Reading file '{path}'.");
+        if (_config.Debug)
+        {
+            _llmResponseDetailsCallback?.Invoke($"Reading file '{path}'.");
+        }
         var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
 
         if (!IsPathInWorkingDirectory(filePath))
@@ -310,7 +356,10 @@ public class FileSystemTools
         if (!File.Exists(filePath))
         {
             var msg = $"ERROR: File not found: {filePath}";
-            _llmResponseDetailsCallback?.Invoke(msg);
+            if (_config.Debug)
+            {
+                _llmResponseDetailsCallback?.Invoke(msg);
+            }
             return msg;
         }
 
@@ -329,7 +378,10 @@ public class FileSystemTools
             return "ERROR: File system is in readonly mode. Write operations are disabled.";
         }
 
-        _llmResponseDetailsCallback?.Invoke($"Replacing content in file '{path}'.");
+        if (_config.Debug)
+        {
+            _llmResponseDetailsCallback?.Invoke($"Replacing content in file '{path}'.");
+        }
         var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
 
         if (!IsPathInWorkingDirectory(filePath))
@@ -374,7 +426,10 @@ public class FileSystemTools
         catch (Exception ex)
         {
             var msg = $"ERROR: Failed to replace content in file. {ex.Message}";
-            _llmResponseDetailsCallback?.Invoke(msg);
+            if (_config.Debug)
+            {
+                _llmResponseDetailsCallback?.Invoke(msg);
+            }
             return msg;
         }
     }

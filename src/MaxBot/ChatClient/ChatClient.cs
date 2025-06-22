@@ -74,8 +74,19 @@ public partial class ChatClient
         var result = Create(null, configFilePath, profileName, toolApprovals, mode, llmResponseDetailsCallback);
         return result;
     }
+    
+    public static Result<ChatClient> Create(string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string>? llmResponseDetailsCallback = null, bool debug = false)
+    {
+        var result = Create(null, configFilePath, profileName, toolApprovals, mode, llmResponseDetailsCallback, debug);
+        return result;
+    }
 
     public static Result<ChatClient> Create(IChatClient? chatClient, string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string>? llmResponseDetailsCallback = null)
+    {
+        return Create(chatClient, configFilePath, profileName, toolApprovals, mode, llmResponseDetailsCallback, false);
+    }
+
+    public static Result<ChatClient> Create(IChatClient? chatClient, string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string>? llmResponseDetailsCallback = null, bool debug = false)
     {
         string jsonContent;
         try
@@ -109,6 +120,9 @@ public partial class ChatClient
         {
             maxbotConfig.ToolApprovals = toolApprovals;
         }
+        
+        // Set debug flag if specified
+        maxbotConfig.Debug = debug;
 
 
         // Find the specified profile, or default profile, or first profile
