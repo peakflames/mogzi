@@ -349,40 +349,8 @@ public class App
                         Console.WriteLine($"Loaded {chatHistory.Count} messages from previous session");
                         Console.ResetColor();
                         
-                        // Display the loaded chat history to make it look like you just had those chats
-                        Console.WriteLine("\n--- Chat History ---");
-                        
-                        // Skip the system message when displaying
-                        for (int i = 1; i < chatHistory.Count; i++)
-                        {
-                            var message = chatHistory[i];
-                            
-                            if (message.Role == ChatRole.User)
-                            {
-                                // Display user message
-                                Console.ForegroundColor = ConsoleColor.Yellow;
-                                Console.Write($"\n{catHeartEyesEmoji} Max | {folderEmoji} {Directory.GetCurrentDirectory()} | {robotEmoji}: {_activeProfileName}\n% ");
-                                Console.ForegroundColor = ConsoleColor.White;
-                                Console.WriteLine(message.Text);
-                                Console.WriteLine();
-                            }
-                            else if (message.Role == ChatRole.Assistant)
-                            {
-                                // Display assistant message
-                                Console.ForegroundColor = ConsoleColor.Blue;
-                                Console.Write(message.Text);
-                                Console.WriteLine();
-                                
-                                if (_showStatus)
-                                {
-                                    // Calculate tokens up to this point in the conversation
-                                    var partialHistory = chatHistory.Take(i + 1).ToList();
-                                    WriteTokenMetrics(partialHistory);
-                                }
-                            }
-                        }
-                        
-                        Console.WriteLine("\n--- End of History ---\n");
+                        // Display the loaded chat history
+                        DisplayChatHistory(chatHistory);
                     }
                     else
                     {
@@ -668,6 +636,47 @@ public class App
         // }
         Console.ForegroundColor = currentForegroundColor;
     }
+    
+    /// <summary>
+    /// Displays the chat history in a formatted way
+    /// </summary>
+    /// <param name="chatHistory">The chat history to display</param>
+    private void DisplayChatHistory(List<ChatMessage> chatHistory)
+    {
+        var robotEmoji = char.ConvertFromUtf32(0x1F916);  // 🤖
+        var folderEmoji = char.ConvertFromUtf32(0x1F4C2); // 📂
+        var catHeartEyesEmoji = char.ConvertFromUtf32(0x1F63B); // 😻
+                
+        // Skip the system message when displaying
+        for (int i = 1; i < chatHistory.Count; i++)
+        {
+            var message = chatHistory[i];
+            
+            if (message.Role == ChatRole.User)
+            {
+                // Display user message
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.Write($"\n{catHeartEyesEmoji} Max | {folderEmoji} {Directory.GetCurrentDirectory()} | {robotEmoji}: {_activeProfileName}\n% ");
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.WriteLine(message.Text);
+                Console.WriteLine();
+            }
+            else if (message.Role == ChatRole.Assistant)
+            {
+                // Display assistant message
+                Console.ForegroundColor = ConsoleColor.Blue;
+                Console.Write(message.Text);
+                Console.WriteLine();
+                
+                if (_showStatus)
+                {
+                    // Calculate tokens up to this point in the conversation
+                    var partialHistory = chatHistory.Take(i + 1).ToList();
+                    WriteTokenMetrics(partialHistory);
+                }
+            }
+        }
+    }
 
     /// <summary>
     /// Handles slash commands in chat mode
@@ -836,6 +845,9 @@ public class App
             Console.WriteLine($"Loaded chat session: {sessionId}");
             Console.WriteLine($"Loaded {chatHistory.Count} messages from session");
             Console.ResetColor();
+            
+            // Display the loaded chat history
+            DisplayChatHistory(chatHistory);
         }
         else
         {
