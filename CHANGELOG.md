@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Reinforced the need to assume cross-platform compatibility for all OS-level interactions.
   - Added a requirement to verify Native AOT compatibility for all new dependencies.
   - Added a guideline to test against the application's secure-by-default settings.
+- Refactored the `Cli` project to use the Command Pattern, improving modularity and maintainability.
 
 ## [1.3.1] - 2025-06-22
 

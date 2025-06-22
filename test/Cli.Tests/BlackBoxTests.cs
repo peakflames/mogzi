@@ -5,7 +5,7 @@ using System.IO;
 using System;
 using MaxBot;
 using System.Text.RegularExpressions;
-using CLI;
+using Cli.UI;
 
 namespace Cli.Tests;
 
@@ -112,7 +112,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
 
-        var clientResult = ChatClient.Create("maxbot.config.json", profileName, null, "oneshot", App.ConsoleWriteLLMResponseDetails);
+        var clientResult = ChatClient.Create("maxbot.config.json", profileName, null, "oneshot", ConsoleRenderer.ConsoleWriteLLMResponseDetails);
         clientResult.IsFailed.Should().Be(false);
 
         // Act
@@ -146,7 +146,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
 
-        var clientResult = ChatClient.Create("maxbot.config.json", profileName, null, "oneshot", App.ConsoleWriteLLMResponseDetails);
+        var clientResult = ChatClient.Create("maxbot.config.json", profileName, null, "oneshot", ConsoleRenderer.ConsoleWriteLLMResponseDetails);
         clientResult.IsFailed.Should().Be(false);
 
         // Act
