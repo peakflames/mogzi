@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [1.3.1]
+## [1.3.1] - 2025-06-22
 
 - Add active profile name to the CLI interface prompt and update the emoji styling. 
 - Display tool approvals setting in startup information to improve visibility of the current configuration.
@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Pre-releases include version number with date and commit hash
   - Pre-releases are clearly marked as development builds
 
-## [1.3.0]
+## [1.3.0] - 2025-06-21
 
 - Enhanced session listing with card-like display showing session details, message count, and first user prompt
 - Improved session loading to display previous chat history when loading a session
@@ -53,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added comprehensive tests for chat history service
 - Fixed list_files tool to properly list both files and directories as per specification
 
-## [1.2.0]
+## [1.2.0] - 2025-06-21
 
 __Added__:
 
