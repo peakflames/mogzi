@@ -28,8 +28,7 @@ MaxBot is equipped with a powerful set of tools to interact with your local syst
 | `search_files`      | 🎯 Next Priority | Regex-based search across files for enhanced code analysis.        | Read-only operation. Constrained to the working directory. Supports pattern matching across file contents.                                          |
 | `attempt_completion` | 🔄 Coming Soon | Signals task completion and presents results to the user.          | Read-only operation. Provides structured completion feedback and optional demonstration commands.                                                    |
 | `list_code_definition_names` | 📋 Planned | Lists code definitions (classes, functions, methods) in source files. | Read-only operation. Constrained to the working directory. Provides code structure analysis.                                                        |
-| `browser_action`    | 🌐 Future | Web browser automation for testing and interaction.                | Sandboxed browser operations. Requires explicit approval for navigation and interactions.                                                           |
-| `mcp_tools`         | 🔄 Coming Soon | Model Context Protocol support for external integrations.          | Configurable approval requirements. Enables integration with external services and APIs.                                                            |
+| `mcp_tools`         | 📋 Planned | Model Context Protocol support for external integrations.          | Configurable approval requirements. Enables integration with external services and APIs.                                                            |
 
 
 ### Examples 💡
