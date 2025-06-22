@@ -55,7 +55,7 @@ Before running the application, ensure you have:
     - Download loads max and moves it to your `/usr/local/bin`
   
     ```sh
-    sudo curl -sLO https://github.com/peakflames/maxbot/releases/latest/download/max-osx-x64 -o max && chmod +x max && mv max /usr/local/bin && rm ./max
+    sudo curl -L -o max https://github.com/peakflames/maxbot/releases/latest/download/max-osx-x64 && sudo chmod +x max && sudo mv -f max /usr/local/bin
     ```
 
     For Linux (sudo)
@@ -63,7 +63,7 @@ Before running the application, ensure you have:
     - Download loads max and moves it to your `/usr/local/bin`
 
     ```sh
-    sudo curl -L https://github.com/peakflames/maxbot/releases/latest/download/max-linux-x64 -o max && sudo chmod +x max && sudo mv -f max /usr/local/bin
+    sudo curl -L -o max https://github.com/peakflames/maxbot/releases/latest/download/max-linux-x64 && sudo chmod +x max && sudo mv -f max /usr/local/bin
     ```
 
 2. In your home directory, create a configuration file (`maxbot.config.json`) with your API provider details:
