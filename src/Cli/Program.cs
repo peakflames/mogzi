@@ -53,7 +53,14 @@ public partial class Program
 
         if (chatClient == null)
         {
-            var clientResult = ChatClient.Create(options.ConfigPath, options.ProfileName, options.ToolApprovals, options.Mode, App.ConsoleWriteLLMResponseDetails);
+            // Set debug flag in config if specified
+            var clientResult = ChatClient.Create(
+                options.ConfigPath, 
+                options.ProfileName, 
+                options.ToolApprovals, 
+                options.Mode, 
+                options.Debug ? App.ConsoleWriteLLMResponseDetails : null, 
+                options.Debug);
             if (clientResult.IsFailed)
             {
                 App.ConsoleWriteError(clientResult.ToResult());
@@ -76,7 +83,8 @@ public partial class Program
             Console.Write($"Mode='{options.Mode}', ");
             Console.Write($"Profile='{maxClient.ActiveProfile.Name}', ");
             Console.Write($"Provider='{maxClient.ActiveProfile.ApiProvider}', ");
-            Console.Write($"Model='{maxClient.ActiveProfile.ModelId}'");
+            Console.Write($"Model='{maxClient.ActiveProfile.ModelId}', ");
+            Console.Write($"ToolApprovals='{maxClient.Config.ToolApprovals}'");
             Console.Write(")\n\n");
 
             Console.ForegroundColor = ConsoleColor.Cyan;

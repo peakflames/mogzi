@@ -27,6 +27,9 @@ public class MaxbotConfiguration
 
     [JsonPropertyName("tool_approvals")]
     public string ToolApprovals { get; set; } = "readonly";
+    
+    [JsonPropertyName("debug")]
+    public bool Debug { get; set; } = false;
 }
 
 public class ApiProvider

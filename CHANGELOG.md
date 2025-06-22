@@ -5,7 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.0]
+
+## [1.3.1] - 2025-06-22
+
+- Add active profile name to the CLI interface prompt and update the emoji styling. 
+- Display tool approvals setting in startup information to improve visibility of the current configuration.
+- Added slash commands in chat mode:
+  - `/status` - Display current configuration (similar to `--status` flag)
+  - `/tool-approval [readonly|all]` - Change tool approval setting
+  - `/sessions` - List available sessions (similar to `--list-sessions` flag)
+  - `/load-session [ID]` - Load a specific chat session
+  - `/help` - Display available slash commands
+- Fixed bug where changing tool approval setting with `/tool-approval` command wasn't reflected in the system prompt
+- Added `--debug` flag to enable detailed tool logging in the console
+- Improved session listing to order sessions by last update date, with most recently used sessions appearing last
+- Enhanced GitHub Actions workflow to support develop branch builds:
+  - Added automatic build artifacts for all pushes to the develop branch
+  - Added manual trigger for creating pre-releases from the develop branch
+  - Pre-releases include version number with date and commit hash
+  - Pre-releases are clearly marked as development builds
+
+## [1.3.0] - 2025-06-21
 
 - Enhanced session listing with card-like display showing session details, message count, and first user prompt
 - Improved session loading to display previous chat history when loading a session
@@ -33,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added comprehensive tests for chat history service
 - Fixed list_files tool to properly list both files and directories as per specification
 
-## [1.2.0]
+## [1.2.0] - 2025-06-21
 
 __Added__:
 

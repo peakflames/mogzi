@@ -27,6 +27,11 @@ public class AppService : IAppService
     /// Gets the chat options
     /// </summary>
     public ChatOptions ChatOptions => _chatClient.ChatOptions;
+    
+    /// <summary>
+    /// Gets the chat client
+    /// </summary>
+    public ChatClient ChatClient => _chatClient;
 
     /// <summary>
     /// Initializes a new instance of the AppService class
@@ -100,6 +105,13 @@ public class AppService : IAppService
     /// <returns>An async enumerable of chat response updates</returns>
     public IAsyncEnumerable<ChatResponseUpdate> ProcessChatMessageAsync(List<ChatMessage> chatHistory, CancellationToken cancellationToken)
     {
+        // Ensure the first message is the system prompt with the current value
+        if (chatHistory.Count > 0 && chatHistory[0].Role == ChatRole.System)
+        {
+            // Update the system message with the current system prompt
+            chatHistory[0] = new ChatMessage(ChatRole.System, _chatClient.SystemPrompt);
+        }
+        
         return _chatClient.ChatClientMEAI.GetStreamingResponseAsync(chatHistory, _chatClient.ChatOptions, cancellationToken);
     }
 

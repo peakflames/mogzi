@@ -71,7 +71,9 @@ public class FileIntegrityTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, newContent);
 
         // Assert
-        result.Should().Be("success");
+        result.Should().Contain("<tool_response>");
+        result.Should().Contain("Successfully wrote the contents to the file");
+        result.Should().Contain("</tool_response>");
         File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(newContent);
         
@@ -103,7 +105,7 @@ public class FileIntegrityTests : IDisposable
         // Assert - File should either succeed or remain unchanged
         File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         
-        if (result == "success")
+        if (result.Contains("Successfully wrote the contents to the file"))
         {
             // If write succeeded, verify integrity of new content
             File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(largeContent);
@@ -163,7 +165,7 @@ public class FileIntegrityTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, newContent);
 
         // Assert
-        result.Should().Be("success");
+        result.Should().Contain("Successfully wrote the contents to the file");
         
         // Original file should have new content
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(newContent);
@@ -213,7 +215,7 @@ public class FileIntegrityTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, content);
 
         // Assert
-        result.Should().Be("success");
+        result.Should().Contain("Successfully wrote the contents to the file");
         File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         
         // Verify written content matches expected content exactly
@@ -245,7 +247,7 @@ public class FileIntegrityTests : IDisposable
         // In case of checksum mismatch, file should be rolled back to original state
         File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         
-        if (result != "success")
+        if (!result.Contains("Successfully wrote the contents to the file"))
         {
             // If write failed due to checksum mismatch, original should be restored
             File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(originalContent);
@@ -274,7 +276,7 @@ public class FileIntegrityTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, newContent);
 
         // Assert
-        result.Should().Be("success");
+        result.Should().Contain("Successfully wrote the contents to the file");
         
         // After atomic write, file should contain complete new content
         var finalContent = File.ReadAllText(Path.Combine(_testDirectory, testFile));
@@ -295,7 +297,7 @@ public class FileIntegrityTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, largeContent);
 
         // Assert
-        result.Should().Be("success");
+        result.Should().Contain("Successfully wrote the contents to the file");
         File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         
         // Verify complete content was written correctly
@@ -320,7 +322,7 @@ public class FileIntegrityTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, contentWithSpecialChars);
 
         // Assert
-        result.Should().Be("success");
+        result.Should().Contain("Successfully wrote the contents to the file");
         File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         
         // Verify special characters are preserved exactly
