@@ -2,7 +2,11 @@ using FluentResults;
 using MaxBot;
 using MaxBot.Domain;
 using Microsoft.Extensions.AI;
+using System;
 using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
 
 namespace CLI;
 
@@ -84,17 +88,19 @@ public class App
             Console.WriteLine();
             Console.ResetColor();
             
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"{"Session ID",-20} {"Created",-20}");
-            Console.WriteLine($"{"----------",-20} {"-------",-20}");
-            Console.ResetColor();
-            
             foreach (var session in sessions)
             {
                 string sessionId = Path.GetFileName(session);
+                string sessionPath = session;
+                string filePath = Path.Combine(sessionPath, "chatHistory.json");
                 
-                // Try to parse the timestamp from the session ID
+                // Default values in case we can't read the file
                 string createdDate = "Unknown";
+                string lastUpdatedDate = "Unknown";
+                string firstPrompt = "No prompt available";
+                int messageCount = 0;
+                
+                // Try to parse the timestamp from the session ID as a fallback
                 if (sessionId.Length >= 15) // Format: YYYYMMDD_HHMMSS
                 {
                     try
@@ -110,14 +116,149 @@ public class App
                     }
                     catch
                     {
-                        // If parsing fails, use the default "Unknown"
+                        // If parsing fails, keep the default "Unknown"
                     }
                 }
                 
-                Console.WriteLine($"{sessionId,-20} {createdDate,-20}");
+                // Try to read the chat history file
+                if (File.Exists(filePath))
+                {
+                    try
+                    {
+                        // Read the file synchronously since we're in a synchronous method
+                        string jsonContent = File.ReadAllText(filePath);
+                        var historyRoot = JsonSerializer.Deserialize(jsonContent, ChatHistoryContext.Default.ChatHistoryRoot);
+                        
+                        if (historyRoot != null)
+                        {
+                            // Get created and updated dates
+                            if (!string.IsNullOrEmpty(historyRoot.CreatedAt))
+                            {
+                                createdDate = historyRoot.CreatedAt;
+                            }
+                            
+                            if (!string.IsNullOrEmpty(historyRoot.LastUpdatedAt))
+                            {
+                                lastUpdatedDate = historyRoot.LastUpdatedAt;
+                            }
+                            
+                            // Get message count
+                            messageCount = historyRoot.Messages.Count;
+                            
+                            // Find the first user prompt
+                            var firstUserMessage = historyRoot.Messages.FirstOrDefault(m => 
+                                m.Role.Equals("user", StringComparison.OrdinalIgnoreCase));
+                            
+                            if (firstUserMessage != null && !string.IsNullOrEmpty(firstUserMessage.Content))
+                            {
+                                // Use the full prompt text (will be wrapped when displayed)
+                                firstPrompt = firstUserMessage.Content;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // If there's an error reading the file, just use the default values
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                        Console.WriteLine($"Warning: Could not read chat history for session {sessionId}: {ex.Message}");
+                        Console.ResetColor();
+                    }
+                }
+                
+                // Display the card
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("┌─────────────────────────────────────────────────────────────┐");
+                Console.WriteLine($"│ Session: {sessionId,-50} │");
+                Console.WriteLine("├─────────────────────────────────────────────────────────────┤");
+                Console.WriteLine($"│ Created:      {createdDate,-45} │");
+                Console.WriteLine($"│ Last Updated: {lastUpdatedDate,-45} │");
+                // Calculate padding for message count, ensuring it's never negative
+                int messagesPadding = Math.Max(0, 45 - messageCount.ToString().Length - 8);
+                Console.WriteLine($"│ Messages:     {messageCount} entries{new string(' ', messagesPadding)} │");
+                Console.WriteLine("├─────────────────────────────────────────────────────────────┤");
+                // Word wrap the first prompt
+                const int maxWidth = 55;
+                const string promptPrefix = "│ First Prompt: \"";
+                const string continuationPrefix = "│               ";
+                
+                // Display the first line with the "First Prompt:" prefix
+                if (firstPrompt.Length <= maxWidth - promptPrefix.Length - 2) // -2 for the quotes
+                {
+                    // Short prompt fits on one line
+                    int padding = Math.Max(0, 45 - firstPrompt.Length - 2);
+                    Console.WriteLine($"{promptPrefix}{firstPrompt}\"{new string(' ', padding)} │");
+                }
+                else
+                {
+                    // Implement smarter word wrapping that respects word boundaries
+                    // First, split the prompt into words
+                    string[] words = firstPrompt.Split(' ');
+                    
+                    // Build the first line
+                    int firstLineMaxLength = maxWidth - promptPrefix.Length - 3; // -3 for the opening quote and space
+                    StringBuilder firstLineBuilder = new StringBuilder();
+                    int wordIndex = 0;
+                    
+                    // Add words to the first line until we reach the max length
+                    while (wordIndex < words.Length)
+                    {
+                        if (firstLineBuilder.Length + words[wordIndex].Length + (firstLineBuilder.Length > 0 ? 1 : 0) <= firstLineMaxLength)
+                        {
+                            if (firstLineBuilder.Length > 0)
+                                firstLineBuilder.Append(' ');
+                            firstLineBuilder.Append(words[wordIndex]);
+                            wordIndex++;
+                        }
+                        else
+                            break;
+                    }
+                    
+                    // Output the first line with proper right-aligned pipe
+                    int firstLinePadding = Math.Max(0, 45 - firstLineBuilder.Length - 1);
+                    Console.WriteLine($"{promptPrefix}{firstLineBuilder}{new string(' ', firstLinePadding)} │");
+                    
+                    // Process remaining words for continuation lines
+                    if (wordIndex < words.Length)
+                    {
+                        int continuationMaxLength = maxWidth - continuationPrefix.Length - 3; // -3 for space and right border
+                        
+                        while (wordIndex < words.Length)
+                        {
+                            StringBuilder lineBuilder = new StringBuilder();
+                            
+                            // Add words to the current continuation line
+                            while (wordIndex < words.Length)
+                            {
+                                if (lineBuilder.Length + words[wordIndex].Length + (lineBuilder.Length > 0 ? 1 : 0) <= continuationMaxLength)
+                                {
+                                    if (lineBuilder.Length > 0)
+                                        lineBuilder.Append(' ');
+                                    lineBuilder.Append(words[wordIndex]);
+                                    wordIndex++;
+                                }
+                                else
+                                    break;
+                            }
+                            
+                            // Output the continuation line
+                            if (wordIndex >= words.Length)
+                            {
+                                // Last line, add the closing quote
+                                int padding = Math.Max(0, 45 - lineBuilder.Length - 1);
+                                Console.WriteLine($"{continuationPrefix}{lineBuilder}\"{new string(' ', padding)} │");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"{continuationPrefix}{lineBuilder} │");
+                            }
+                        }
+                    }
+                }
+                Console.WriteLine("└─────────────────────────────────────────────────────────────┘");
+                Console.WriteLine();
+                Console.ResetColor();
             }
             
-            Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("To load a session, use: max chat -l <Session ID>");
             Console.ResetColor();
