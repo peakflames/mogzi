@@ -245,4 +245,49 @@ public class FileSystemToolTests : IDisposable
         File.ReadAllText(outsideFile).Should().Be("test"); // Unchanged
         Directory.Delete(outsideDir, true);
     }
+
+    // TOR-3.3: File Permission Respect Tests
+
+    [Fact]
+    public void WriteFile_ToReadOnlyFile_ShouldReturnError()
+    {
+        // Arrange
+        var testFile = "readonly_write_test.txt";
+        var testFilePath = Path.Combine(_testDirectory, testFile);
+        File.WriteAllText(testFilePath, "Initial content.");
+        var fileInfo = new FileInfo(testFilePath);
+        fileInfo.IsReadOnly = true;
+
+        // Act
+        var result = _fileSystemTools.WriteFile(testFile, "This should fail.");
+
+        // Assert
+        result.Should().Contain("is read-only and cannot be modified");
+        File.ReadAllText(testFilePath).Should().Be("Initial content."); // Unchanged
+
+        // Cleanup
+        fileInfo.IsReadOnly = false;
+    }
+
+    [Fact]
+    public void ReplaceInFile_ToReadOnlyFile_ShouldReturnError()
+    {
+        // Arrange
+        var testFile = "readonly_replace_test.txt";
+        var testFilePath = Path.Combine(_testDirectory, testFile);
+        File.WriteAllText(testFilePath, "Initial content.");
+        var fileInfo = new FileInfo(testFilePath);
+        fileInfo.IsReadOnly = true;
+        var diff = "------- SEARCH\nInitial\n=======\nNew\n+++++++ REPLACE";
+
+        // Act
+        var result = _fileSystemTools.ReplaceInFile(testFile, diff);
+
+        // Assert
+        result.Should().Contain("is read-only and cannot be modified");
+        File.ReadAllText(testFilePath).Should().Be("Initial content."); // Unchanged
+
+        // Cleanup
+        fileInfo.IsReadOnly = false;
+    }
 }

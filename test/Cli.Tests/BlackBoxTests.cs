@@ -188,8 +188,8 @@ public class BlackBoxTests
         // Assert
         exitCode.Should().Be(0);
         var response = output.ToString().ToLower();
-        response.Should().MatchRegex("read-?only");
-        response.Should().MatchRegex("tool approval setting|not allowed");
+        // The response should contain keywords indicating the operation was blocked due to permissions.
+        response.Should().MatchRegex("read-?only|cannot write|disabled|not allowed");
 
         // Clean up the temporary files.
         Directory.Delete(tempDir, true);

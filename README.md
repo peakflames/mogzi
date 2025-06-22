@@ -13,6 +13,19 @@ An interactive command-line chat application featuring streaming responses and s
 - Session management to list and load previous chat sessions
 - MCP-Support coming soon
 
+## Available Tools 🛠️
+
+MaxBot is equipped with a powerful set of tools to interact with your local system. Here is a summary of the currently implemented tools:
+
+| Tool Name           | Notes                                                              | Safety/Security Features                                                                                                                            |
+| ------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_files`        | Lists files and directories, supports recursive listing.           | Read-only operation. Constrained to the working directory.                                                                                          |
+| `read_file`         | Reads the content of a specified file.                             | Read-only operation. Constrained to the working directory.                                                                                          |
+| `write_file`        | Creates a new file or overwrites an existing one.                  | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic writes with backups and checksums.<br>- Respects read-only file attributes. |
+| `replace_in_file`   | Performs targeted search and replace operations within a file.     | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic writes with backups and checksums.<br>- Respects read-only file attributes. |
+| `execute_command`   | Executes shell commands.                                           | - Requires `--tool-approvals all` by default.<br>- Cross-platform aware (uses `cmd`, `zsh`, `bash` appropriately).                                     |
+
+
 ### Examples 💡
 
 ```bash

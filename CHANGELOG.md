@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Added `execute_command` tool** to allow the AI to run shell commands, satisfying TOR-4.2.
   - The tool is cross-platform, automatically using `cmd.exe` on Windows, `zsh` on macOS, and `bash` on Linux.
   - It respects the `tool_approvals` configuration, providing a security layer for potentially destructive operations (TOR-7.1).
+- **Enhanced File System Tools** to respect read-only permissions, satisfying **TOR-3.3**.
+  - `write_file` and `replace_in_file` now check if a file is read-only before attempting to modify it.
 
 
 ## [1.3.1] - 2025-06-22

@@ -143,12 +143,17 @@ public class FileSystemTools
         {
             return "ERROR: File system is in readonly mode. Write operations are disabled.";
         }
+
+        var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
+        if (File.Exists(filePath) && new FileInfo(filePath).IsReadOnly)
+        {
+            return $"ERROR: File '{path}' is read-only and cannot be modified.";
+        }
         
         if (_config.Debug)
         {
             _llmResponseDetailsCallback?.Invoke($"Writing to file '{path}' with integrity preservation.");
         }
-        var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
 
         if (!IsPathInWorkingDirectory(filePath))
         {
@@ -378,11 +383,16 @@ public class FileSystemTools
             return "ERROR: File system is in readonly mode. Write operations are disabled.";
         }
 
+        var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
+        if (File.Exists(filePath) && new FileInfo(filePath).IsReadOnly)
+        {
+            return $"ERROR: File '{path}' is read-only and cannot be modified.";
+        }
+
         if (_config.Debug)
         {
             _llmResponseDetailsCallback?.Invoke($"Replacing content in file '{path}'.");
         }
-        var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
 
         if (!IsPathInWorkingDirectory(filePath))
         {
