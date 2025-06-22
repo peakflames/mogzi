@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## [1.3.1]
 
 - Add active profile name to the CLI interface prompt and update the emoji styling. 
@@ -18,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed bug where changing tool approval setting with `/tool-approval` command wasn't reflected in the system prompt
 - Added `--debug` flag to enable detailed tool logging in the console
 - Improved session listing to order sessions by last update date, with most recently used sessions appearing last
+- Enhanced GitHub Actions workflow to support develop branch builds:
+  - Added automatic build artifacts for all pushes to the develop branch
+  - Added manual trigger for creating pre-releases from the develop branch
+  - Pre-releases include version number with date and commit hash
+  - Pre-releases are clearly marked as development builds
 
 ## [1.3.0]
 

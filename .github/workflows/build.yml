@@ -5,7 +5,7 @@ permissions:
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
     tags: [ 'v*' ]
     paths-ignore:
       - '**.md'
@@ -13,6 +13,17 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      create_prerelease:
+        description: 'Create pre-release from develop branch'
+        required: true
+        default: false
+        type: boolean
+      prerelease_name:
+        description: 'Pre-release name (e.g., "Beta 1", "RC 2")'
+        required: false
+        type: string
+        default: 'Development Build'
 
 env:
   PROJECT_PATH: src/Cli/Cli.csproj
@@ -100,6 +111,56 @@ jobs:
           name: Release v${{ env.VERSION }}
           draft: false
           prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
+          files: |
+            release-assets/${{ env.PROJECT_NAME }}-win-x64.exe
+            release-assets/${{ env.PROJECT_NAME }}-linux-x64
+            release-assets/${{ env.PROJECT_NAME }}-osx-x64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+  create-develop-prerelease:
+    needs: build
+    if: (github.ref == 'refs/heads/develop' && github.event_name == 'workflow_dispatch' && github.event.inputs.create_prerelease == true)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+      
+      - name: Get current date
+        id: date
+        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+      
+      - name: Get short SHA
+        id: sha
+        run: echo "SHA=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      
+      - name: Extract version from project file
+        id: project_version
+        run: |
+          VERSION=$(grep -o '<Version>.*</Version>' ${{ env.PROJECT_PATH }} | sed 's/<Version>\(.*\)<\/Version>/\1/')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Set develop version
+        run: |
+          echo "DEV_VERSION=${{ steps.project_version.outputs.VERSION }}-dev.${{ steps.date.outputs.DATE }}.${{ steps.sha.outputs.SHA }}" >> $GITHUB_ENV
+      
+      - name: Rename executables for pre-release
+        run: |
+          mkdir -p release-assets
+          cp "${{ env.PROJECT_NAME }}-win-x64/${{ env.PROJECT_NAME }}.exe" "release-assets/${{ env.PROJECT_NAME }}-win-x64.exe"
+          cp "${{ env.PROJECT_NAME }}-linux-x64/${{ env.PROJECT_NAME }}" "release-assets/${{ env.PROJECT_NAME }}-linux-x64"
+          cp "${{ env.PROJECT_NAME }}-osx-x64/${{ env.PROJECT_NAME }}" "release-assets/${{ env.PROJECT_NAME }}-osx-x64"
+          chmod +x "release-assets/${{ env.PROJECT_NAME }}-linux-x64" "release-assets/${{ env.PROJECT_NAME }}-osx-x64"
+      
+      - name: Create Pre-Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.event.inputs.prerelease_name }} v${{ env.DEV_VERSION }}
+          tag_name: v${{ env.DEV_VERSION }}
+          draft: false
+          prerelease: true
           files: |
             release-assets/${{ env.PROJECT_NAME }}-win-x64.exe
             release-assets/${{ env.PROJECT_NAME }}-linux-x64
