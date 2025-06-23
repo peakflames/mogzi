@@ -110,7 +110,7 @@ Uses Rust regex syntax which includes:
 
 ## Integration with Other Tools
 - Often used before `read_file` to examine specific matches
-- Frequently combined with `replace_in_file` for targeted changes
+- Frequently combined with `apply_code_patch` for targeted changes
 - Used with `list_files` to understand search scope
 - Precedes code analysis and refactoring tasks
 

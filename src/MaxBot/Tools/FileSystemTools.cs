@@ -77,13 +77,13 @@ public class FileSystemTools
                     Name = "read_file",
                     Description = "A read-only tool to read the contents of a file at the specified path. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. Automatically extracts raw text from PDF and DOCX files. May not be suitable for other types of binary files, as it returns the raw content as a string"
                 }),
-            AIFunctionFactory.Create(
-                ReplaceInFile,
-                new AIFunctionFactoryOptions
-                {
-                    Name = "replace_in_file",
-                    Description = "Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool very picky and fails often. THis tool should be used when you need to make targeted changes to specific parts of a file. Returns a string message indicating status, absolute_path, and the full, updated content of the file read from disk."
-                })
+            // AIFunctionFactory.Create(
+            //     ReplaceInFile,
+            //     new AIFunctionFactoryOptions
+            //     {
+            //         Name = "replace_in_file",
+            //         Description = "Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool very picky and fails often. THis tool should be used when you need to make targeted changes to specific parts of a file. Returns a string message indicating status, absolute_path, and the full, updated content of the file read from disk."
+            //     })
         ];
     }
 
@@ -93,10 +93,8 @@ public class FileSystemTools
         [Description("(optional) Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.")]
         bool recursive = false)
     {
-        if (_config.Debug)
-        {
-            _llmResponseDetailsCallback?.Invoke($"Listing files in '{path}'{(recursive ? " recursively" : "")}.");
-        }
+        _llmResponseDetailsCallback?.Invoke($"Listing files in '{path}'{(recursive ? " recursively" : "")}.");
+        
         var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
 
         if (!Directory.Exists(filePath))
@@ -168,10 +166,8 @@ public class FileSystemTools
             return FormatXmlResponseForFileChange("FAILED", path, filePath, null, $"File '{path}' is read-only and cannot be modified.", null);
         }
         
-        if (_config.Debug)
-        {
-            _llmResponseDetailsCallback?.Invoke($"Writing to file '{path}' with integrity preservation.");
-        }
+        _llmResponseDetailsCallback?.Invoke($"Writing to file '{path}' with integrity preservation.");
+        
 
         if (!IsPathInWorkingDirectory(filePath))
         {
@@ -336,10 +332,8 @@ public class FileSystemTools
         [Description("The path of the file to read (relative to the current working directory)")]
         string path)
     {
-        if (_config.Debug)
-        {
-            _llmResponseDetailsCallback?.Invoke($"Reading file '{path}'.");
-        }
+        _llmResponseDetailsCallback?.Invoke($"Reading file '{path}'.");
+        
         var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
 
         if (!IsPathInWorkingDirectory(filePath))
@@ -363,10 +357,7 @@ public class FileSystemTools
             var fileInfo = new FileInfo(filePath);
             var checksum = CalculateStringChecksum(content);
             
-            if (_config.Debug)
-            {
-                _llmResponseDetailsCallback?.Invoke($"Successfully read file '{path}' ({FormatFileSize(fileInfo.Length)}).");
-            }
+            _llmResponseDetailsCallback?.Invoke($"Successfully read file '{path}' ({FormatFileSize(fileInfo.Length)}).");
             
             return FormatXmlResponseForFileRead("SUCCESS", path, filePath, fileInfo.Length, fileInfo.LastWriteTime, checksum, null, content);
         }
@@ -399,10 +390,7 @@ public class FileSystemTools
             return FormatXmlResponseForFileChange("FAILED", path, filePath, null, $"File '{path}' is read-only and cannot be modified.", null, "replace_in_file");
         }
 
-        if (_config.Debug)
-        {
-            _llmResponseDetailsCallback?.Invoke($"Replacing content in file '{path}'.");
-        }
+        _llmResponseDetailsCallback?.Invoke($"Replacing content in file '{path}'.");
 
         if (!IsPathInWorkingDirectory(filePath))
         {

@@ -37,6 +37,10 @@ public class OneShotCommand : ICommand
 
             chatHistory.Add(new ChatMessage(ChatRole.User, _userPrompt));
 
+            // This was encouraged to add to ensure some models to just lie.
+            //
+            chatHistory.Add(new ChatMessage(ChatRole.User, "IMPORTANT: I didn't see any tool run from my debugger i think. Run the tools to make fixes and to complete the task. I am watching."));
+
             using var cts = new CancellationTokenSource();
             bool isProcessingRequest = true;
 

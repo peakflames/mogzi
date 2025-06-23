@@ -22,7 +22,7 @@ Read the contents of a file at a specified path. This tool is essential for exam
 ## Best Practices
 - Use to examine existing files before making modifications
 - Essential for understanding code structure before making changes
-- Always read files before attempting to modify them with replace_in_file
+- Always read files before attempting to modify them with apply_code_patch
 - Use to gather context about project structure and patterns
 
 ## Common Use Cases
@@ -39,6 +39,6 @@ Read the contents of a file at a specified path. This tool is essential for exam
 - May return garbled content for binary files
 
 ## Integration with Other Tools
-- Often used before `replace_in_file` to understand current content
+- Often used before `apply_code_patch` to understand current content
 - Frequently combined with `search_files` for comprehensive code analysis
 - Used with `list_files` to explore and then examine specific files

@@ -32,12 +32,12 @@ This table summarizes the implementation status of the tools anticipated by the 
 |---|---|---|---|
 | `read_file` | TOR-3.1 | ✅ Implemented | Core file reading capability. |
 | `write_to_file` | TOR-3.1, TOR-3.2 | ✅ Implemented | Includes integrity checks. |
-| `replace_in_file` | TOR-3.1, TOR-3.2 | ✅ Implemented | Core file modification capability. |
+| `apply_code_patch` | TOR-3.1, TOR-3.2 | ✅ Implemented | Core file modification capability using diff patches. |
 | `list_files` | TOR-3.1 | ✅ Implemented | Lists files and directories. |
 | `ask_followup_question` | TOR-2.1 | ✅ Implemented | Part of the core conversational loop. |
 | `execute_command` | TOR-4.2, TOR-7.1 | ✅ Implemented | Cross-platform and AOT-safe. |
 | `write_to_file` (with permissions) | TOR-3.3 | ✅ Implemented | Respects read-only attributes. |
-| `replace_in_file` (with permissions) | TOR-3.3 | ✅ Implemented | Respects read-only attributes. |
+| `apply_code_patch` (with permissions) | TOR-3.3 | ✅ Implemented | Respects read-only attributes. |
 | `search_files` | TOR-1.1 | ❌ Not Implemented | **🎯 NEXT PRIORITY** - Extended Phase 1. |
 | `attempt_completion` | TOR-5.2 | ❌ Not Implemented | **🎯 SECOND PRIORITY** - Extended Phase 1. |
 | `list_code_definition_names` | TOR-1.1 | ❌ Not Implemented | Slated for Phase 2. |
