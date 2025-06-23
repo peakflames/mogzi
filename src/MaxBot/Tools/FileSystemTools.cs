@@ -66,22 +66,19 @@ public class FileSystemTools
     {
         if (_config.Debug)
         {
-            _llmResponseDetailsCallback?.Invoke($"Listing files in '{path}'{(recursive ? "recursively" : "")}.");
+            _llmResponseDetailsCallback?.Invoke($"Listing files in '{path}'{(recursive ? " recursively" : "")}.");
         }
         var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
 
-        var result = string.Empty;
         if (!Directory.Exists(filePath))
         {
-            var msg = $"ERROR: Failed to list files. The directory '{filePath}' does not exist.";
+            var errorMsg = $"The directory '{filePath}' does not exist.";
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke(msg);
+                _llmResponseDetailsCallback?.Invoke($"ERROR: Failed to list files. {errorMsg}");
             }
-            return msg;
+            return FormatXmlResponseForDirectoryListing("FAILED", path, filePath, 0, errorMsg, null);
         }
-
-        List<string> entries = new List<string>();
 
         try
         {
@@ -96,9 +93,6 @@ public class FileSystemTools
                 directories = Directory.GetDirectories(filePath);
             }
             
-            // Add directories to the list
-            entries.AddRange(directories);
-            
             // Get files
             string[] files;
             if (recursive)
@@ -110,27 +104,27 @@ public class FileSystemTools
                 files = Directory.GetFiles(filePath);
             }
             
-            // Add files to the list
-            entries.AddRange(files);
+            var totalItems = directories.Length + files.Length;
             
             if (_config.Debug)
             {
                 _llmResponseDetailsCallback?.Invoke($"Listed {directories.Length} directories and {files.Length} files for '{filePath}'.");
             }
 
-            result = string.Join("\n", entries);
+            // Format directory contents with file sizes and timestamps
+            var directoryContents = FormatDirectoryContentsWithDetails(filePath, directories, files, recursive);
+            
+            return FormatXmlResponseForDirectoryListing("SUCCESS", path, filePath, totalItems, null, directoryContents);
         }
         catch (Exception ex)
         {
-            var msg = $"ERROR: Failed to list files and directories. {ex.Message}";
+            var errorMsg = $"Failed to list files and directories. {ex.Message}";
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke(msg);
+                _llmResponseDetailsCallback?.Invoke($"ERROR: {errorMsg}");
             }
-            return msg;
+            return FormatXmlResponseForDirectoryListing("FAILED", path, filePath, 0, errorMsg, null);
         }
-        
-        return result;
     }
 
     public string WriteFile(
@@ -467,5 +461,97 @@ public class FileSystemTools
         
         response.AppendLine("</tool_response>");
         return response.ToString();
+    }
+
+    private string FormatXmlResponseForDirectoryListing(string status, string relativePath, string absolutePath, int itemCount, string? errorMessage, string? directoryContents)
+    {
+        var response = new StringBuilder();
+        response.AppendLine("<tool_response tool_name=\"list_files\">");
+        response.AppendLine("    <notes>");
+        response.AppendLine($"    Listed contents of directory `{relativePath}`");
+        if (status == "SUCCESS")
+        {
+            response.AppendLine($"    Found {itemCount} items");
+        }
+        response.AppendLine("    </notes>");
+        
+        if (status == "SUCCESS")
+        {
+            response.AppendLine($"    <result status=\"{status}\" directory_path=\"{absolutePath}\" item_count=\"{itemCount}\" />");
+        }
+        else
+        {
+            response.AppendLine($"    <result status=\"{status}\" directory_path=\"{absolutePath}\" />");
+        }
+        
+        if (!string.IsNullOrEmpty(errorMessage))
+        {
+            response.AppendLine("    <error>");
+            response.AppendLine($"        {errorMessage}");
+            response.AppendLine("    </error>");
+        }
+        
+        if (!string.IsNullOrEmpty(directoryContents))
+        {
+            response.AppendLine("    <directory_contents>");
+            response.AppendLine(directoryContents);
+            response.AppendLine("    </directory_contents>");
+        }
+        
+        response.AppendLine("</tool_response>");
+        return response.ToString();
+    }
+
+    private string FormatDirectoryContentsWithDetails(string basePath, string[] directories, string[] files, bool recursive)
+    {
+        var contents = new StringBuilder();
+        var allItems = new List<(string path, bool isDirectory, long size, DateTime lastModified)>();
+
+        // Add directories
+        foreach (var dir in directories)
+        {
+            var dirInfo = new DirectoryInfo(dir);
+            allItems.Add((dir, true, 0, dirInfo.LastWriteTime));
+        }
+
+        // Add files with size information
+        foreach (var file in files)
+        {
+            var fileInfo = new FileInfo(file);
+            allItems.Add((file, false, fileInfo.Length, fileInfo.LastWriteTime));
+        }
+
+        // Sort by path for consistent output
+        allItems.Sort((a, b) => string.Compare(a.path, b.path, StringComparison.OrdinalIgnoreCase));
+
+        foreach (var item in allItems)
+        {
+            var relativePath = Path.GetRelativePath(basePath, item.path);
+            // Normalize path separators to forward slashes for consistent output
+            relativePath = relativePath.Replace('\\', '/');
+            var sizeStr = item.isDirectory ? "<DIR>" : FormatFileSize(item.size);
+            var timeStr = item.lastModified.ToString("yyyy-MM-dd HH:mm:ss");
+            
+            contents.AppendLine($"{timeStr}  {sizeStr,10}  {relativePath}{(item.isDirectory ? "/" : "")}");
+        }
+
+        return contents.ToString().TrimEnd();
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        if (bytes == 0) return "0 B";
+        
+        string[] suffixes = { "B", "KB", "MB", "GB", "TB" };
+        int suffixIndex = 0;
+        double size = bytes;
+        
+        while (size >= 1024 && suffixIndex < suffixes.Length - 1)
+        {
+            size /= 1024;
+            suffixIndex++;
+        }
+        
+        return $"{size:F1} {suffixes[suffixIndex]}";
     }
 }

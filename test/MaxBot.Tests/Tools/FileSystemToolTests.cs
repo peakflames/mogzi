@@ -274,6 +274,120 @@ public class FileSystemToolTests : IDisposable
         Directory.Delete(outsideDir, true);
     }
 
+    // ListFiles Tests
+
+    [Fact]
+    public void ListFiles_WithExistingDirectory_ShouldReturnXmlResponse()
+    {
+        // Arrange
+        var testSubDir = "list_test_dir";
+        var testSubDirPath = Path.Combine(_testDirectory, testSubDir);
+        Directory.CreateDirectory(testSubDirPath);
+        
+        var testFile1 = Path.Combine(testSubDirPath, "file1.txt");
+        var testFile2 = Path.Combine(testSubDirPath, "file2.txt");
+        File.WriteAllText(testFile1, "Content 1");
+        File.WriteAllText(testFile2, "Content 2");
+
+        // Act
+        var result = _fileSystemTools.ListFiles(testSubDir);
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"list_files\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("item_count=\"2\"");
+        result.Should().Contain("<directory_contents>");
+        result.Should().Contain("file1.txt");
+        result.Should().Contain("file2.txt");
+        result.Should().Contain("Found 2 items");
+    }
+
+    [Fact]
+    public void ListFiles_WithNonExistentDirectory_ShouldReturnXmlError()
+    {
+        // Arrange
+        var nonExistentDir = "non_existent_directory";
+
+        // Act
+        var result = _fileSystemTools.ListFiles(nonExistentDir);
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"list_files\">");
+        result.Should().Contain("status=\"FAILED\"");
+        result.Should().Contain("<error>");
+        result.Should().Contain("does not exist");
+    }
+
+    [Fact]
+    public void ListFiles_WithRecursiveOption_ShouldIncludeSubdirectories()
+    {
+        // Arrange
+        var testSubDir = "recursive_test_dir";
+        var testSubDirPath = Path.Combine(_testDirectory, testSubDir);
+        Directory.CreateDirectory(testSubDirPath);
+        
+        var nestedDir = Path.Combine(testSubDirPath, "nested");
+        Directory.CreateDirectory(nestedDir);
+        
+        var testFile1 = Path.Combine(testSubDirPath, "file1.txt");
+        var testFile2 = Path.Combine(nestedDir, "file2.txt");
+        File.WriteAllText(testFile1, "Content 1");
+        File.WriteAllText(testFile2, "Content 2");
+
+        // Act
+        var result = _fileSystemTools.ListFiles(testSubDir, recursive: true);
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"list_files\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("item_count=\"3\""); // 1 directory + 2 files
+        result.Should().Contain("<directory_contents>");
+        result.Should().Contain("file1.txt");
+        result.Should().Contain("nested/");
+        result.Should().Contain("nested/file2.txt");
+    }
+
+    [Fact]
+    public void ListFiles_WithEmptyDirectory_ShouldReturnEmptyListing()
+    {
+        // Arrange
+        var emptyDir = "empty_test_dir";
+        var emptyDirPath = Path.Combine(_testDirectory, emptyDir);
+        Directory.CreateDirectory(emptyDirPath);
+
+        // Act
+        var result = _fileSystemTools.ListFiles(emptyDir);
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"list_files\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("item_count=\"0\"");
+        result.Should().Contain("Found 0 items");
+    }
+
+    [Fact]
+    public void ListFiles_ShouldIncludeFileSizesAndTimestamps()
+    {
+        // Arrange
+        var testSubDir = "size_test_dir";
+        var testSubDirPath = Path.Combine(_testDirectory, testSubDir);
+        Directory.CreateDirectory(testSubDirPath);
+        
+        var testFile = Path.Combine(testSubDirPath, "test_file.txt");
+        File.WriteAllText(testFile, "Hello World"); // 11 bytes
+
+        // Act
+        var result = _fileSystemTools.ListFiles(testSubDir);
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"list_files\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("<directory_contents>");
+        result.Should().MatchRegex(@"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}"); // Timestamp format
+        result.Should().Contain("11.0 B"); // File size
+        result.Should().Contain("test_file.txt");
+    }
+
     // TOR-3.3: File Permission Respect Tests
 
     [Fact]
