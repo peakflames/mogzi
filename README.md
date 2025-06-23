@@ -1,6 +1,6 @@
 # MaxBot AI Assistant CLI 😻
 
-An cross-platform, AI assistant in the terminal intended to support for multiple API providers
+An cross-platform, AI assistant in the terminal intended to support multiple API providers
 
 ## Features ✨
 
