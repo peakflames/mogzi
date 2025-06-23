@@ -53,7 +53,21 @@ This workflow automates the implementation of the next priority task from the pr
    - If TORs are ambiguous, use `ask_followup_question` to clarify with the user.
    - Document any assumptions made about unclear requirements.
 
-## 3. Create Automation Tests
+## 3. Propose Implementation Plan and Seek Approval
+
+1. Formulate a detailed implementation plan based on the analysis.
+   - Outline the files that will be created or modified.
+   - Describe the automation tests that will be implemented to verify the TORs.
+   - Detail the feature implementation steps.
+
+2. Present the plan to the user for approval before implementing.
+   - Use the `ask_followup_question` tool to present the summarized plan.
+   - State clearly that implementation will not begin without explicit user approval.
+
+3. Await user confirmation before proceeding.
+   - Do not proceed to the next step until the user approves the proposed plan.
+
+## 4. Create Automation Tests
 
 1. Check the trace matrix to ensure tests don't already exist.
    - Use the `read_file` tool to examine `docs/specs/trace_matrix.md`.
@@ -82,7 +96,7 @@ This workflow automates the implementation of the next priority task from the pr
    - Link TORs to their corresponding test implementations with specific test method names.
    - Include test file paths and line numbers for precise traceability.
 
-## 4. Implement Required Features
+## 5. Implement Required Features
 
 1. Analyze the failing tests to understand what functionality needs to be implemented.
    - Run the new tests using the `execute_command` tool to see current failures.
@@ -112,7 +126,7 @@ This workflow automates the implementation of the next priority task from the pr
    - Verify that the implementation integrates properly with existing code.
    - Check that no existing functionality is broken.
 
-## 5. Execute Verification
+## 6. Execute Verification
 
 1. Run the complete test suite to ensure no regressions.
    - Use the `execute_command` tool to run all tests in the project.
@@ -139,7 +153,7 @@ This workflow automates the implementation of the next priority task from the pr
    - Identify potential improvements for future iterations.
    - Record any technical debt introduced.
 
-## 6. Generate Summary Report
+## 7. Generate Summary Report
 
 1. Organize outputs under the root directory `outputs/`.
    - Use the `list_files` tool to check if the `outputs/` directory exists.
