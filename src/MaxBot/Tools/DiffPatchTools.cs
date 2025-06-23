@@ -18,7 +18,7 @@ namespace MaxBot.Tools;
 public class DiffPatchTools
 {
     private readonly MaxbotConfiguration _config;
-    private readonly Action<string>? _llmResponseDetailsCallback = null;
+    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = null;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
     private readonly FuzzyPatchApplicator _patchApplicator;
 
@@ -28,7 +28,7 @@ public class DiffPatchTools
     /// <param name="config">The Maxbot configuration.</param>
     /// <param name="llmResponseDetailsCallback">The callback for debug output.</param>
     /// <param name="workingDirectoryProvider">The working directory provider.</param>
-    public DiffPatchTools(MaxbotConfiguration config, Action<string>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
+    public DiffPatchTools(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
     {
         _config = config;
         _llmResponseDetailsCallback = llmResponseDetailsCallback;
@@ -80,7 +80,7 @@ public class DiffPatchTools
         [Description("Whether to use fuzzy matching if exact patch application fails (default: true)")]
         bool useFuzzyMatching = true)
     {
-        _llmResponseDetailsCallback?.Invoke($"Applying code patch to '{path}'{(useFuzzyMatching ? " with fuzzy matching" : "")}.");
+        _llmResponseDetailsCallback?.Invoke($"Applying code patch to '{path}'{(useFuzzyMatching ? " with fuzzy matching" : "")}.", ConsoleColor.DarkGray);
 
         try
         {
@@ -132,7 +132,7 @@ public class DiffPatchTools
         {
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke($"ERROR: Error applying code patch. {ex.Message}");
+                _llmResponseDetailsCallback?.Invoke($"ERROR: Error applying code patch. {ex.Message}", ConsoleColor.Red);
             }
             return CreateErrorResponse("apply_code_patch", $"Unexpected error: {ex.Message}");
         }
@@ -147,7 +147,7 @@ public class DiffPatchTools
         [Description("Number of context lines to include around changes (default: 3)")]
         int contextLines = 3)
     {
-        _llmResponseDetailsCallback?.Invoke($"Generating code patch for '{path}' with {contextLines} context lines.");
+        _llmResponseDetailsCallback?.Invoke($"Generating code patch for '{path}' with {contextLines} context lines.", ConsoleColor.DarkGray);
 
         try
         {
@@ -177,7 +177,7 @@ public class DiffPatchTools
         {
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke($"ERROR: Error generating code patch. {ex.Message}");
+                _llmResponseDetailsCallback?.Invoke($"ERROR: Error generating code patch. {ex.Message}", ConsoleColor.Red);
             }
             return CreateErrorResponse("generate_code_patch", $"Error generating patch: {ex.Message}");
         }
@@ -190,7 +190,7 @@ public class DiffPatchTools
         [Description("The unified diff patch to preview")]
         string patch)
     {
-        _llmResponseDetailsCallback?.Invoke($"Previewing patch application for '{path}'.");
+        _llmResponseDetailsCallback?.Invoke($"Previewing patch application for '{path}'.", ConsoleColor.DarkGray);
 
         try
         {
@@ -243,7 +243,7 @@ public class DiffPatchTools
         {
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke($"ERROR: Error previewing patch application. {ex.Message}");
+                _llmResponseDetailsCallback?.Invoke($"ERROR: Error previewing patch application. {ex.Message}", ConsoleColor.Red);
             }
             return CreateErrorResponse("preview_patch_application", $"Error previewing patch: {ex.Message}");
         }
@@ -317,7 +317,7 @@ public class DiffPatchTools
                     {
                         if (_config.Debug)
                         {
-                            _llmResponseDetailsCallback?.Invoke($"ERROR: Failed to parse hunk header: {line}");
+                            _llmResponseDetailsCallback?.Invoke($"ERROR: Failed to parse hunk header: {line}", ConsoleColor.Red);
                         }
                         return null;
                     }
@@ -352,7 +352,7 @@ public class DiffPatchTools
             {
                 if (_config.Debug)
                 {
-                    _llmResponseDetailsCallback?.Invoke("ERROR: Patch did not contain file headers.");
+                    _llmResponseDetailsCallback?.Invoke("ERROR: Patch did not contain file headers.", ConsoleColor.Red);
                 }
                 return null;
             }
@@ -363,7 +363,7 @@ public class DiffPatchTools
         {
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke($"ERROR: Error parsing unified diff patch. {ex.Message}");
+                _llmResponseDetailsCallback?.Invoke($"ERROR: Error parsing unified diff patch. {ex.Message}", ConsoleColor.Red);
             }
             return null;
         }

@@ -112,7 +112,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
 
-        var clientResult = ChatClient.Create("maxbot.config.json", profileName, null, "oneshot", ConsoleRenderer.ConsoleWriteLLMResponseDetails);
+        var clientResult = ChatClient.Create("maxbot.config.json", profileName, null, "oneshot", (message, color) => ConsoleRenderer.ConsoleWriteLLMResponseDetails(message, color));
         clientResult.IsFailed.Should().Be(false);
 
         // Act
@@ -146,7 +146,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
 
-        var clientResult = ChatClient.Create("maxbot.config.json", profileName, null, "oneshot", ConsoleRenderer.ConsoleWriteLLMResponseDetails);
+        var clientResult = ChatClient.Create("maxbot.config.json", profileName, null, "oneshot", (message, color) => ConsoleRenderer.ConsoleWriteLLMResponseDetails(message, color));
         clientResult.IsFailed.Should().Be(false);
 
         // Act

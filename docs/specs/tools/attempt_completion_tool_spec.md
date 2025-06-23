@@ -5,7 +5,6 @@ Present the result of completed work to the user. This tool marks the end of a t
 
 ## Parameters
 - `result` (required): The final result description - should be comprehensive and final
-- `command` (optional): A CLI command to execute to demonstrate the result
 
 ## Usage
 ```xml
@@ -21,7 +20,6 @@ I have successfully created a responsive todo application with the following fea
 
 The application is fully functional and ready for use.
 </result>
-<command>open index.html</command>
 </attempt_completion>
 ```
 
@@ -39,22 +37,10 @@ The application is fully functional and ready for use.
 - Be specific about deliverables and outcomes
 - Avoid conversational language like "Great!" or "Certainly!"
 
-## Command Guidelines
-Set `command` for:
-- `open index.html` - Display created HTML websites
-- `open localhost:3000` - Display locally running development servers
-- Commands that demonstrate live results
-
-Do NOT use commands like:
-- `echo` or `cat` that merely print text
-- Commands that don't show live demonstrations
-- Commands that require additional setup
-
 ## Best Practices
 - Use only after confirming all previous tool operations succeeded
 - Provide detailed summary of accomplishments
 - Include specific technical details about what was created/modified
-- Use demonstration commands when appropriate
 - Be direct and technical, not conversational
 - Focus on deliverables and functionality
 
@@ -88,7 +74,6 @@ I have created a fully functional e-commerce product page with the following com
 
 The page is complete and ready for integration into the larger e-commerce platform.
 </result>
-<command>open product-page.html</command>
 </attempt_completion>
 ```
 

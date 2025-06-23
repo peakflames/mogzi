@@ -14,7 +14,7 @@
 
 | TOR ID | Requirement | Tool Specifications | Implementation Components | Test Cases | Verification Status |
 |--------|-------------|-------------------|--------------------------|------------|-------------------|
-| TOR-1.1 | AI code analysis and generation | [All tool specs](tools/_index.md) | `Cli.App`, `MaxBot.ChatClient`, `MaxBot.Tools.FileSystemTools`, `MaxBot.Tools.SystemTools` | `test/Cli.Tests/BlackBoxTests.cs`, `test/local_exe_acceptance.ps1` | ✅ Verified |
+| TOR-1.1 | AI code analysis and generation | [All tool specs](tools/_index.md) | `Cli.App`, `MaxBot.ChatClient`, `MaxBot.Tools.FileSystemTools`, `MaxBot.Tools.SystemTools` | `test/Cli.Tests/BlackBoxTests.cs`, `test/local_exe_acceptance.ps1`, `test/MaxBot.Tests/Tools/FileSystemToolTests.cs` | ✅ Verified |
 | TOR-1.2 | Context maintenance | [workflow_management_tools_spec.md](workflow_management_tools_spec.md) | `MaxBot.Domain.ChatHistory`, `MaxBot.Services.ChatHistoryService` | `test/MaxBot.Tests/Services/ChatHistoryServiceTests.cs` | ✅ Verified |
 | TOR-1.3 | Action explanations | [All tool specs](tools/_index.md) | Partially implemented via tool responses and debug mode | `test/Cli.Tests/BlackBoxTests.cs` | 🟡 Partially Verified |
 
@@ -47,7 +47,7 @@
 | TOR ID | Requirement | Tool Specifications | Implementation Components | Test Cases | Verification Status |
 |--------|-------------|-------------------|--------------------------|------------|-------------------|
 | TOR-5.1 | Iterative execution | [All tool specs](tools/_index.md) | `Cli.App` (Chat Mode), `MaxBot.Services.AppService` | `test/Cli.Tests/BlackBoxTests.cs` | ✅ Verified |
-| TOR-5.2 | Completion verification | [attempt_completion_tool_spec.md](tools/attempt_completion_tool_spec.md) | To be implemented | To be developed | ❌ Not Verified |
+| TOR-5.2 | Completion verification | [attempt_completion_tool_spec.md](tools/attempt_completion_tool_spec.md) | `MaxBot.Tools.SystemTools.AttemptCompletion` | `test/MaxBot.Tests/Tools/SystemToolTests.cs` | ✅ Verified |
 | TOR-5.3 | Context preservation | [workflow_management_tools_spec.md](workflow_management_tools_spec.md) | ChatHistoryService.SaveChatHistoryAsync(), ChatHistoryService.LoadChatHistoryAsync(), session management | test/MaxBot.Tests/Services/ChatHistoryServiceTests.cs | ✅ Verified |
 
 ### TOR-6: Extensibility and Integration
