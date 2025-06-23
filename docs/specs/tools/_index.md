@@ -10,8 +10,14 @@ Read the contents of files at specified paths. Essential for examining existing 
 ### [write_to_file_tool_spec.md](write_to_file_tool_spec.md)
 Create new files or completely overwrite existing files with provided content. Used for initial file creation and major restructuring.
 
-### [replace_in_file_tool_spec.md](replace_in_file_tool_spec.md)
-Make targeted edits to specific parts of existing files using SEARCH/REPLACE blocks. The preferred tool for precise modifications without rewriting entire files.
+### [apply_code_patch_tool_spec.md](apply_code_patch_tool_spec.md)
+Apply code changes using Git-style unified diff patches. More robust than string replacement for handling whitespace and formatting variations. The preferred tool for precise modifications without rewriting entire files.
+
+### [generate_code_patch_tool_spec.md](generate_code_patch_tool_spec.md)
+Generate unified diff patches showing changes between original and modified content. Useful for creating patches that can be applied later.
+
+### [preview_patch_application_tool_spec.md](preview_patch_application_tool_spec.md)
+Preview what changes a patch would make without actually applying them. Useful for validating patches before application.
 
 ### [list_files_tool_spec.md](list_files_tool_spec.md)
 List files and directories within specified directories. Essential for understanding project structure and exploring directory contents.
@@ -53,7 +59,9 @@ Tools for organizing tasks, managing conversations, and handling different opera
 ### **Core File Operations**
 - `read_file` - Read file contents
 - `write_to_file` - Create/overwrite files
-- `replace_in_file` - Targeted file edits
+- `apply_code_patch` - Targeted file edits using diff patches
+- `generate_code_patch` - Create diff patches
+- `preview_patch_application` - Preview patch changes
 
 ### **Project Exploration**
 - `list_files` - Directory structure
@@ -90,7 +98,7 @@ For new users, start with these essential tools:
 1. `list_files` - Understand project structure
 2. `read_file` - Examine existing files
 3. `search_files` - Find specific content or patterns
-4. `replace_in_file` or `write_to_file` - Make changes
+4. `apply_code_patch` or `write_to_file` - Make changes
 5. `attempt_completion` - Present results
 
 Each specification document contains detailed information about parameters, usage examples, best practices, common use cases, and integration patterns with other tools.

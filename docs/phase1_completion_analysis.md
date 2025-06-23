@@ -46,7 +46,7 @@ After a comprehensive re-evaluation of the MaxBot AI Assistant System implementa
 ## Implementation Highlights
 
 ### Core AI Functionality
-- **Complete file system toolkit**: read_file, write_file, replace_in_file, list_files
+- **Complete file system toolkit**: read_file, write_file, apply_code_patch, list_files
 - **System command execution**: Cross-platform shell command execution with security controls
 - **Chat history persistence**: Full session management with context preservation
 

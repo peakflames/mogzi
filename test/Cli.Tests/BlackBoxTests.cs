@@ -105,7 +105,7 @@ public class BlackBoxTests
         var fileContent = "This is a test file for the read_file scenario.";
         await File.WriteAllTextAsync(tempFile, fileContent);
 
-        var args = new string[] { $"Read the content of the file at {tempFile} and tell me what it says." };
+        var args = new string[] { $"Read the content of the file at {tempFile}, DO NOT ANNOUNCE the tool use, and solely report the contents of the file." };
         // var input = new StringReader("y\n");
         // Console.SetIn(input);
 

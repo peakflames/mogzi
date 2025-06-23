@@ -30,7 +30,7 @@ Create a new file or completely overwrite an existing file with provided content
 ## Best Practices
 - Always provide the COMPLETE intended content without truncation
 - Use for initial file creation or major restructuring
-- Consider using `replace_in_file` for targeted edits instead
+- Consider using `apply_code_patch` for targeted edits instead
 - Ensure content is properly formatted before writing
 - Use when changes are so extensive that targeted edits would be complex
 
@@ -43,7 +43,7 @@ Create a new file or completely overwrite an existing file with provided content
 - When the majority of file content needs to change
 
 ## When NOT to Use
-- Making small, targeted changes (use `replace_in_file` instead)
+- Making small, targeted changes (use `apply_code_patch` instead)
 - Modifying just a few lines in a large file
 - Adding single functions or small code blocks
 
@@ -59,5 +59,5 @@ Create a new file or completely overwrite an existing file with provided content
 
 ## Integration with Other Tools
 - Often used after `read_file` to understand existing structure
-- May be followed by `replace_in_file` for fine-tuning
+- May be followed by `apply_code_patch` for fine-tuning
 - Commonly used with `list_files` to understand directory structure

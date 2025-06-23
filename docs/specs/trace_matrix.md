@@ -30,8 +30,8 @@
 
 | TOR ID | Requirement | Tool Specifications | Implementation Components | Test Cases | Verification Status |
 |--------|-------------|-------------------|--------------------------|------------|-------------------|
-| TOR-3.1 | Safe file system interaction | [read_file_tool_spec.md](tools/read_file_tool_spec.md), [write_to_file_tool_spec.md](tools/write_to_file_tool_spec.md), [replace_in_file_tool_spec.md](tools/replace_in_file_tool_spec.md), [list_files_tool_spec.md](tools/list_files_tool_spec.md) | FileSystemTools.ReadFile(), FileSystemTools.WriteFile(), FileSystemTools.ReplaceInFile(), FileSystemTools.ListFiles() | test/MaxBot.Tests/Tools/FileSystemToolTests.cs, test/Cli.Tests/BlackBoxTests.cs | ✅ Verified |
-| TOR-3.2 | File integrity preservation | [write_to_file_tool_spec.md](tools/write_to_file_tool_spec.md), [replace_in_file_tool_spec.md](tools/replace_in_file_tool_spec.md) | FileSystemTools.WriteFileWithIntegrity() with atomic operations, backup creation, checksum validation | test/MaxBot.Tests/Tools/FileSystemToolTests.cs | ✅ Verified |
+| TOR-3.1 | Safe file system interaction | [read_file_tool_spec.md](tools/read_file_tool_spec.md), [write_to_file_tool_spec.md](tools/write_to_file_tool_spec.md), [apply_code_patch_tool_spec.md](tools/apply_code_patch_tool_spec.md), [list_files_tool_spec.md](tools/list_files_tool_spec.md) | FileSystemTools.ReadFile(), FileSystemTools.WriteFile(), DiffPatchTools.ApplyCodePatch(), FileSystemTools.ListFiles() | test/MaxBot.Tests/Tools/FileSystemToolTests.cs, test/MaxBot.Tests/Tools/DiffPatchToolTests.cs, test/Cli.Tests/BlackBoxTests.cs | ✅ Verified |
+| TOR-3.2 | File integrity preservation | [write_to_file_tool_spec.md](tools/write_to_file_tool_spec.md), [apply_code_patch_tool_spec.md](tools/apply_code_patch_tool_spec.md) | FileSystemTools.WriteFileWithIntegrity(), DiffPatchTools.ApplyCodePatch() with atomic operations, backup creation, checksum validation | test/MaxBot.Tests/Tools/FileSystemToolTests.cs, test/MaxBot.Tests/Tools/DiffPatchToolTests.cs | ✅ Verified |
 | TOR-3.3 | Permission respect | [All file tools](tools/_index.md) | `MaxBot.Tools.FileSystemTools` with read-only file attribute checks | `test/MaxBot.Tests/Tools/FileSystemToolTests.cs` | ✅ Verified |
 
 ### TOR-4: Development Environment Integration
@@ -94,7 +94,7 @@
 |-------------------|--------------|----------------|
 | [read_file_tool_spec.md](tools/read_file_tool_spec.md) | TOR-3.1, TOR-3.3 | TOR-1.1, TOR-5.1 |
 | [write_to_file_tool_spec.md](tools/write_to_file_tool_spec.md) | TOR-3.1, TOR-3.2 | TOR-1.1, TOR-5.1 |
-| [replace_in_file_tool_spec.md](tools/replace_in_file_tool_spec.md) | TOR-3.1, TOR-3.2 | TOR-1.1, TOR-5.1 |
+| [apply_code_patch_tool_spec.md](tools/apply_code_patch_tool_spec.md) | TOR-3.1, TOR-3.2 | TOR-1.1, TOR-5.1 |
 | [execute_command_tool_spec.md](tools/execute_command_tool_spec.md) | TOR-4.2, TOR-7.1 | TOR-5.1, TOR-8.2 |
 | [browser_action_tool_spec.md](tools/browser_action_tool_spec.md) | TOR-4.3 | TOR-5.1, TOR-8.2 |
 | [ask_followup_question_tool_spec.md](tools/ask_followup_question_tool_spec.md) | TOR-2.1, TOR-2.3 | TOR-1.3, TOR-5.1 |

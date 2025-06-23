@@ -77,13 +77,13 @@ public class FileSystemTools
                     Name = "read_file",
                     Description = "A read-only tool to read the contents of a file at the specified path. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. Automatically extracts raw text from PDF and DOCX files. May not be suitable for other types of binary files, as it returns the raw content as a string"
                 }),
-            AIFunctionFactory.Create(
-                ReplaceInFile,
-                new AIFunctionFactoryOptions
-                {
-                    Name = "replace_in_file",
-                    Description = "Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool very picky and fails often. THis tool should be used when you need to make targeted changes to specific parts of a file. Returns a string message indicating status, absolute_path, and the full, updated content of the file read from disk."
-                })
+            // AIFunctionFactory.Create(
+            //     ReplaceInFile,
+            //     new AIFunctionFactoryOptions
+            //     {
+            //         Name = "replace_in_file",
+            //         Description = "Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool very picky and fails often. THis tool should be used when you need to make targeted changes to specific parts of a file. Returns a string message indicating status, absolute_path, and the full, updated content of the file read from disk."
+            //     })
         ];
     }
 

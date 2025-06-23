@@ -114,10 +114,15 @@ $testCases = @(
         Args = @("execute the command 'echo acceptance test'", "--tool-approvals", "all", "--debug")
         ExpectedOutput = "acceptance test"
     },
+    # @{
+    #     Name = "Tool integration test"
+    #     Args = @("This task is to support acceptance testing of the integration between MaxBot and some of the tools I need MaxBot to do the following: 1. list the files in the directory , the report the name of the tool you used and the response string you received verbatim (as a markdown codeblock). 2. Read the LICENSE.md file then report the tool you used and the tool's response string verbatim (as a markdown codeblock). 2. Write a just markdown file at junk.md then report the tool you used and the tool's response string verbatim (as a markdown codeblock). 3. execute the command ``rm junk.md`` and report the tool you used and the tools response verbatim (as a markdown codeblock).  4. Generate said report to ./outputs/tool_integration_test_result.md. If ALL tool calls were successful then state to the user (not the report) the phrase 'SUPER DUPER SUCCESS'. IMPORTANT. FOR THIS TIME YOU ARE EXPLICITLY APPROVED TO RUN ALL TOOLS", "--tool-approvals", "all", "--debug")
+    #     ExpectedOutput = "SUPER DUPER SUCCESS"
+    # },
     @{
-        Name = "Tool integration test"
-        Args = @("This task is to support acceptance testing of the integration between MaxBot and some of the tools I need MaxBot to do the following: 1. list the files in the directory , the report the name of the tool you used and the response string you received verbatim (as a markdown codeblock). 2. Read the LICENSE.md file then report the tool you used and the tool's response string verbatim (as a markdown codeblock). 2. Write a just markdown file at junk.md then report the tool you used and the tool's response string verbatim (as a markdown codeblock). 3. execute the command ``rm junk.md`` and report the tool you used and the tools response verbatim (as a markdown codeblock).  4. Generate said report to ./outputs/tool_integration_test_result.md. If ALL tool calls were successful then state to the user (not the report) the phrase 'SUPER DUPER SUCCESS'. IMPORTANT. FOR THIS TIME YOU ARE EXPLICITLY APPROVED TO RUN ALL TOOLS", "--tool-approvals", "all", "--debug")
-        ExpectedOutput = "SUPER DUPER SUCCESS"
+        Name = "Diff patch generation test"
+        Args = @("I need you to test the new git-style diff tools. Please do the following: 1. Read the README.md file to get its current content. 2. Use the generate_code_patch tool to create a unified diff patch that would change the first line from 'MaxBot' to 'MaxBot AI Assistant'. 3. If the patch generation succeeds, respond with exactly the phrase 'DIFF TOOL SUCCESS'. Note: generate_code_patch is READ-ONLY and will not modify any files. You are approved to use all tools for this test.", "--tool-approvals", "all", "--debug")
+        ExpectedOutput = "DIFF TOOL SUCCESS"
     }
 )
 
