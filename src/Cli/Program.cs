@@ -60,7 +60,7 @@ public partial class Program
                 options.ProfileName, 
                 options.ToolApprovals, 
                 options.Mode, 
-                options.Debug ? ConsoleRenderer.ConsoleWriteLLMResponseDetails : null, 
+                ConsoleRenderer.ConsoleWriteLLMResponseDetails, 
                 options.Debug);
             if (clientResult.IsFailed)
             {

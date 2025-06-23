@@ -58,7 +58,12 @@ public class ChatCommand : ICommand
                     }
                 }
 
+
                 chatHistory.Add(new ChatMessage(ChatRole.User, userPrompt));
+
+                // This was encouraged to add to ensure some models to just lie.
+                //
+                chatHistory.Add(new ChatMessage(ChatRole.User, "HELPFUL REMINDER: By waiting for and carefully considering the tools response after each tool use, Max can react accordingly and make informed decisions about how to proceed with the task. This iterative process helps ensure the overall success and accuracy of Max's work."));
 
                 using var cts = new CancellationTokenSource();
                 bool isProcessingRequest = true;

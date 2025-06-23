@@ -80,10 +80,7 @@ public class DiffPatchTools
         [Description("Whether to use fuzzy matching if exact patch application fails (default: true)")]
         bool useFuzzyMatching = true)
     {
-        if (_config.Debug)
-        {
-            _llmResponseDetailsCallback?.Invoke($"Applying code patch to '{path}'{(useFuzzyMatching ? " with fuzzy matching" : "")}.");
-        }
+        _llmResponseDetailsCallback?.Invoke($"Applying code patch to '{path}'{(useFuzzyMatching ? " with fuzzy matching" : "")}.");
 
         try
         {
@@ -150,10 +147,7 @@ public class DiffPatchTools
         [Description("Number of context lines to include around changes (default: 3)")]
         int contextLines = 3)
     {
-        if (_config.Debug)
-        {
-            _llmResponseDetailsCallback?.Invoke($"Generating code patch for '{path}' with {contextLines} context lines.");
-        }
+        _llmResponseDetailsCallback?.Invoke($"Generating code patch for '{path}' with {contextLines} context lines.");
 
         try
         {
@@ -196,10 +190,7 @@ public class DiffPatchTools
         [Description("The unified diff patch to preview")]
         string patch)
     {
-        if (_config.Debug)
-        {
-            _llmResponseDetailsCallback?.Invoke($"Previewing patch application for '{path}'.");
-        }
+        _llmResponseDetailsCallback?.Invoke($"Previewing patch application for '{path}'.");
 
         try
         {
