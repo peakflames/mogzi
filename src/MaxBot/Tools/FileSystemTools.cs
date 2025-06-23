@@ -32,14 +32,14 @@ public class FileSystemTools
                 new AIFunctionFactoryOptions
                 {
                     Name = "list_files",
-                    Description = "A read-only tool to list files and directories within the specified directory. If recursive is true, it will list all files and directories recursively. If recursive is false or not provided, it will only list the top-level contents. Do not use this tool to confirm the existence of files you may have created, as the user will let you know if the files were created successfully or not."
+                    Description = "A read-only tool to list files and directories within the specified directory. If recursive is true, it will list all files and directories recursively. If recursive is false or not provided, it will only list the top-level contents. This tool can be useful to confirm the existence of files you may have created as part of a prudent verification strategy."
                 }),
             AIFunctionFactory.Create(
                 WriteFile,
                 new AIFunctionFactoryOptions
                 {
                     Name = "write_file",
-                    Description = "Request to write content to a file at the specified path. If the file exists, it will be overwritten with the provided content. If the file doesn't exist, it will be created. This tool will automatically create any directories needed to write the file. Returns a string message indicating success or failure."
+                    Description = "Request to write content to a file at the specified path. If the file exists, it will be overwritten with the provided content. If the file doesn't exist, it will be created. This tool will automatically create any directories needed to write the file. Returns a string message indicating status, absolute_path, and the full, updated content of the file."
                 }),
             AIFunctionFactory.Create(
                 ReadFile,
@@ -53,7 +53,7 @@ public class FileSystemTools
                 new AIFunctionFactoryOptions
                 {
                     Name = "replace_in_file",
-                    Description = "Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool should be used when you need to make targeted changes to specific parts of a file."
+                    Description = "Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool should be used when you need to make targeted changes to specific parts of a file. Returns a string message indicating status, absolute_path, and the full, updated content of the file read from disk."
                 })
         ];
     }
@@ -139,15 +139,16 @@ public class FileSystemTools
         [Description("The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.")]
         string content)
     {
+        var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
+        
         if (_config.ToolApprovals == "readonly")
         {
-            return "ERROR: File system is in readonly mode. Write operations are disabled.";
+            return FormatXmlResponseForFileChange("FAILED", path, filePath, null, "File system is in readonly mode. Write operations are disabled.", null);
         }
 
-        var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
         if (File.Exists(filePath) && new FileInfo(filePath).IsReadOnly)
         {
-            return $"ERROR: File '{path}' is read-only and cannot be modified.";
+            return FormatXmlResponseForFileChange("FAILED", path, filePath, null, $"File '{path}' is read-only and cannot be modified.", null);
         }
         
         if (_config.Debug)
@@ -157,12 +158,12 @@ public class FileSystemTools
 
         if (!IsPathInWorkingDirectory(filePath))
         {
-            return "ERROR: Path is outside the working directory";
+            return FormatXmlResponseForFileChange("FAILED", path, filePath, null, "Path is outside the working directory", null);
         }
 
         try
         {
-            var response = WriteFileWithIntegrity(filePath, content);
+            var response = WriteFileWithIntegrity(filePath, path, content);
             if (_config.Debug)
             {
                 _llmResponseDetailsCallback?.Invoke(response);
@@ -171,12 +172,12 @@ public class FileSystemTools
         }
         catch (Exception ex)
         {
-            var msg = $"ERROR: Failed to write file with integrity preservation. {ex.Message}";
+            var msg = $"Failed to write file with integrity preservation. {ex.Message}";
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke(msg);
+                _llmResponseDetailsCallback?.Invoke($"ERROR: {msg}");
             }
-            return msg;
+            return FormatXmlResponseForFileChange("FAILED", path, filePath, null, msg, null);
         }
     }
 
@@ -188,14 +189,11 @@ public class FileSystemTools
     /// - Checksum validation of written content
     /// - Rollback on failure
     /// </summary>
-    private string WriteFileWithIntegrity(string filePath, string content)
+    private string WriteFileWithIntegrity(string filePath, string relativePath, string content)
     {
         string? backupPath = null;
         string? tempPath = null;
         bool fileExisted = File.Exists(filePath);
-        var response = new StringBuilder();
-        response.AppendLine("<tool_response>");
-        var responseText = "";
 
         try
         {
@@ -204,16 +202,12 @@ public class FileSystemTools
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory);
-                responseText = $"Created directory: {directory}";
-                response.AppendLine(responseText);
             }
 
             // Step 1: Create backup if file exists
             if (fileExisted)
             {
                 backupPath = CreateBackup(filePath);
-                responseText = $"Created backup: {backupPath}";
-                response.AppendLine(responseText);
             }
 
             // Step 2: Write to temporary file first (atomic operation)
@@ -221,8 +215,6 @@ public class FileSystemTools
             // Use UTF8 without BOM to avoid checksum mismatches
             var utf8WithoutBom = new UTF8Encoding(false);
             File.WriteAllText(tempPath, content, utf8WithoutBom);
-            responseText = $"Wrote content to temporary file: {tempPath}";
-            response.AppendLine(responseText);
 
             // Step 3: Validate written content integrity
             var expectedChecksum = CalculateStringChecksum(content);
@@ -233,17 +225,12 @@ public class FileSystemTools
                 throw new InvalidOperationException($"Checksum mismatch. Expected: {expectedChecksum}, Actual: {actualChecksum}");
             }
 
-            responseText = $"Checksum validation passed: {actualChecksum}";
-            response.AppendLine(responseText);
-
             // Step 4: Atomic move from temp to final location
             if (fileExisted)
             {
                 File.Delete(filePath);
             }
             File.Move(tempPath, filePath);
-            responseText = $"Atomically moved temporary file to final location";
-            response.AppendLine(responseText);
 
             // Step 5: Final integrity verification
             var finalChecksum = CalculateFileChecksum(filePath);
@@ -252,29 +239,20 @@ public class FileSystemTools
                 throw new InvalidOperationException($"Final checksum verification failed. Expected: {expectedChecksum}, Actual: {finalChecksum}");
             }
 
-            // Step 6: Clean up backup (keep it for now as a safety measure)
-            // We could optionally delete the backup here, but keeping it provides additional safety
+            // Step 6: Read content from disk for verification
+            var contentOnDisk = File.ReadAllText(filePath);
 
-            responseText = $"File integrity preservation completed successfully";
-            response.AppendLine(responseText);
-
-            response.AppendLine($"Successfully wrote the contents to the file '{filePath}'.");
-            response.AppendLine("</tool_response>");
-            return response.ToString();
+            // Return success response with new XML format
+            return FormatXmlResponseForFileChange("SUCCESS", relativePath, filePath, finalChecksum, null, contentOnDisk);
         }
         catch (Exception ex)
         {
-            responseText = $"Error during file write, attempting rollback: {ex.Message}";
-            response.AppendLine(responseText);
-
             // Rollback: Restore from backup if it exists
             try
             {
                 if (tempPath != null && File.Exists(tempPath))
                 {
                     File.Delete(tempPath);
-                    responseText = $"Cleaned up temporary file: {tempPath}";
-                    response.AppendLine(responseText);
                 }
 
                 if (backupPath != null && File.Exists(backupPath))
@@ -284,22 +262,16 @@ public class FileSystemTools
                         File.Delete(filePath);
                     }
                     File.Move(backupPath, filePath);
-                    responseText = $"Restored original file from backup";
-                    response.AppendLine(responseText);
                 }
             }
             catch (Exception rollbackEx)
             {
-                responseText = $"ERROR: Rollback failed: {rollbackEx.Message}";
-                response.AppendLine(responseText);
-                response.AppendLine($"ERROR: Write failed and rollback failed. Original error: {ex.Message}. Rollback error: {rollbackEx.Message}");
-                response.AppendLine("</tool_response>");
-                return response.ToString();
+                return FormatXmlResponseForFileChange("FAILED", relativePath, filePath, null, 
+                    $"Write failed and rollback failed. Original error: {ex.Message}. Rollback error: {rollbackEx.Message}", null);
             }
 
-            response.AppendLine($"ERROR: Write failed but original file restored from backup. {ex.Message}");
-            response.AppendLine("</tool_response>");
-            return response.ToString();
+            return FormatXmlResponseForFileChange("FAILED", relativePath, filePath, null, 
+                $"Write failed but original file restored from backup. {ex.Message}", null);
         }
         finally
         {
@@ -431,7 +403,7 @@ public class FileSystemTools
                 }
             }
 
-            return WriteFileWithIntegrity(filePath, modifiedContent);
+            return WriteFileWithIntegrity(filePath, path, modifiedContent);
         }
         catch (Exception ex)
         {
@@ -459,5 +431,40 @@ public class FileSystemTools
         // doesn't use parent directory traversal trickery like ".." to escape.
         // Path.GetFullPath should resolve this, making the check below sufficient.
         return fullPath.StartsWith(workingDirectory, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string FormatXmlResponseForFileChange(string status, string relativePath, string absolutePath, string? checksum, string? errorMessage, string? contentOnDisk)
+    {
+        var response = new StringBuilder();
+        response.AppendLine("<tool_response tool_name=\"file_write\">");
+        response.AppendLine("    <notes>");
+        response.AppendLine($"    Target relative path is `{relativePath}`");
+        response.AppendLine("    </notes>");
+        
+        if (status == "SUCCESS")
+        {
+            response.AppendLine($"    <result status=\"{status}\" absolute_path=\"{absolutePath}\" sha256_checksum=\"{checksum}\" />");
+        }
+        else
+        {
+            response.AppendLine($"    <result status=\"{status}\" absolute_path=\"{absolutePath}\" />");
+        }
+        
+        if (!string.IsNullOrEmpty(errorMessage))
+        {
+            response.AppendLine("    <error>");
+            response.AppendLine($"        {errorMessage}");
+            response.AppendLine("    </error>");
+        }
+        
+        if (!string.IsNullOrEmpty(contentOnDisk))
+        {
+            response.AppendLine("    <content_on_disk>");
+            response.AppendLine(contentOnDisk);
+            response.AppendLine("    </content_on_disk>");
+        }
+        
+        response.AppendLine("</tool_response>");
+        return response.ToString();
     }
 }

@@ -86,7 +86,11 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, content);
 
         // Assert
-        result.Should().Contain("Successfully wrote the contents to the file");
+        result.Should().Contain("<tool_response tool_name=\"file_write\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("sha256_checksum=");
+        result.Should().Contain("<content_on_disk>");
+        result.Should().Contain(content);
         File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(content);
     }
@@ -103,7 +107,11 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, newContent);
 
         // Assert
-        result.Should().Contain("Successfully wrote the contents to the file");
+        result.Should().Contain("<tool_response tool_name=\"file_write\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("sha256_checksum=");
+        result.Should().Contain("<content_on_disk>");
+        result.Should().Contain(newContent);
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(newContent);
     }
 
@@ -118,7 +126,11 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, content);
 
         // Assert
-        result.Should().Contain("Successfully wrote the contents to the file");
+        result.Should().Contain("<tool_response tool_name=\"file_write\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("sha256_checksum=");
+        result.Should().Contain("<content_on_disk>");
+        result.Should().Contain(content);
         File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(content);
     }
@@ -138,7 +150,11 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReplaceInFile(testFile, diff);
 
         // Assert
-        result.Should().Contain("Successfully wrote the contents to the file");
+        result.Should().Contain("<tool_response tool_name=\"file_write\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("sha256_checksum=");
+        result.Should().Contain("<content_on_disk>");
+        result.Should().Contain("Hello, new world!");
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be("Hello, new world!");
     }
 
@@ -173,7 +189,11 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReplaceInFile(testFile, diff);
 
         // Assert
-        result.Should().Contain("Successfully wrote the contents to the file");
+        result.Should().Contain("<tool_response tool_name=\"file_write\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("sha256_checksum=");
+        result.Should().Contain("<content_on_disk>");
+        result.Should().Contain("1 two 3");
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be("1 two 3");
     }
 
@@ -222,7 +242,9 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.WriteFile(outsideFile, "test");
 
         // Assert
-        result.Should().Contain("ERROR: Path is outside the working directory");
+        result.Should().Contain("<tool_response tool_name=\"file_write\">");
+        result.Should().Contain("status=\"FAILED\"");
+        result.Should().Contain("Path is outside the working directory");
         File.Exists(outsideFile).Should().BeFalse();
         Directory.Delete(outsideDir, true);
     }

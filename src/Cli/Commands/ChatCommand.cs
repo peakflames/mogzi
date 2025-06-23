@@ -183,9 +183,6 @@ public class ChatCommand : ICommand
             _currentSessionPath = _appService.CreateChatSession();
         }
 
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine($"Chat session: {Path.GetFileName(_currentSessionPath)}");
-        Console.WriteLine($"Chat history will be saved to: {_currentSessionPath}");
         Console.ResetColor();
 
         return chatHistory;
