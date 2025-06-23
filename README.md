@@ -1,14 +1,14 @@
 # MaxBot AI Assistant CLI 😻
 
-An interactive command-line chat application featuring streaming responses and support for multiple API providers
+An cross-platform, AI assistant in the terminal intended to support for multiple API providers
 
 ## Features ✨
 
-- Support both Oneshot and Interactive Chat interface with streaming AI responses
-- Supports only OpenAI-compatible APIs 
+- Support both `oneshot` and `Interactive Chat` interface with streaming AI responses
+- Supports OpenAI-compatible APIs, more providers coming soon.
 - Profile-based configuration for easy switching between providers and models
 - Cross-platform support (Windows, MacOS, Linux)
-- LLM can read and write files as well obtain directory listings to learn about your repository (Beta)
+- Control file system access via tool appproval (`readonly` or `all`)
 - Chat history persistence to continue conversations across sessions
 - Session management to list and load previous chat sessions
 - MCP-Support coming soon
