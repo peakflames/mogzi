@@ -36,6 +36,8 @@ public partial class ChatClient
     public ChatOptions ChatOptions { get; init; }
 
     private FileSystemTools FileSystemTools { get; init; }
+    private SystemTools SystemTools { get; init; }
+    private DiffPatchTools DiffPatchTools { get; init; }
 
     private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string>? llmResponseDetailsCallback = null)
     {
@@ -47,7 +49,8 @@ public partial class ChatClient
 
         // Detect the current operating system, we need to handle Windows, MacOS, and Linux differently
         OperatingSystem = Environment.OSVersion.Platform;
-        DefaultShell = OperatingSystem switch {
+        DefaultShell = OperatingSystem switch
+        {
             PlatformID.Win32NT => "powershell",
             PlatformID.MacOSX => "zsh",
             _ => "bash"
@@ -58,13 +61,21 @@ public partial class ChatClient
 
         // Get hostname
         Hostname = System.Net.Dns.GetHostName();
-        
+
         // SystemPrompt is now a computed property, so we don't need to set it here
 
         FileSystemTools = new FileSystemTools(config, llmResponseDetailsCallback);
+        SystemTools = new SystemTools(config, llmResponseDetailsCallback);
+        DiffPatchTools = new DiffPatchTools(config, llmResponseDetailsCallback);
+
+        var allTools = new List<AITool>();
+        allTools.AddRange(FileSystemTools.GetTools().Cast<AITool>());
+        allTools.AddRange(SystemTools.GetTools().Cast<AITool>());
+        allTools.AddRange(DiffPatchTools.GetTools().Cast<AITool>());
+
         ChatOptions = new ChatOptions
         {
-            Tools = FileSystemTools.GetTools().Cast<AITool>().ToList()
+            Tools = allTools
         };
     }
 

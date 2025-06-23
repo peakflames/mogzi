@@ -1,5 +1,4 @@
 using Xunit;
-using CLI;
 using FluentAssertions;
 
 namespace Cli.Tests;

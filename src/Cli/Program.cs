@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using System.Text;
-using CLI;
+using Cli;
+using Cli.UI;
 using FluentResults;
 using MaxBot;
 
@@ -18,7 +19,7 @@ public partial class Program
         var argResult = await CliArgParser.ParseAsync(args);
         if (argResult.IsFailed)
         {
-            App.ConsoleWriteError(argResult.ToResult());
+            ConsoleRenderer.ConsoleWriteError(argResult.Errors.FirstOrDefault()?.Message ?? "Unknown error");
             return 1;
         }
 
@@ -59,11 +60,11 @@ public partial class Program
                 options.ProfileName, 
                 options.ToolApprovals, 
                 options.Mode, 
-                options.Debug ? App.ConsoleWriteLLMResponseDetails : null, 
+                ConsoleRenderer.ConsoleWriteLLMResponseDetails, 
                 options.Debug);
             if (clientResult.IsFailed)
             {
-                App.ConsoleWriteError(clientResult.ToResult());
+                ConsoleRenderer.ConsoleWriteError(clientResult.Errors.FirstOrDefault()?.Message ?? "Unknown error");
                 return 1;
             }
             chatClient = clientResult.Value;
@@ -121,6 +122,8 @@ public partial class Program
             return 0;
         }
 
-        return await new App(maxClient, options.ShowStatus).Run(options.Mode, options.UserPrompt, options.LoadSession);
+        var app = new App(maxClient, options.ShowStatus);
+        var command = app.CreateCommand(options.Mode, options.UserPrompt, options.LoadSession);
+        return await command.ExecuteAsync();
     }
 }

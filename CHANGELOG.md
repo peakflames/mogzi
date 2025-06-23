@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2025-MM-DD
+
+- **Completed Phase 1 Implementation**
+- **Graceful Error Handling (TOR-8.2):** Implemented comprehensive `try-catch` blocks in the main application loop and tool execution to prevent crashes and provide user-friendly error messages for API failures and tool errors.
+- **`execute_command` tool (TOR-4.2 & TOR-7.1):** Added a new tool to execute shell commands.
+  - The tool is cross-platform, automatically using `cmd.exe` on Windows, `zsh` on macOS, and `bash` on Linux.
+  - It respects the `tool_approvals` configuration, providing a security layer for potentially destructive operations.
+- **File Permission Checks (TOR-3.3):** Enhanced `write_file` and `replace_in_file` to respect read-only file attributes, preventing errors when trying to modify locked files.
+- **New Git-Style Diff Patch Tools:** Replaced `replace_in_file` with more robust Git-style unified diff patch tools:
+  - **`apply_code_patch`:** Apply unified diff patches to files with fuzzy matching support for handling whitespace and formatting variations
+  - **`generate_code_patch`:** Generate Git-compatible unified diff patches showing changes between original and modified content
+  - **`preview_patch_application`:** Preview patch changes without applying them for safe validation
+  - Enhanced file modification capabilities with atomic operations, SHA256 checksum validation, and comprehensive error reporting
+  - Supports multiple hunks, context lines configuration, and detailed change statistics
+- **Documentation Updates:** Comprehensive update of all tool specifications and system documentation:
+  - Created detailed specification files for all three new diff patch tools with usage examples and best practices
+  - Updated all existing tool specifications to reference new diff patch tools instead of `replace_in_file`
+  - Updated requirements traceability matrix and project plan to reflect new tool implementation
+  - Updated system prompt with diff patch tools best practices and workflow recommendations
+- **Updated Developer Guidelines:**
+  - Mandated a "Requirements-Driven Workflow" that requires creating skeleton tests before implementation.
+  - Reinforced the need to assume cross-platform compatibility for all OS-level interactions.
+  - Added a requirement to verify Native AOT compatibility for all new dependencies.
+  - Added a guideline to test against the application's secure-by-default settings.
+- Refactored the `Cli` project to use the Command Pattern, improving modularity and maintainability.
+- Refactor system prompt to improve tool usage guidelines and verification
 
 ## [1.3.1] - 2025-06-22
 

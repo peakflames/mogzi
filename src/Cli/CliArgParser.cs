@@ -2,7 +2,7 @@
 using System.Reflection;
 using FluentResults;
 
-namespace CLI;
+namespace Cli;
 
 public record CommandLineOptions
 {

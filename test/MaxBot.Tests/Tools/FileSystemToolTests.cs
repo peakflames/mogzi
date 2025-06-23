@@ -46,7 +46,7 @@ public class FileSystemToolTests : IDisposable
     // ReadFile Tests
 
     [Fact]
-    public void ReadFile_WithExistingFile_ShouldReturnContent()
+    public void ReadFile_WithExistingFile_ShouldReturnXmlResponse()
     {
         // Arrange
         var testFile = "read_test.txt";
@@ -57,11 +57,18 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReadFile(testFile);
 
         // Assert
-        result.Should().Be(content);
+        result.Should().Contain("<tool_response tool_name=\"read_file\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("sha256_checksum=");
+        result.Should().Contain("file_size=\"13\""); // "Hello, World!" is 13 bytes
+        result.Should().MatchRegex(@"last_modified=""\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}""");
+        result.Should().Contain("<file_content>");
+        result.Should().Contain(content);
+        result.Should().Contain("File size: 13.0 B");
     }
 
     [Fact]
-    public void ReadFile_WithNonExistentFile_ShouldReturnError()
+    public void ReadFile_WithNonExistentFile_ShouldReturnXmlError()
     {
         // Arrange
         var testFile = "non_existent_file.txt";
@@ -70,7 +77,88 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReadFile(testFile);
 
         // Assert
-        result.Should().Contain("ERROR: File not found");
+        result.Should().Contain("<tool_response tool_name=\"read_file\">");
+        result.Should().Contain("status=\"FAILED\"");
+        result.Should().Contain("<error>");
+        result.Should().Contain("File not found");
+    }
+
+    [Fact]
+    public void ReadFile_ShouldIncludeValidChecksum()
+    {
+        // Arrange
+        var testFile = "checksum_test.txt";
+        var content = "Test content for checksum validation";
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), content);
+
+        // Act
+        var result = _fileSystemTools.ReadFile(testFile);
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"read_file\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().MatchRegex(@"sha256_checksum=""[A-F0-9]{64}"""); // Valid SHA256 format
+        result.Should().Contain("<file_content>");
+        result.Should().Contain(content);
+    }
+
+    [Fact]
+    public void ReadFile_ShouldIncludeFileMetadata()
+    {
+        // Arrange
+        var testFile = "metadata_test.txt";
+        var content = "Content for metadata testing";
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), content);
+
+        // Act
+        var result = _fileSystemTools.ReadFile(testFile);
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"read_file\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain($"file_size=\"{content.Length}\"");
+        result.Should().MatchRegex(@"last_modified=""\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}""");
+        result.Should().Contain($"File size: {content.Length}.0 B");
+        result.Should().MatchRegex(@"Last modified: \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}");
+    }
+
+    [Fact]
+    public void ReadFile_WithEmptyFile_ShouldReturnXmlResponse()
+    {
+        // Arrange
+        var testFile = "empty_test.txt";
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), "");
+
+        // Act
+        var result = _fileSystemTools.ReadFile(testFile);
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"read_file\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("file_size=\"0\"");
+        result.Should().Contain("File size: 0 B");
+        result.Should().Contain("<file_content>");
+        result.Should().MatchRegex(@"sha256_checksum=""[A-F0-9]{64}"""); // Even empty files have checksums
+    }
+
+    [Fact]
+    public void ReadFile_WithLargeFile_ShouldFormatSizeCorrectly()
+    {
+        // Arrange
+        var testFile = "large_test.txt";
+        var content = new string('A', 2048); // 2KB file
+        File.WriteAllText(Path.Combine(_testDirectory, testFile), content);
+
+        // Act
+        var result = _fileSystemTools.ReadFile(testFile);
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"read_file\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("file_size=\"2048\"");
+        result.Should().Contain("File size: 2.0 KB");
+        result.Should().Contain("<file_content>");
+        result.Should().Contain(content);
     }
 
     // WriteFile Tests
@@ -86,7 +174,11 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, content);
 
         // Assert
-        result.Should().Contain("Successfully wrote the contents to the file");
+        result.Should().Contain("<tool_response tool_name=\"file_write\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("sha256_checksum=");
+        result.Should().Contain("<content_on_disk>");
+        result.Should().Contain(content);
         File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(content);
     }
@@ -103,7 +195,11 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, newContent);
 
         // Assert
-        result.Should().Contain("Successfully wrote the contents to the file");
+        result.Should().Contain("<tool_response tool_name=\"file_write\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("sha256_checksum=");
+        result.Should().Contain("<content_on_disk>");
+        result.Should().Contain(newContent);
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(newContent);
     }
 
@@ -118,7 +214,11 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.WriteFile(testFile, content);
 
         // Assert
-        result.Should().Contain("Successfully wrote the contents to the file");
+        result.Should().Contain("<tool_response tool_name=\"file_write\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("sha256_checksum=");
+        result.Should().Contain("<content_on_disk>");
+        result.Should().Contain(content);
         File.Exists(Path.Combine(_testDirectory, testFile)).Should().BeTrue();
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(content);
     }
@@ -138,7 +238,11 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReplaceInFile(testFile, diff);
 
         // Assert
-        result.Should().Contain("Successfully wrote the contents to the file");
+        result.Should().Contain("<tool_response tool_name=\"replace_in_file\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("sha256_checksum=");
+        result.Should().Contain("<content_on_disk>");
+        result.Should().Contain("Hello, new world!");
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be("Hello, new world!");
     }
 
@@ -155,7 +259,9 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReplaceInFile(testFile, diff);
 
         // Assert
-        result.Should().Contain("ERROR: Search block not found");
+        result.Should().Contain("<tool_response tool_name=\"replace_in_file\">");
+        result.Should().Contain("status=\"FAILED\"");
+        result.Should().Contain("Search block not found");
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(initialContent); // File should be unchanged
     }
 
@@ -173,7 +279,11 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReplaceInFile(testFile, diff);
 
         // Assert
-        result.Should().Contain("Successfully wrote the contents to the file");
+        result.Should().Contain("<tool_response tool_name=\"replace_in_file\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("sha256_checksum=");
+        result.Should().Contain("<content_on_disk>");
+        result.Should().Contain("1 two 3");
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be("1 two 3");
     }
 
@@ -188,13 +298,15 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReplaceInFile(testFile, diff);
 
         // Assert
-        result.Should().Contain("ERROR: File not found");
+        result.Should().Contain("<tool_response tool_name=\"replace_in_file\">");
+        result.Should().Contain("status=\"FAILED\"");
+        result.Should().Contain("File not found");
     }
 
     // TOR-7.2: Working Directory Constraint Tests
 
     [Fact]
-    public void ReadFile_OutsideWorkingDirectory_ShouldReturnError()
+    public void ReadFile_OutsideWorkingDirectory_ShouldReturnXmlError()
     {
         // Arrange
         var outsideDir = Path.Combine(Path.GetTempPath(), "MaxBotFileSystemToolTests_Outside", Guid.NewGuid().ToString());
@@ -206,7 +318,10 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReadFile(outsideFile);
 
         // Assert
-        result.Should().Contain("ERROR: Path is outside the working directory");
+        result.Should().Contain("<tool_response tool_name=\"read_file\">");
+        result.Should().Contain("status=\"FAILED\"");
+        result.Should().Contain("<error>");
+        result.Should().Contain("Path is outside the working directory");
         Directory.Delete(outsideDir, true);
     }
 
@@ -222,7 +337,9 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.WriteFile(outsideFile, "test");
 
         // Assert
-        result.Should().Contain("ERROR: Path is outside the working directory");
+        result.Should().Contain("<tool_response tool_name=\"file_write\">");
+        result.Should().Contain("status=\"FAILED\"");
+        result.Should().Contain("Path is outside the working directory");
         File.Exists(outsideFile).Should().BeFalse();
         Directory.Delete(outsideDir, true);
     }
@@ -241,8 +358,169 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReplaceInFile(outsideFile, diff);
 
         // Assert
-        result.Should().Contain("ERROR: Path is outside the working directory");
+        result.Should().Contain("<tool_response tool_name=\"replace_in_file\">");
+        result.Should().Contain("status=\"FAILED\"");
+        result.Should().Contain("Path is outside the working directory");
         File.ReadAllText(outsideFile).Should().Be("test"); // Unchanged
         Directory.Delete(outsideDir, true);
+    }
+
+    // ListFiles Tests
+
+    [Fact]
+    public void ListFiles_WithExistingDirectory_ShouldReturnXmlResponse()
+    {
+        // Arrange
+        var testSubDir = "list_test_dir";
+        var testSubDirPath = Path.Combine(_testDirectory, testSubDir);
+        Directory.CreateDirectory(testSubDirPath);
+        
+        var testFile1 = Path.Combine(testSubDirPath, "file1.txt");
+        var testFile2 = Path.Combine(testSubDirPath, "file2.txt");
+        File.WriteAllText(testFile1, "Content 1");
+        File.WriteAllText(testFile2, "Content 2");
+
+        // Act
+        var result = _fileSystemTools.ListFiles(testSubDir);
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"list_files\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("item_count=\"2\"");
+        result.Should().Contain("<directory_contents>");
+        result.Should().Contain("file1.txt");
+        result.Should().Contain("file2.txt");
+        result.Should().Contain("Found 2 items");
+    }
+
+    [Fact]
+    public void ListFiles_WithNonExistentDirectory_ShouldReturnXmlError()
+    {
+        // Arrange
+        var nonExistentDir = "non_existent_directory";
+
+        // Act
+        var result = _fileSystemTools.ListFiles(nonExistentDir);
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"list_files\">");
+        result.Should().Contain("status=\"FAILED\"");
+        result.Should().Contain("<error>");
+        result.Should().Contain("does not exist");
+    }
+
+    [Fact]
+    public void ListFiles_WithRecursiveOption_ShouldIncludeSubdirectories()
+    {
+        // Arrange
+        var testSubDir = "recursive_test_dir";
+        var testSubDirPath = Path.Combine(_testDirectory, testSubDir);
+        Directory.CreateDirectory(testSubDirPath);
+        
+        var nestedDir = Path.Combine(testSubDirPath, "nested");
+        Directory.CreateDirectory(nestedDir);
+        
+        var testFile1 = Path.Combine(testSubDirPath, "file1.txt");
+        var testFile2 = Path.Combine(nestedDir, "file2.txt");
+        File.WriteAllText(testFile1, "Content 1");
+        File.WriteAllText(testFile2, "Content 2");
+
+        // Act
+        var result = _fileSystemTools.ListFiles(testSubDir, recursive: true);
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"list_files\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("item_count=\"3\""); // 1 directory + 2 files
+        result.Should().Contain("<directory_contents>");
+        result.Should().Contain("file1.txt");
+        result.Should().Contain("nested/");
+        result.Should().Contain("nested/file2.txt");
+    }
+
+    [Fact]
+    public void ListFiles_WithEmptyDirectory_ShouldReturnEmptyListing()
+    {
+        // Arrange
+        var emptyDir = "empty_test_dir";
+        var emptyDirPath = Path.Combine(_testDirectory, emptyDir);
+        Directory.CreateDirectory(emptyDirPath);
+
+        // Act
+        var result = _fileSystemTools.ListFiles(emptyDir);
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"list_files\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("item_count=\"0\"");
+        result.Should().Contain("Found 0 items");
+    }
+
+    [Fact]
+    public void ListFiles_ShouldIncludeFileSizesAndTimestamps()
+    {
+        // Arrange
+        var testSubDir = "size_test_dir";
+        var testSubDirPath = Path.Combine(_testDirectory, testSubDir);
+        Directory.CreateDirectory(testSubDirPath);
+        
+        var testFile = Path.Combine(testSubDirPath, "test_file.txt");
+        File.WriteAllText(testFile, "Hello World"); // 11 bytes
+
+        // Act
+        var result = _fileSystemTools.ListFiles(testSubDir);
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"list_files\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("<directory_contents>");
+        result.Should().MatchRegex(@"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}"); // Timestamp format
+        result.Should().Contain("11.0 B"); // File size
+        result.Should().Contain("test_file.txt");
+    }
+
+    // TOR-3.3: File Permission Respect Tests
+
+    [Fact]
+    public void WriteFile_ToReadOnlyFile_ShouldReturnError()
+    {
+        // Arrange
+        var testFile = "readonly_write_test.txt";
+        var testFilePath = Path.Combine(_testDirectory, testFile);
+        File.WriteAllText(testFilePath, "Initial content.");
+        var fileInfo = new FileInfo(testFilePath);
+        fileInfo.IsReadOnly = true;
+
+        // Act
+        var result = _fileSystemTools.WriteFile(testFile, "This should fail.");
+
+        // Assert
+        result.Should().Contain("is read-only and cannot be modified");
+        File.ReadAllText(testFilePath).Should().Be("Initial content."); // Unchanged
+
+        // Cleanup
+        fileInfo.IsReadOnly = false;
+    }
+
+    [Fact]
+    public void ReplaceInFile_ToReadOnlyFile_ShouldReturnError()
+    {
+        // Arrange
+        var testFile = "readonly_replace_test.txt";
+        var testFilePath = Path.Combine(_testDirectory, testFile);
+        File.WriteAllText(testFilePath, "Initial content.");
+        var fileInfo = new FileInfo(testFilePath);
+        fileInfo.IsReadOnly = true;
+        var diff = "------- SEARCH\nInitial\n=======\nNew\n+++++++ REPLACE";
+
+        // Act
+        var result = _fileSystemTools.ReplaceInFile(testFile, diff);
+
+        // Assert
+        result.Should().Contain("is read-only and cannot be modified");
+        File.ReadAllText(testFilePath).Should().Be("Initial content."); // Unchanged
+
+        // Cleanup
+        fileInfo.IsReadOnly = false;
     }
 }

@@ -1,8 +1,8 @@
-# MaxBot CLI 🤖✨
+# MaxBot AI Assistant CLI 🤖✨
 
 An interactive command-line chat application featuring streaming responses and support for multiple API providers
 
-## Features 🌟
+## Features ✨
 
 - Support both Oneshot and Interactive Chat interface with streaming AI responses
 - Supports only OpenAI-compatible APIs 
@@ -12,6 +12,25 @@ An interactive command-line chat application featuring streaming responses and s
 - Chat history persistence to continue conversations across sessions
 - Session management to list and load previous chat sessions
 - MCP-Support coming soon
+
+## Available Tools 🛠️
+
+MaxBot is equipped with a powerful set of tools to interact with your local system. Here is a summary of the currently implemented and upcoming tools:
+
+| Tool Name           | Status | Notes                                                              | Safety/Security Features                                                                                                                            |
+| ------------------- | ------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_files`        | ✅ Implemented | Lists files and directories, supports recursive listing.           | Read-only operation. Constrained to the working directory.                                                                                          |
+| `read_file`         | ✅ Implemented | Reads the content of a specified file. Supports PDF and DOCX.      | Read-only operation. Constrained to the working directory.                                                                                          |
+| `write_file`        | ✅ Implemented | Creates a new file or overwrites an existing one.                  | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic writes with backups and checksums.<br>- Respects read-only file attributes. |
+| `apply_code_patch`  | ✅ Implemented | Applies Git-style unified diff patches for precise code changes.   | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses fuzzy matching for robust patch application.                |
+| `generate_code_patch` | ✅ Implemented | Creates unified diff patches showing changes between content.       | Read-only operation. Generates patches without modifying files.                                                                                     |
+| `preview_patch_application` | ✅ Implemented | Previews what changes a patch would make without applying them.     | Read-only operation. Safe preview of potential changes.                                                                                             |
+| `execute_command`   | ✅ Implemented | Executes shell commands.                                           | - Requires `--tool-approvals all` by default.<br>- Cross-platform aware (uses `cmd`, `zsh`, `bash` appropriately).                                     |
+| `search_files`      | 🎯 Next Priority | Regex-based search across files for enhanced code analysis.        | Read-only operation. Constrained to the working directory. Supports pattern matching across file contents.                                          |
+| `attempt_completion` | 🔄 Coming Soon | Signals task completion and presents results to the user.          | Read-only operation. Provides structured completion feedback and optional demonstration commands.                                                    |
+| `list_code_definition_names` | 📋 Planned | Lists code definitions (classes, functions, methods) in source files. | Read-only operation. Constrained to the working directory. Provides code structure analysis.                                                        |
+| `mcp_tools`         | 📋 Planned | Model Context Protocol support for external integrations.          | Configurable approval requirements. Enables integration with external services and APIs.                                                            |
+
 
 ### Examples 💡
 
@@ -47,7 +66,7 @@ Before running the application, ensure you have:
 
    - Download loads max.exe and moves it to your WindowsApp directory
    ```sh
-   Start-BitsTransfer -Source https://github.com/peakflames/maxbot/releases/latest/download/max-win-x64.exe -Destination max.exe; move -Force max.exe $env:USERPROFILE\AppData\Local\Microsoft\WindowsApps
+   Start-BitsTransfer -Source https://github.com/peakflames/maxbot/releases/latest/download/max-win-x64.exe -Destination max.exe; move -Force max.exe $env:USERPROFILE\\AppData\\Local\\Microsoft\\WindowsApps
    ```
 
     For MacOS (sudo):
@@ -118,7 +137,7 @@ Before running the application, ensure you have:
    }
    ```
 
-## Usage 📝
+## Usage 📄
 
 ```bash
 max [prompt] [options]
