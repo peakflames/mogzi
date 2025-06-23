@@ -32,7 +32,7 @@ public class SystemTools
     }
 
     public async Task<string> ExecuteCommand(
-        [Description("The CLI command to execute.")] string command,
+        [Description("The CLI command to execute. Command that result in or require interactivity are forbidden. Command must be compatible with the User's shell")] string command,
         [Description("A boolean indicating if the command requires explicit user approval.")] bool requiresApproval = true)
     {
         if (requiresApproval && _config.ToolApprovals.Equals("readonly", StringComparison.OrdinalIgnoreCase))

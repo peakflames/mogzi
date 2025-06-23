@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added a requirement to verify Native AOT compatibility for all new dependencies.
   - Added a guideline to test against the application's secure-by-default settings.
 - Refactored the `Cli` project to use the Command Pattern, improving modularity and maintainability.
+- Refactor system prompt to improve tool usage guidelines and verification
 
 ## [1.3.1] - 2025-06-22
 
