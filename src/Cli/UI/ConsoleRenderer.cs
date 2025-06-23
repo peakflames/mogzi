@@ -11,10 +11,10 @@ namespace Cli.UI;
 
 public static class ConsoleRenderer
 {
-    public static void ConsoleWriteLLMResponseDetails(string response)
+    public static void ConsoleWriteLLMResponseDetails(string response, ConsoleColor color = ConsoleColor.DarkGray)
     {
         var originalColor = Console.ForegroundColor;
-        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.ForegroundColor = color;
         Console.WriteLine($"\n{response}");
         Console.ForegroundColor = originalColor;
     }

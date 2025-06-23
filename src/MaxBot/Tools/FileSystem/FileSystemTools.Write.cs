@@ -23,7 +23,7 @@ public partial class FileSystemTools
             return FormatXmlResponseForFileChange("FAILED", path, filePath, null, $"File '{path}' is read-only and cannot be modified.", null);
         }
         
-        _llmResponseDetailsCallback?.Invoke($"Writing to file '{path}' with integrity preservation.");
+        _llmResponseDetailsCallback?.Invoke($"Writing to file '{path}' with integrity preservation.", ConsoleColor.DarkGray);
         
 
         if (!IsPathInWorkingDirectory(filePath))
@@ -36,7 +36,7 @@ public partial class FileSystemTools
             var response = WriteFileWithIntegrity(filePath, path, content, "file_write");
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke(response);
+                _llmResponseDetailsCallback?.Invoke(response, ConsoleColor.DarkGray);
             }
             return response;
         }
@@ -45,7 +45,7 @@ public partial class FileSystemTools
             var msg = $"Failed to write file with integrity preservation. {ex.Message}";
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke($"ERROR: {msg}");
+                _llmResponseDetailsCallback?.Invoke($"ERROR: {msg}", ConsoleColor.Red);
             }
             return FormatXmlResponseForFileChange("FAILED", path, filePath, null, msg, null);
         }
@@ -187,7 +187,7 @@ public partial class FileSystemTools
             return FormatXmlResponseForFileChange("FAILED", path, filePath, null, $"File '{path}' is read-only and cannot be modified.", null, "replace_in_file");
         }
 
-        _llmResponseDetailsCallback?.Invoke($"Replacing content in file '{path}'.");
+        _llmResponseDetailsCallback?.Invoke($"Replacing content in file '{path}'.", ConsoleColor.DarkGray);
 
         if (!IsPathInWorkingDirectory(filePath))
         {
@@ -233,7 +233,7 @@ public partial class FileSystemTools
             var msg = $"Failed to replace content in file. {ex.Message}";
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke($"ERROR: {msg}");
+                _llmResponseDetailsCallback?.Invoke($"ERROR: {msg}", ConsoleColor.Red);
             }
             return FormatXmlResponseForFileChange("FAILED", path, filePath, null, msg, null, "replace_in_file");
         }

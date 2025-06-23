@@ -39,7 +39,7 @@ public partial class ChatClient
     private SystemTools SystemTools { get; init; }
     private DiffPatchTools DiffPatchTools { get; init; }
 
-    private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string>? llmResponseDetailsCallback = null)
+    private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
     {
         ChatClientMEAI = chatClient;
         Config = config;
@@ -80,14 +80,14 @@ public partial class ChatClient
     }
 
     
-    public static Result<ChatClient> Create(string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string>? llmResponseDetailsCallback = null, bool debug = false)
+    public static Result<ChatClient> Create(string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string, ConsoleColor>? llmResponseDetailsCallback = null, bool debug = false)
     {
         var result = Create(null, configFilePath, profileName, toolApprovals, mode, llmResponseDetailsCallback, debug);
         return result;
     }
 
 
-    public static Result<ChatClient> Create(IChatClient? chatClient, string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string>? llmResponseDetailsCallback = null, bool debug = false)
+    public static Result<ChatClient> Create(IChatClient? chatClient, string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string, ConsoleColor>? llmResponseDetailsCallback = null, bool debug = false)
     {
         string jsonContent;
         try

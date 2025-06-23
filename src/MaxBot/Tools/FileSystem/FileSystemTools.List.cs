@@ -10,7 +10,7 @@ public partial class FileSystemTools
         [Description("(optional) Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.")]
         bool recursive = false)
     {
-        _llmResponseDetailsCallback?.Invoke($"Listing files in '{path}'{(recursive ? " recursively" : "")}.");
+        _llmResponseDetailsCallback?.Invoke($"Listing files in '{path}'{(recursive ? " recursively" : "")}.", ConsoleColor.DarkGray);
         
         var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
 
@@ -19,7 +19,7 @@ public partial class FileSystemTools
             var errorMsg = $"The directory '{filePath}' does not exist.";
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke($"ERROR: Failed to list files. {errorMsg}");
+                _llmResponseDetailsCallback?.Invoke($"ERROR: Failed to list files. {errorMsg}", ConsoleColor.Red);
             }
             return FormatXmlResponseForDirectoryListing("FAILED", path, filePath, 0, errorMsg, null);
         }
@@ -46,7 +46,7 @@ public partial class FileSystemTools
             
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke($"Listed {directories.Length} directories and {files.Length} files for '{filePath}'.");
+                _llmResponseDetailsCallback?.Invoke($"Listed {directories.Length} directories and {files.Length} files for '{filePath}'.", ConsoleColor.DarkGray);
             }
 
             // Format directory contents with file sizes and timestamps
@@ -59,7 +59,7 @@ public partial class FileSystemTools
             var errorMsg = $"Failed to list files and directories. {ex.Message}";
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke($"ERROR: {errorMsg}");
+                _llmResponseDetailsCallback?.Invoke($"ERROR: {errorMsg}", ConsoleColor.Red);
             }
             return FormatXmlResponseForDirectoryListing("FAILED", path, filePath, 0, errorMsg, null);
         }

@@ -17,7 +17,7 @@ public partial class FileSystemTools
         [Description("(optional) Glob pattern to filter files (e.g., '*.cs', 'src/**/*.js'). If not provided, it will search all files.")]
         string? file_pattern = null)
     {
-        _llmResponseDetailsCallback?.Invoke($"Searching files in '{path}' with regex '{regex}' and pattern '{file_pattern ?? "*"}'.");
+        _llmResponseDetailsCallback?.Invoke($"Searching files in '{path}' with regex '{regex}' and pattern '{file_pattern ?? "*"}'.", ConsoleColor.DarkGray);
         var searchPath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
 
         if (!Directory.Exists(searchPath))

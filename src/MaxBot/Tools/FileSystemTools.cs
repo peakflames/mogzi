@@ -6,7 +6,7 @@ namespace MaxBot.Tools;
 public partial class FileSystemTools
 {
     private readonly MaxbotConfiguration _config;
-    private readonly Action<string>? _llmResponseDetailsCallback = null;
+    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = null;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
 
     // Directories to exclude from recursive listing to prevent enormous data returns
@@ -35,7 +35,7 @@ public partial class FileSystemTools
         ".rollup.cache"
     };
 
-    public FileSystemTools(MaxbotConfiguration config, Action<string>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
+    public FileSystemTools(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
     {
         _config = config;
         _llmResponseDetailsCallback = llmResponseDetailsCallback;

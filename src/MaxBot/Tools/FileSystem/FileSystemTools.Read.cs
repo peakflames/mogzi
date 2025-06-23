@@ -8,7 +8,7 @@ public partial class FileSystemTools
         [Description("The path of the file to read (relative to the current working directory)")]
         string path)
     {
-        _llmResponseDetailsCallback?.Invoke($"Reading file '{path}'.");
+        _llmResponseDetailsCallback?.Invoke($"Reading file '{path}'.", ConsoleColor.DarkGray);
         
         var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
 
@@ -22,7 +22,7 @@ public partial class FileSystemTools
             var errorMsg = $"File not found: {filePath}";
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke($"ERROR: {errorMsg}");
+                _llmResponseDetailsCallback?.Invoke($"ERROR: {errorMsg}", ConsoleColor.Red);
             }
             return FormatXmlResponseForFileRead("FAILED", path, filePath, null, null, null, errorMsg, null);
         }
@@ -33,7 +33,7 @@ public partial class FileSystemTools
             var fileInfo = new FileInfo(filePath);
             var checksum = CalculateStringChecksum(content);
             
-            _llmResponseDetailsCallback?.Invoke($"Successfully read file '{path}' ({FormatFileSize(fileInfo.Length)}).");
+            _llmResponseDetailsCallback?.Invoke($"Successfully read file '{path}' ({FormatFileSize(fileInfo.Length)}).", ConsoleColor.DarkGray);
             
             return FormatXmlResponseForFileRead("SUCCESS", path, filePath, fileInfo.Length, fileInfo.LastWriteTime, checksum, null, content);
         }
@@ -42,7 +42,7 @@ public partial class FileSystemTools
             var errorMsg = $"Failed to read file. {ex.Message}";
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke($"ERROR: {errorMsg}");
+                _llmResponseDetailsCallback?.Invoke($"ERROR: {errorMsg}", ConsoleColor.Red);
             }
             return FormatXmlResponseForFileRead("FAILED", path, filePath, null, null, null, errorMsg, null);
         }

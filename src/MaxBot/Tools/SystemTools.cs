@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using MaxBot.Domain;
 using Microsoft.Extensions.AI;
 
@@ -9,9 +10,9 @@ namespace MaxBot.Tools;
 public class SystemTools
 {
     private readonly MaxbotConfiguration _config;
-    private readonly Action<string>? _llmResponseDetailsCallback = null;
+    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = null;
 
-    public SystemTools(MaxbotConfiguration config, Action<string>? llmResponseDetailsCallback = null)
+    public SystemTools(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
     {
         _config = config;
         _llmResponseDetailsCallback = llmResponseDetailsCallback;
@@ -27,6 +28,13 @@ public class SystemTools
                 {
                     Name = "execute_command",
                     Description = "Executes a CLI command on the user's system."
+                }),
+            AIFunctionFactory.Create(
+                AttemptCompletion,
+                new AIFunctionFactoryOptions
+                {
+                    Name = "attempt_completion",
+                    Description = "Presents the result of completed work to the user. This tool marks the end of a task and provides a summary of what was accomplished, optionally with a command to demonstrate the results. Optionally you may provide a CLI command to showcase the result of your work. The user may respond with feedback if they are not satisfied with the result, which you can use to make improvements and try again. IMPORTANT. The tool will display the result text to the user, do not repeat it."
                 })
         ];
     }
@@ -40,15 +48,13 @@ public class SystemTools
             var msg = "Execution of this command requires approval. Please run with --tool-approvals all or use the /tool-approval slash command to grant permission.";
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke(msg);
+                _llmResponseDetailsCallback?.Invoke(msg, ConsoleColor.DarkGray);
             }
             return msg;
         }
 
-        if (_config.Debug)
-        {
-            _llmResponseDetailsCallback?.Invoke($"Executing command: {command}");
-        }
+        _llmResponseDetailsCallback?.Invoke($"Executing command: {command}", ConsoleColor.DarkGray);
+        
 
         string fileName;
         string arguments;
@@ -100,8 +106,21 @@ public class SystemTools
         var finalResult = string.IsNullOrEmpty(result) ? "Command executed successfully with no output." : result;
         if (_config.Debug)
         {
-            _llmResponseDetailsCallback?.Invoke(finalResult);
+            _llmResponseDetailsCallback?.Invoke(finalResult, ConsoleColor.DarkGray);
         }
         return finalResult;
+    }
+
+    public string AttemptCompletion(
+        [Description("The final result description - should be comprehensive and final")] string result)
+    {
+        _llmResponseDetailsCallback?.Invoke($"\n\n🎉 TASK COMPLETED 🎉\n\n{result}\n\n", ConsoleColor.Green);
+
+        var response = new StringBuilder();
+        response.AppendLine("<tool_response tool_name=\"attempt_completion\" >");
+        response.AppendLine($"    <result status=\"SUCCESS\"  />");
+        response.AppendLine($"    <notes>Your message is now displayed to the User. DO NOT REPEAT as the User will see duplication of text</notes>");
+        response.AppendLine("</tool_response>");
+        return response.ToString();
     }
 }

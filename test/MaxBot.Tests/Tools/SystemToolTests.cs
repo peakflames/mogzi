@@ -2,6 +2,7 @@ using MaxBot.Domain;
 using MaxBot.Tools;
 using Xunit;
 using FluentAssertions;
+using System.Xml;
 
 namespace MaxBot.Tests.Tools;
 
@@ -86,5 +87,28 @@ public class SystemToolTests
         result.Should().Contain("Error:");
         // Check for common "command not found" messages across platforms
         result.Should().MatchRegex("not recognized|command not found");
+    }
+
+    [Fact]
+    public void AttemptCompletion_ShouldReturnCorrectXml()
+    {
+        // Arrange
+        var resultText = "Task completed successfully.";
+        var tools = new SystemTools(new MaxbotConfiguration());
+
+        // Act
+        var xmlString = tools.AttemptCompletion(resultText);
+
+        // Assert
+        var xmlDoc = new XmlDocument();
+        xmlDoc.LoadXml(xmlString);
+
+        var toolResponseNode = xmlDoc.SelectSingleNode("tool_response");
+        Assert.NotNull(toolResponseNode);
+        Assert.Equal("attempt_completion", toolResponseNode.Attributes?["tool_name"]?.Value);
+
+        var resultNode = xmlDoc.SelectSingleNode("//result");
+        Assert.NotNull(resultNode);
+        Assert.Equal("SUCCESS", resultNode.Attributes?["status"]?.Value);
     }
 }
