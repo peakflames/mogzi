@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.2] - 2025-MM-DD
+## [1.3.2] - 2025-06-23
 
 - **Completed Phase 1 Implementation**
 - **Graceful Error Handling (TOR-8.2):** Implemented comprehensive `try-catch` blocks in the main application loop and tool execution to prevent crashes and provide user-friendly error messages for API failures and tool errors.
