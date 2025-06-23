@@ -150,7 +150,7 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReplaceInFile(testFile, diff);
 
         // Assert
-        result.Should().Contain("<tool_response tool_name=\"file_write\">");
+        result.Should().Contain("<tool_response tool_name=\"replace_in_file\">");
         result.Should().Contain("status=\"SUCCESS\"");
         result.Should().Contain("sha256_checksum=");
         result.Should().Contain("<content_on_disk>");
@@ -171,7 +171,9 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReplaceInFile(testFile, diff);
 
         // Assert
-        result.Should().Contain("ERROR: Search block not found");
+        result.Should().Contain("<tool_response tool_name=\"replace_in_file\">");
+        result.Should().Contain("status=\"FAILED\"");
+        result.Should().Contain("Search block not found");
         File.ReadAllText(Path.Combine(_testDirectory, testFile)).Should().Be(initialContent); // File should be unchanged
     }
 
@@ -189,7 +191,7 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReplaceInFile(testFile, diff);
 
         // Assert
-        result.Should().Contain("<tool_response tool_name=\"file_write\">");
+        result.Should().Contain("<tool_response tool_name=\"replace_in_file\">");
         result.Should().Contain("status=\"SUCCESS\"");
         result.Should().Contain("sha256_checksum=");
         result.Should().Contain("<content_on_disk>");
@@ -208,7 +210,9 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReplaceInFile(testFile, diff);
 
         // Assert
-        result.Should().Contain("ERROR: File not found");
+        result.Should().Contain("<tool_response tool_name=\"replace_in_file\">");
+        result.Should().Contain("status=\"FAILED\"");
+        result.Should().Contain("File not found");
     }
 
     // TOR-7.2: Working Directory Constraint Tests
@@ -263,7 +267,9 @@ public class FileSystemToolTests : IDisposable
         var result = _fileSystemTools.ReplaceInFile(outsideFile, diff);
 
         // Assert
-        result.Should().Contain("ERROR: Path is outside the working directory");
+        result.Should().Contain("<tool_response tool_name=\"replace_in_file\">");
+        result.Should().Contain("status=\"FAILED\"");
+        result.Should().Contain("Path is outside the working directory");
         File.ReadAllText(outsideFile).Should().Be("test"); // Unchanged
         Directory.Delete(outsideDir, true);
     }

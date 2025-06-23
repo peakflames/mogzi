@@ -163,7 +163,7 @@ public class FileSystemTools
 
         try
         {
-            var response = WriteFileWithIntegrity(filePath, path, content);
+            var response = WriteFileWithIntegrity(filePath, path, content, "file_write");
             if (_config.Debug)
             {
                 _llmResponseDetailsCallback?.Invoke(response);
@@ -189,7 +189,7 @@ public class FileSystemTools
     /// - Checksum validation of written content
     /// - Rollback on failure
     /// </summary>
-    private string WriteFileWithIntegrity(string filePath, string relativePath, string content)
+    private string WriteFileWithIntegrity(string filePath, string relativePath, string content, string toolName)
     {
         string? backupPath = null;
         string? tempPath = null;
@@ -243,7 +243,7 @@ public class FileSystemTools
             var contentOnDisk = File.ReadAllText(filePath);
 
             // Return success response with new XML format
-            return FormatXmlResponseForFileChange("SUCCESS", relativePath, filePath, finalChecksum, null, contentOnDisk);
+            return FormatXmlResponseForFileChange("SUCCESS", relativePath, filePath, finalChecksum, null, contentOnDisk, toolName);
         }
         catch (Exception ex)
         {
@@ -267,11 +267,11 @@ public class FileSystemTools
             catch (Exception rollbackEx)
             {
                 return FormatXmlResponseForFileChange("FAILED", relativePath, filePath, null, 
-                    $"Write failed and rollback failed. Original error: {ex.Message}. Rollback error: {rollbackEx.Message}", null);
+                    $"Write failed and rollback failed. Original error: {ex.Message}. Rollback error: {rollbackEx.Message}", null, toolName);
             }
 
             return FormatXmlResponseForFileChange("FAILED", relativePath, filePath, null, 
-                $"Write failed but original file restored from backup. {ex.Message}", null);
+                $"Write failed but original file restored from backup. {ex.Message}", null, toolName);
         }
         finally
         {
@@ -350,15 +350,16 @@ public class FileSystemTools
         [Description("One or more SEARCH/REPLACE blocks")]
         string diff)
     {
+        var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
+        
         if (_config.ToolApprovals == "readonly")
         {
-            return "ERROR: File system is in readonly mode. Write operations are disabled.";
+            return FormatXmlResponseForFileChange("FAILED", path, filePath, null, "File system is in readonly mode. Write operations are disabled.", null, "replace_in_file");
         }
 
-        var filePath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
         if (File.Exists(filePath) && new FileInfo(filePath).IsReadOnly)
         {
-            return $"ERROR: File '{path}' is read-only and cannot be modified.";
+            return FormatXmlResponseForFileChange("FAILED", path, filePath, null, $"File '{path}' is read-only and cannot be modified.", null, "replace_in_file");
         }
 
         if (_config.Debug)
@@ -368,12 +369,12 @@ public class FileSystemTools
 
         if (!IsPathInWorkingDirectory(filePath))
         {
-            return "ERROR: Path is outside the working directory";
+            return FormatXmlResponseForFileChange("FAILED", path, filePath, null, "Path is outside the working directory", null, "replace_in_file");
         }
 
         if (!File.Exists(filePath))
         {
-            return $"ERROR: File not found: {filePath}";
+            return FormatXmlResponseForFileChange("FAILED", path, filePath, null, $"File not found: {filePath}", null, "replace_in_file");
         }
 
         try
@@ -387,7 +388,7 @@ public class FileSystemTools
                 var parts = block.Split(new[] { "=======" }, StringSplitOptions.None);
                 if (parts.Length != 2)
                 {
-                    return "ERROR: Invalid SEARCH/REPLACE block format.";
+                    return FormatXmlResponseForFileChange("FAILED", path, filePath, null, "Invalid SEARCH/REPLACE block format.", null, "replace_in_file");
                 }
 
                 var search = parts[0].Trim('\r', '\n');
@@ -399,20 +400,20 @@ public class FileSystemTools
                 }
                 else
                 {
-                    return "ERROR: Search block not found";
+                    return FormatXmlResponseForFileChange("FAILED", path, filePath, null, "Search block not found", null, "replace_in_file");
                 }
             }
 
-            return WriteFileWithIntegrity(filePath, path, modifiedContent);
+            return WriteFileWithIntegrity(filePath, path, modifiedContent, "replace_in_file");
         }
         catch (Exception ex)
         {
-            var msg = $"ERROR: Failed to replace content in file. {ex.Message}";
+            var msg = $"Failed to replace content in file. {ex.Message}";
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke(msg);
+                _llmResponseDetailsCallback?.Invoke($"ERROR: {msg}");
             }
-            return msg;
+            return FormatXmlResponseForFileChange("FAILED", path, filePath, null, msg, null, "replace_in_file");
         }
     }
 
@@ -433,10 +434,10 @@ public class FileSystemTools
         return fullPath.StartsWith(workingDirectory, StringComparison.OrdinalIgnoreCase);
     }
 
-    private string FormatXmlResponseForFileChange(string status, string relativePath, string absolutePath, string? checksum, string? errorMessage, string? contentOnDisk)
+    private string FormatXmlResponseForFileChange(string status, string relativePath, string absolutePath, string? checksum, string? errorMessage, string? contentOnDisk, string toolName = "file_write")
     {
         var response = new StringBuilder();
-        response.AppendLine("<tool_response tool_name=\"file_write\">");
+        response.AppendLine($"<tool_response tool_name=\"{toolName}\">");
         response.AppendLine("    <notes>");
         response.AppendLine($"    Target relative path is `{relativePath}`");
         response.AppendLine("    </notes>");
