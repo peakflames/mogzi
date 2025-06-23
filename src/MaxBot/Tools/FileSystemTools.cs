@@ -5,8 +5,12 @@ using Microsoft.Extensions.AI;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
+using System.Security;
 using FluentResults;
 using MaxBot.Domain;
+using Microsoft.Extensions.FileSystemGlobbing;
 
 namespace MaxBot.Tools;
 
@@ -77,13 +81,13 @@ public class FileSystemTools
                     Name = "read_file",
                     Description = "A read-only tool to read the contents of a file at the specified path. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. Automatically extracts raw text from PDF and DOCX files. May not be suitable for other types of binary files, as it returns the raw content as a string"
                 }),
-            // AIFunctionFactory.Create(
-            //     ReplaceInFile,
-            //     new AIFunctionFactoryOptions
-            //     {
-            //         Name = "replace_in_file",
-            //         Description = "Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool very picky and fails often. THis tool should be used when you need to make targeted changes to specific parts of a file. Returns a string message indicating status, absolute_path, and the full, updated content of the file read from disk."
-            //     })
+            AIFunctionFactory.Create(
+                SearchFiles,
+                new AIFunctionFactoryOptions
+                {
+                    Name = "search_files",
+                    Description = "A read-only tool to perform a regex search across files in a specified directory, providing context-rich results. This tool searches for patterns or specific content across multiple files, displaying each match with encapsulating context."
+                })
         ];
     }
 
@@ -678,5 +682,132 @@ public class FileSystemTools
         }
         
         return $"{size:F1} {suffixes[suffixIndex]}";
+    }
+
+    public string SearchFiles(
+        [Description("The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.")]
+        string path,
+        [Description("The regular expression pattern to search for. Uses standard .NET regex syntax.")]
+        string regex,
+        [Description("(optional) Glob pattern to filter files (e.g., '*.cs', 'src/**/*.js'). If not provided, it will search all files.")]
+        string? file_pattern = null)
+    {
+        _llmResponseDetailsCallback?.Invoke($"Searching files in '{path}' with regex '{regex}' and pattern '{file_pattern ?? "*"}'.");
+        var searchPath = Path.Combine(_workingDirectoryProvider.GetCurrentDirectory(), path);
+
+        if (!Directory.Exists(searchPath))
+        {
+            return FormatXmlResponseForSearch("FAILED", path, regex, file_pattern, 0, 0, "Directory not found", null);
+        }
+
+        Regex compiledRegex;
+        try
+        {
+            compiledRegex = new Regex(regex, RegexOptions.Compiled | RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
+        }
+        catch (ArgumentException ex)
+        {
+            return FormatXmlResponseForSearch("FAILED", path, regex, file_pattern, 0, 0, $"Invalid regex pattern: {ex.Message}", null);
+        }
+
+        var filesToSearch = GetFilesMatchingPattern(searchPath, file_pattern);
+        var matches = new ConcurrentBag<(string FilePath, int LineNumber, string Line)>();
+        var filesSearchedCount = 0;
+
+        try
+        {
+            Parallel.ForEach(filesToSearch, file =>
+            {
+                Interlocked.Increment(ref filesSearchedCount);
+                try
+                {
+                    var lines = File.ReadLines(file);
+                    var lineNumber = 0;
+                    foreach (var line in lines)
+                    {
+                        lineNumber++;
+                        if (compiledRegex.IsMatch(line))
+                        {
+                            matches.Add((file, lineNumber, line));
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // Ignore files that can't be read
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return FormatXmlResponseForSearch("FAILED", path, regex, file_pattern, filesSearchedCount, 0, $"An error occurred during search: {ex.Message}", null);
+        }
+
+        var searchResults = new StringBuilder();
+        foreach (var group in matches.GroupBy(m => m.FilePath).OrderBy(g => g.Key))
+        {
+            var relativePath = Path.GetRelativePath(searchPath, group.Key).Replace('\\', '/');
+            searchResults.AppendLine($"<file path=\"{SecurityElement.Escape(relativePath)}\">");
+            foreach (var match in group)
+            {
+                searchResults.AppendLine($"    <match line_number=\"{match.LineNumber}\" content=\"{SecurityElement.Escape(match.Line.Trim())}\" />");
+            }
+            searchResults.AppendLine("</file>");
+        }
+
+        return FormatXmlResponseForSearch("SUCCESS", path, regex, file_pattern, filesSearchedCount, matches.Count, null, searchResults.ToString());
+    }
+
+    private IEnumerable<string> GetFilesMatchingPattern(string rootPath, string? globPattern)
+    {
+        var matcher = new Matcher();
+        if (!string.IsNullOrEmpty(globPattern))
+        {
+            matcher.AddInclude(globPattern);
+        }
+        else
+        {
+            matcher.AddInclude("**/*"); // Default to all files if no pattern is provided
+        }
+
+        // Exclude blacklisted directories for performance
+        foreach (var blacklistedDir in BlacklistedDirectories)
+        {
+            matcher.AddExclude($"**/{blacklistedDir}/**");
+        }
+
+        return matcher.GetResultsInFullPath(rootPath);
+    }
+
+    private string FormatXmlResponseForSearch(string status, string relativePath, string regex, string? filePattern, int filesSearched, int totalMatches, string? errorMessage, string? searchResults)
+    {
+        var response = new StringBuilder();
+        response.AppendLine("<tool_response tool_name=\"search_files\">");
+        response.AppendLine("    <notes>");
+        response.AppendLine($"    Searched in `{relativePath}` for regex `{regex}`" + (string.IsNullOrEmpty(filePattern) ? "" : $" with pattern `{filePattern}`") + ".");
+        if (status == "SUCCESS")
+        {
+            response.AppendLine($"    Found {totalMatches} matches in {filesSearched} files.");
+        }
+        response.AppendLine("    </notes>");
+        
+        response.AppendLine($"    <result status=\"{status}\" files_searched=\"{filesSearched}\" total_matches=\"{totalMatches}\" />");
+        
+        if (!string.IsNullOrEmpty(errorMessage))
+        {
+            response.AppendLine("    <error>");
+            response.AppendLine($"        {SecurityElement.Escape(errorMessage)}");
+            response.AppendLine("    </error>");
+        }
+        
+        if (!string.IsNullOrEmpty(searchResults))
+        {
+            response.AppendLine("    <search_results>");
+            response.Append(searchResults);
+            response.AppendLine("    </search_results>");
+        }
+        
+        response.AppendLine("</tool_response>");
+        return response.ToString();
     }
 }

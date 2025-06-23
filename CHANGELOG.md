@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.4] - 2025-06-23
+
+- **`search_files` tool (TOR-1.1 Enhancement):** Implemented a new tool for performing regex-based searches across files in the workspace, with support for file globbing and parallel execution.
+
 ## [1.3.3] - 2025-06-XX
 
 - TBD

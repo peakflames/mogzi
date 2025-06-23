@@ -523,4 +523,129 @@ public class FileSystemToolTests : IDisposable
         // Cleanup
         fileInfo.IsReadOnly = false;
     }
+
+    // SearchFiles Tests
+
+    [Fact]
+    public void SearchFiles_WithValidRegex_ShouldReturnMatchingResults()
+    {
+        // Arrange
+        var searchDir = "search_test";
+        var searchDirPath = Path.Combine(_testDirectory, searchDir);
+        Directory.CreateDirectory(searchDirPath);
+
+        File.WriteAllText(Path.Combine(searchDirPath, "file1.txt"), "Hello World");
+        File.WriteAllText(Path.Combine(searchDirPath, "file2.log"), "Hello Universe");
+        File.WriteAllText(Path.Combine(searchDirPath, "file3.txt"), "No match here");
+
+        // Act
+        var result = _fileSystemTools.SearchFiles(searchDir, "Hello\\s\\w+");
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"search_files\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("total_matches=\"2\"");
+        result.Should().Contain("files_searched=");
+        result.Should().Contain("<search_results>");
+        result.Should().Contain("file1.txt");
+        result.Should().Contain("file2.log");
+        result.Should().NotContain("file3.txt");
+        result.Should().Contain("Found 2 matches");
+    }
+
+    [Fact]
+    public void SearchFiles_WithNoMatches_ShouldReturnEmptySuccess()
+    {
+        // Arrange
+        var searchDir = "search_no_match";
+        var searchDirPath = Path.Combine(_testDirectory, searchDir);
+        Directory.CreateDirectory(searchDirPath);
+        File.WriteAllText(Path.Combine(searchDirPath, "file1.txt"), "some content");
+
+        // Act
+        var result = _fileSystemTools.SearchFiles(searchDir, "non_existent_pattern");
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"search_files\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("total_matches=\"0\"");
+        result.Should().Contain("Found 0 matches");
+    }
+
+    [Fact]
+    public void SearchFiles_WithFilePattern_ShouldFilterResults()
+    {
+        // Arrange
+        var searchDir = "search_pattern";
+        var searchDirPath = Path.Combine(_testDirectory, searchDir);
+        Directory.CreateDirectory(searchDirPath);
+
+        File.WriteAllText(Path.Combine(searchDirPath, "file1.txt"), "Hello World");
+        File.WriteAllText(Path.Combine(searchDirPath, "file2.log"), "Hello Universe");
+
+        // Act
+        var result = _fileSystemTools.SearchFiles(searchDir, "Hello", "*.txt");
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"search_files\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("total_matches=\"1\"");
+        result.Should().Contain("file1.txt");
+        result.Should().NotContain("file2.log");
+    }
+    
+    [Fact]
+    public void SearchFiles_Recursive_ShouldFindMatchesInSubdirectories()
+    {
+        // Arrange
+        var searchDir = "search_recursive";
+        var searchDirPath = Path.Combine(_testDirectory, searchDir);
+        var subDir = Path.Combine(searchDirPath, "sub");
+        Directory.CreateDirectory(subDir);
+
+        File.WriteAllText(Path.Combine(searchDirPath, "root.txt"), "Root match");
+        File.WriteAllText(Path.Combine(subDir, "nested.txt"), "Nested match");
+
+        // Act
+        var result = _fileSystemTools.SearchFiles(searchDir, "match");
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"search_files\">");
+        result.Should().Contain("status=\"SUCCESS\"");
+        result.Should().Contain("total_matches=\"2\"");
+        result.Should().Contain("root.txt");
+        result.Should().Contain("sub/nested.txt"); // Use normalized path for assertion
+    }
+
+    [Fact]
+    public void SearchFiles_WithInvalidRegex_ShouldReturnError()
+    {
+        // Arrange
+        var searchDir = "search_invalid_regex";
+        var searchDirPath = Path.Combine(_testDirectory, searchDir);
+        Directory.CreateDirectory(searchDirPath);
+        File.WriteAllText(Path.Combine(searchDirPath, "file1.txt"), "content");
+
+        // Act
+        var result = _fileSystemTools.SearchFiles(searchDir, "[invalid");
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"search_files\">");
+        result.Should().Contain("status=\"FAILED\"");
+        result.Should().Contain("<error>");
+        result.Should().Contain("Invalid regex pattern");
+    }
+
+    [Fact]
+    public void SearchFiles_WithNonExistentDirectory_ShouldReturnError()
+    {
+        // Act
+        var result = _fileSystemTools.SearchFiles("non_existent_dir", ".*");
+
+        // Assert
+        result.Should().Contain("<tool_response tool_name=\"search_files\">");
+        result.Should().Contain("status=\"FAILED\"");
+        result.Should().Contain("<error>");
+        result.Should().Contain("Directory not found");
+    }
 }

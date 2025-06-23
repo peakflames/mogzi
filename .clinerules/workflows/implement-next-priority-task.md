@@ -174,7 +174,12 @@ This workflow automates the implementation of the next priority task from the pr
    - Update implementation and verification status percentages.
    - Ensure the next recommended task is clearly documented for future sessions.
 
-6. Use the `attempt_completion` tool to present the final results.
+6. Update System Prompt and Documentation.
+   - Analyze `src/MaxBot/Prompts/SystemPrompt.cs` to determine if the new tool requires any changes to the system prompt.
+   - Append a user-facing update to `CHANGELOG.md`.
+   - Update `README.md` to reflect the new tool's status and capabilities.
+
+7. Use the `attempt_completion` tool to present the final results.
    - Include the path to the generated summary report.
    - Provide a concise overview of what was accomplished.
    - Include key metrics (tests added, files modified, TORs satisfied).

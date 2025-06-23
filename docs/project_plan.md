@@ -38,8 +38,8 @@ This table summarizes the implementation status of the tools anticipated by the 
 | `execute_command` | TOR-4.2, TOR-7.1 | ✅ Implemented | Cross-platform and AOT-safe. |
 | `write_to_file` (with permissions) | TOR-3.3 | ✅ Implemented | Respects read-only attributes. |
 | `apply_code_patch` (with permissions) | TOR-3.3 | ✅ Implemented | Respects read-only attributes. |
-| `search_files` | TOR-1.1 | ❌ Not Implemented | **🎯 NEXT PRIORITY** - Extended Phase 1. |
-| `attempt_completion` | TOR-5.2 | ❌ Not Implemented | **🎯 SECOND PRIORITY** - Extended Phase 1. |
+| `search_files` | TOR-1.1 | ✅ Implemented | Extended Phase 1. |
+| `attempt_completion` | TOR-5.2 | ❌ Not Implemented | **🎯 NEXT PRIORITY** - Extended Phase 1. |
 | `list_code_definition_names` | TOR-1.1 | ❌ Not Implemented | Slated for Phase 2. |
 | `mcp_tools` | TOR-6.1, TOR-6.2 | ❌ Not Implemented | Slated for Phase 2. Deferred after Phase 1. |
 | `browser_action` | TOR-4.3 | ❌ Not Implemented | Slated for Phase 3. Deferred until further notice. |
@@ -81,7 +81,7 @@ This table summarizes the implementation status of the tools anticipated by the 
 **Target**: Complete the core workflow cycle with essential analysis and completion tools
 
 #### Enhanced Code Analysis
-- **TOR-1.1 Enhancement**: `search_files` tool for regex-based file content search
+- **TOR-1.1 Enhancement**: `search_files` tool for regex-based file content search ✅ **COMPLETED**
   - **Priority**: Critical (extends core AI functionality)
   - **Implementation**: Regex search across files in directories with working directory constraints
   - **Dependencies**: Builds on existing FileSystemTools infrastructure
@@ -238,8 +238,8 @@ This table summarizes the implementation status of the tools anticipated by the 
 - Graceful error handling throughout the system
 
 **🎯 IMMEDIATE NEXT PRIORITIES - Extended Phase 1**:
-1. **TOR-1.1 Enhancement**: `search_files` tool - Regex search across files for enhanced code analysis
-2. **TOR-5.2**: `attempt_completion` tool - Task completion verification and result presentation
+1. **TOR-1.1 Enhancement**: `search_files` tool - ✅ **COMPLETED**
+2. **TOR-5.2**: `attempt_completion` tool - **🎯 NEXT PRIORITY** - Task completion verification and result presentation
 
 **Remaining Phase 2 High Priority Requirements**:
 1. **TOR-2.2**: Planning and execution mode support
