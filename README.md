@@ -1,4 +1,4 @@
-# MaxBot AI Assistant CLI 🤖✨
+# MaxBot AI Assistant CLI 😻
 
 An interactive command-line chat application featuring streaming responses and support for multiple API providers
 
