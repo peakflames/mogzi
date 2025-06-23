@@ -16,6 +16,35 @@ public class FileSystemTools
     private readonly Action<string>? _llmResponseDetailsCallback = null;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
 
+    // Directories to exclude from recursive listing to prevent enormous data returns
+    private static readonly HashSet<string> BlacklistedDirectories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "node_modules",
+        ".git",
+        "venv",
+        ".venv",
+        "__pycache__",
+        "bin",
+        "obj",
+        ".vs",
+        "dist",
+        "build",
+        ".idea",
+        "target",
+        "vendor",
+        ".next",
+        ".nuxt",
+        "coverage",
+        ".nyc_output",
+        "logs",
+        "tmp",
+        "temp",
+        ".cache",
+        ".parcel-cache",
+        ".webpack",
+        ".rollup.cache"
+    };
+
     public FileSystemTools(MaxbotConfiguration config, Action<string>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
     {
         _config = config;
@@ -82,25 +111,19 @@ public class FileSystemTools
 
         try
         {
-            // Get directories
+            // Get directories and files with blacklist filtering for recursive mode
             string[] directories;
+            string[] files;
+            
             if (recursive)
             {
-                directories = Directory.GetDirectories(filePath, "*", SearchOption.AllDirectories);
+                var (filteredDirectories, filteredFiles) = GetFilteredDirectoriesAndFiles(filePath);
+                directories = filteredDirectories.ToArray();
+                files = filteredFiles.ToArray();
             }
             else
             {
                 directories = Directory.GetDirectories(filePath);
-            }
-            
-            // Get files
-            string[] files;
-            if (recursive)
-            {
-                files = Directory.GetFiles(filePath, "*", SearchOption.AllDirectories);
-            }
-            else
-            {
                 files = Directory.GetFiles(filePath);
             }
             
@@ -429,6 +452,58 @@ public class FileSystemTools
             }
             return FormatXmlResponseForFileChange("FAILED", path, filePath, null, msg, null, "replace_in_file");
         }
+    }
+
+    /// <summary>
+    /// Recursively gets directories and files while respecting the blacklist
+    /// </summary>
+    private (List<string> directories, List<string> files) GetFilteredDirectoriesAndFiles(string rootPath)
+    {
+        var allDirectories = new List<string>();
+        var allFiles = new List<string>();
+        var directoriesToProcess = new Queue<string>();
+        
+        directoriesToProcess.Enqueue(rootPath);
+        
+        while (directoriesToProcess.Count > 0)
+        {
+            var currentDir = directoriesToProcess.Dequeue();
+            
+            try
+            {
+                // Get immediate subdirectories
+                var subdirectories = Directory.GetDirectories(currentDir);
+                foreach (var subdir in subdirectories)
+                {
+                    var dirName = Path.GetFileName(subdir);
+                    
+                    // Add to results (we include blacklisted dirs in the listing, just don't recurse into them)
+                    allDirectories.Add(subdir);
+                    
+                    // Only recurse if not blacklisted
+                    if (!BlacklistedDirectories.Contains(dirName))
+                    {
+                        directoriesToProcess.Enqueue(subdir);
+                    }
+                }
+                
+                // Get files in current directory
+                var filesInDir = Directory.GetFiles(currentDir);
+                allFiles.AddRange(filesInDir);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Skip directories we can't access
+                continue;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                // Skip directories that no longer exist
+                continue;
+            }
+        }
+        
+        return (allDirectories, allFiles);
     }
 
     private bool IsPathInWorkingDirectory(string path)
