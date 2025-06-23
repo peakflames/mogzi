@@ -82,7 +82,7 @@ public class FileSystemTools
                 new AIFunctionFactoryOptions
                 {
                     Name = "replace_in_file",
-                    Description = "Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool should be used when you need to make targeted changes to specific parts of a file. Returns a string message indicating status, absolute_path, and the full, updated content of the file read from disk."
+                    Description = "Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool very picky and fails often. THis tool should be used when you need to make targeted changes to specific parts of a file. Returns a string message indicating status, absolute_path, and the full, updated content of the file read from disk."
                 })
         ];
     }
