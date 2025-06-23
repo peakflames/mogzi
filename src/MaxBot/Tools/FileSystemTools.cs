@@ -321,21 +321,41 @@ public class FileSystemTools
 
         if (!IsPathInWorkingDirectory(filePath))
         {
-            return "ERROR: Path is outside the working directory";
+            return FormatXmlResponseForFileRead("FAILED", path, filePath, null, null, null, "Path is outside the working directory", null);
         }
 
         if (!File.Exists(filePath))
         {
-            var msg = $"ERROR: File not found: {filePath}";
+            var errorMsg = $"File not found: {filePath}";
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke(msg);
+                _llmResponseDetailsCallback?.Invoke($"ERROR: {errorMsg}");
             }
-            return msg;
+            return FormatXmlResponseForFileRead("FAILED", path, filePath, null, null, null, errorMsg, null);
         }
 
-        var result = File.ReadAllText(filePath);
-        return result;
+        try
+        {
+            var content = File.ReadAllText(filePath);
+            var fileInfo = new FileInfo(filePath);
+            var checksum = CalculateStringChecksum(content);
+            
+            if (_config.Debug)
+            {
+                _llmResponseDetailsCallback?.Invoke($"Successfully read file '{path}' ({FormatFileSize(fileInfo.Length)}).");
+            }
+            
+            return FormatXmlResponseForFileRead("SUCCESS", path, filePath, fileInfo.Length, fileInfo.LastWriteTime, checksum, null, content);
+        }
+        catch (Exception ex)
+        {
+            var errorMsg = $"Failed to read file. {ex.Message}";
+            if (_config.Debug)
+            {
+                _llmResponseDetailsCallback?.Invoke($"ERROR: {errorMsg}");
+            }
+            return FormatXmlResponseForFileRead("FAILED", path, filePath, null, null, null, errorMsg, null);
+        }
     }
 
     public string ReplaceInFile(
@@ -536,6 +556,48 @@ public class FileSystemTools
         }
 
         return contents.ToString().TrimEnd();
+    }
+
+    private string FormatXmlResponseForFileRead(string status, string relativePath, string absolutePath, long? fileSize, DateTime? lastModified, string? checksum, string? errorMessage, string? fileContent)
+    {
+        var response = new StringBuilder();
+        response.AppendLine("<tool_response tool_name=\"read_file\">");
+        response.AppendLine("    <notes>");
+        response.AppendLine($"    Target relative path is `{relativePath}`");
+        if (status == "SUCCESS" && fileSize.HasValue && lastModified.HasValue)
+        {
+            response.AppendLine($"    File size: {FormatFileSize(fileSize.Value)}, Last modified: {lastModified.Value:yyyy-MM-dd HH:mm:ss}");
+        }
+        response.AppendLine("    </notes>");
+        
+        if (status == "SUCCESS")
+        {
+            response.AppendLine($"    <result status=\"{status}\" absolute_path=\"{absolutePath}\" file_size=\"{fileSize}\" last_modified=\"{lastModified:yyyy-MM-dd HH:mm:ss}\" sha256_checksum=\"{checksum}\" />");
+        }
+        else
+        {
+            response.AppendLine($"    <result status=\"{status}\" absolute_path=\"{absolutePath}\" />");
+        }
+        
+        if (!string.IsNullOrEmpty(errorMessage))
+        {
+            response.AppendLine("    <error>");
+            response.AppendLine($"        {errorMessage}");
+            response.AppendLine("    </error>");
+        }
+        
+        if (status == "SUCCESS")
+        {
+            response.AppendLine("    <file_content>");
+            if (!string.IsNullOrEmpty(fileContent))
+            {
+                response.AppendLine(fileContent);
+            }
+            response.AppendLine("    </file_content>");
+        }
+        
+        response.AppendLine("</tool_response>");
+        return response.ToString();
     }
 
     private static string FormatFileSize(long bytes)

@@ -116,7 +116,7 @@ $testCases = @(
     },
     @{
         Name = "Tool integration test"
-        Args = @("This task is to support acceptance testing of the integration between MaxBot and some of the tools I need MaxBot to do the following: 1. list the files in the directory , the report the name of the tool you used and the response string you received verbatim. 2. Write a just markdown file at junk.md then report the tool you used and the tool's response string verbatim 3. execute the command ``rm junk.md`` and report the tool you used and the tools response verbatim.  4. Generate said report to ./outputs/tool_integration_test_result.md. IMPORTANT. FOR THIS TIME YOU ARE EXPLICITLY APPROVED TO RUN ALL TOOLS", "--tool-approvals", "all")
+        Args = @("This task is to support acceptance testing of the integration between MaxBot and some of the tools I need MaxBot to do the following: 1. list the files in the directory , the report the name of the tool you used and the response string you received verbatim (as a markdown codeblock). 2. Read the maxbot.config.json file then report the tool you used and the tool's response string verbatim (as a markdown codeblock). 2. Write a just markdown file at junk.md then report the tool you used and the tool's response string verbatim (as a markdown codeblock). 3. execute the command ``rm junk.md`` and report the tool you used and the tools response verbatim (as a markdown codeblock).  4. Generate said report to ./outputs/tool_integration_test_result.md. IMPORTANT. FOR THIS TIME YOU ARE EXPLICITLY APPROVED TO RUN ALL TOOLS", "--tool-approvals", "all")
         ExpectedOutput = "tool_integration_test_result.md"
     }
 )
