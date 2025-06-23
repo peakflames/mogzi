@@ -280,6 +280,46 @@ To run acceptacne tests the
 #if it exist non-zero than it is a fail otherwise pass
 ```
 
+## AI Tool Implementation Essentials
+
+### Rich XML Response Format (CRITICAL)
+**All AI tools MUST return structured XML responses** for LLM integration:
+
+```xml
+<tool_response tool_name="tool_name">
+    <notes>Human-readable summary of what happened</notes>
+    <result status="SUCCESS|FAILED" absolute_path="/path" sha256_checksum="hash" />
+    <content_on_disk>Actual content read from disk</content_on_disk>
+</tool_response>
+```
+
+**Key Requirements:**
+- Always include `absolute_path` and `sha256_checksum` for file operations
+- Return actual content read from disk, not just what was written
+- Use `SecurityElement.Escape()` for XML content
+- Provide clear error messages in `<error>` tags for failures
+
+### Tool Registration Pattern
+```csharp
+AIFunctionFactory.Create(
+    MethodName,
+    new AIFunctionFactoryOptions
+    {
+        Name = "snake_case_name",
+        Description = "Clear description"
+    })
+```
+
+### Security Boundaries (CRITICAL)
+- **Always check tool approvals**: `if (_config.ToolApprovals == "readonly")` 
+- **Always validate working directory**: `IsPathInWorkingDirectory(path)`
+- **Always check file permissions**: `new FileInfo(path).IsReadOnly`
+
+### File Operations Pattern
+1. Create backup → 2. Write to temp file → 3. Verify checksum → 4. Atomic move → 5. Final verification
+
+These patterns ensure consistency, security, and proper LLM integration across all tools.
+
 ## Microsoft.Extensions.AI Developer Docs
 
 - docs\llmctx\usage-of-microsoft-extensions-ai.md
