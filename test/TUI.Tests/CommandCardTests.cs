@@ -1,7 +1,3 @@
-using Xunit;
-using Spectre.Console.Testing;
-using MaxBot.TUI;
-
 namespace TUI.Tests;
 
 public class CommandCardTests
@@ -20,7 +16,7 @@ public class CommandCardTests
         
         // Act
         var commandCard = new CommandCard(command, status, output);
-        var renderable = commandCard.GetRenderable();
+        var renderable = commandCard.Render();
         testConsole.Write(renderable);
         
         // Assert
@@ -45,7 +41,7 @@ public class CommandCardTests
         commandCard.UpdateStatus(CommandStatus.Success);
         commandCard.UpdateOutput("Tests passed!");
         
-        var renderable = commandCard.GetRenderable();
+        var renderable = commandCard.Render();
         testConsole.Write(renderable);
         
         // Assert
@@ -65,7 +61,7 @@ public class CommandCardTests
         var commandCard = new CommandCard("npm install", CommandStatus.Running, "Installing packages...");
         
         // Act
-        var renderable = commandCard.GetRenderable();
+        var renderable = commandCard.Render();
         testConsole.Write(renderable);
         
         // Assert
@@ -87,7 +83,7 @@ public class CommandCardTests
         
         // Act
         commandCard.UpdateStatus(CommandStatus.Interrupted);
-        var renderable = commandCard.GetRenderable();
+        var renderable = commandCard.Render();
         testConsole.Write(renderable);
         
         // Assert
@@ -96,7 +92,7 @@ public class CommandCardTests
         Assert.Contains("⚠", consoleOutput);
         
         // Verify no exception is thrown when rendering after interrupt
-        var exception = Record.Exception(() => commandCard.GetRenderable());
+        var exception = Record.Exception(() => commandCard.Render());
         Assert.Null(exception);
     }
 }

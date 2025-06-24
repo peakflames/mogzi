@@ -1,6 +1,3 @@
-using Spectre.Console;
-using Spectre.Console.Rendering;
-
 namespace MaxBot.TUI;
 
 /// <summary>
@@ -35,7 +32,7 @@ public class CommandCard : ITuiCard
         _output = output;
     }
 
-    public IRenderable GetRenderable()
+    public IRenderable Render()
     {
         var panel = new Panel(CreateContent())
         {

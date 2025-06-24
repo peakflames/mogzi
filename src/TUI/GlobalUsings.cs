@@ -1,0 +1,13 @@
+global using System;
+global using System.Collections.Concurrent;
+global using System.Collections.Generic;
+global using System.Text;
+global using System.Threading.Tasks;
+global using MaxBot.TUI;
+global using Spectre.Console;
+global using Spectre.Console.Rendering;
+global using MaxBot.Services;
+global using System.Text.RegularExpressions;
+global using Microsoft.Extensions.AI;
+global using System.Reflection;
+global using FluentResults;

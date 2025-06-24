@@ -1,6 +1,3 @@
-using Spectre.Console;
-using Spectre.Console.Rendering;
-
 namespace MaxBot.TUI;
 
 /// <summary>
@@ -45,7 +42,7 @@ public class ApiStatusIndicator : ITuiCard
         _isCompleted = true;
     }
 
-    public IRenderable GetRenderable()
+    public IRenderable Render()
     {
         if (_isCompleted)
         {

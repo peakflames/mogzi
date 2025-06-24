@@ -1,7 +1,3 @@
-using System.Text.RegularExpressions;
-using Spectre.Console;
-using Spectre.Console.Rendering;
-
 namespace MaxBot.TUI;
 
 /// <summary>
@@ -17,7 +13,7 @@ public class RichContentCard : ITuiCard
         _content = content ?? string.Empty;
     }
 
-    public IRenderable GetRenderable()
+    public IRenderable Render()
     {
         var processedContent = ConvertMarkdownToMarkup(_content);
         

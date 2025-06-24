@@ -22,19 +22,27 @@ graph TD
     end
 
     subgraph "User Interface (TUI Project)"
-        D[TuiAppService] -- "Wraps" --> A;
-        D --> B{TuiEventBus};
-        E[ConsoleRenderer] -- "Subscribes to" --> B;
-        E --> F[ITuiCard];
-        G[Program.cs] --> E;
+        G[Program.cs] --> H[Infrastructure/ArgumentParser];
+        G --> D[Services/TuiAppService];
+        D -- "Wraps" --> A;
+        D --> B{Infrastructure/TuiEventBus};
+        E[Infrastructure/ConsoleRenderer] -- "Subscribes to" --> B;
+        E --> F[Components/ITuiCard];
     end
 
-    subgraph "TUI Cards"
+    subgraph "TUI Cards (Components)"
         direction TB
-        F --> H[TextCard];
+        F --> H1[TextCard];
         F --> I[CommandCard];
         F --> J[DiffCard];
         F --> K[...];
+    end
+
+    subgraph "TUI Events (Events)"
+        direction TB
+        L[ITuiEvent]
+        L --> M[TextReceivedEvent]
+        L --> N[FileReadEvent]
     end
 
     B -- "Publishes ITuiEvent notifications" --> E;
@@ -53,11 +61,14 @@ graph TD
 
 ### 3.1. Core Components
 
--   **`ConsoleRenderer`**: A singleton class responsible for managing the overall TUI layout. It initializes `Spectre.Console`, sets up the main layout regions (e.g., conversation history, input prompt), and handles the subscription to and processing of UI events.
--   **`TuiEventBus`**: A lightweight, in-memory event bus that provides type-safe pub/sub functionality. It uses synchronous event handling to ensure immediate UI updates and optimal responsiveness.
--   **`ITuiEvent`**: A base interface that all TUI events must implement, providing common properties like timestamp and ensuring type safety across the event system.
--   **`ITuiCard`**: An interface that defines the contract for all renderable TUI cards. It will have a single method, `Render(IAnsiConsole console)`, which contains the logic for drawing the card to the screen.
--   **Card Implementations**: A series of classes that implement `ITuiCard`. These cards are designed for reusability. For instance, a single `FileCard` could be responsible for rendering the output of `read_file`, `list_files`, and `write_to_file`, adapting its presentation (e.g., showing a text preview vs. a file tree) based on the specific event data it receives. This approach promotes code reuse while maintaining presentation flexibility.
+-   **`Program.cs`**: The main entry point of the TUI application. It is responsible for parsing command-line arguments, initializing the application services, and starting the main application loop.
+-   **`Infrastructure/ArgumentParser`**: A static class responsible for parsing command-line arguments using a manual parsing approach. It defines the available options and provides help and version information.
+-   **`Infrastructure/ConsoleRenderer`**: A class responsible for managing the overall TUI layout. It initializes `Spectre.Console`, sets up the main layout regions, and handles the subscription to and processing of UI events.
+-   **`Infrastructure/TuiEventBus`**: A lightweight, in-memory event bus that provides type-safe pub/sub functionality.
+-   **`Events/ITuiEvent`**: A base interface that all TUI events must implement.
+-   **`Components/ITuiCard`**: An interface that defines the contract for all renderable TUI cards. It has a single `Render()` method.
+-   **Card Implementations (`Components/`)**: A series of classes that implement `ITuiCard`. Each card is responsible for rendering a specific type of content.
+-   **`Services/TuiAppService`**: A wrapper around the core `IAppService` that orchestrates calls to the core logic and publishes UI-specific events.
 
 ### 3.2. Event System Design
 
@@ -95,44 +106,49 @@ This design ensures:
 
 ```mermaid
 classDiagram
-    class IAppService {
-        <<interface>>
+    direction LR
+    class Program {
+        +Main(args)
+    }
+    class ArgumentParser {
+        <<static>>
+        +ParseAsync(args)
+    }
+    class AppService {
         +ProcessChatMessageAsync()
     }
     class TuiAppService {
-        -IAppService appService
         +ProcessChatMessageAsync()
-        -PublishEvent(event)
     }
     class TuiEventBus {
-        +Publish~T~(event)
-        +Subscribe~T~(handler)
+        +PublishAsync(event)
+        +Register(handler)
+    }
+    class ConsoleRenderer {
+        +Render()
+    }
+    class ITuiCard {
+        <<interface>>
+        +Render()
+    }
+    class TextCard {
+        +Render()
     }
     class ITuiEvent {
         <<interface>>
     }
-    class ConsoleRenderer {
-        +Render()
-        -SubscribeToEvents()
-    }
-    class ITuiCard {
-        <<interface>>
-        +GetRenderable()
-    }
-    class TextCard {
-        +GetRenderable()
-    }
     class TextReceivedEvent {
-        +string Text
     }
 
-    TuiAppService --> IAppService : Wraps
-    TuiAppService --> TuiEventBus : Publishes events
-    ConsoleRenderer --> TuiEventBus : Subscribes to events
-    ConsoleRenderer o-- ITuiCard
+    Program --> ArgumentParser
+    Program --> TuiAppService
+    TuiAppService --> AppService
+    TuiAppService --> TuiEventBus
+    ConsoleRenderer --> TuiEventBus
+    ConsoleRenderer --> ITuiCard
     ITuiCard <|-- TextCard
     ITuiEvent <|-- TextReceivedEvent
-    TuiEventBus ..> ITuiEvent : Uses
+    TuiEventBus ..> ITuiEvent
 ```
 
 ## 4. Technology Stack

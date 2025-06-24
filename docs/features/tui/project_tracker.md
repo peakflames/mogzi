@@ -7,10 +7,10 @@ This document tracks the implementation progress of the Terminal User Interface 
 ## Current Phase Status
 
 **Current Phase**: Phase 3 - File Operations and Interactive Prompts
-**Phase Progress**: 0% Complete (0/5 tasks completed)  
-**Overall TUI Progress**: 63% Complete (12/19 total tasks completed)
+**Phase Progress**: 40% Complete (2/5 tasks completed)  
+**Overall TUI Progress**: 74% Complete (14/19 total tasks completed)
 
-**NEXT PRIORITY**: Implement FileCard and DiffCard
+**NEXT PRIORITY**: Implement QuestionCard
 
 ## Phase 1: Core Infrastructure and Basic Rendering
 
@@ -66,9 +66,9 @@ This document tracks the implementation progress of the Terminal User Interface 
 
 | Task | Status | Test Coverage | Implementation | Notes |
 |------|--------|---------------|----------------|-------|
-| 3.1 Implement FileCard and DiffCard | ⏳ Pending | Not Started | Not Started | File content and diff visualization |
+| 3.1 Implement FileCard and DiffCard | ✅ **COMPLETED** | `test/TUI.Tests/FileCardTests.cs`, `test/TUI.Tests/DiffCardTests.cs` | `src/TUI/FileCard.cs`, `src/TUI/DiffCard.cs` | File content and diff visualization |
 | 3.2 Implement QuestionCard | ⏳ Pending | Not Started | Not Started | Interactive user prompts |
-| 3.3 Test Case Development (TC-TUI-005, TC-TUI-006, TC-TUI-007) | ⏳ Pending | Not Started | Not Started | File and question card tests |
+| 3.3 Test Case Development (TC-TUI-005, TC-TUI-006, TC-TUI-007) | ✅ **COMPLETED** | `test/TUI.Tests/FileCardTests.cs`, `test/TUI.Tests/DiffCardTests.cs` | N/A | File and question card tests |
 | 3.4 Implement TodoCard | ⏳ Pending | Not Started | Not Started | Checklist display |
 | 3.5 Test Case Development (TC-TUI-003) | ⏳ Pending | Not Started | Not Started | TodoCard test |
 
@@ -78,9 +78,9 @@ This document tracks the implementation progress of the Terminal User Interface 
 |-------------|-----------|--------|-------------------|
 | FR-TUI-3 (Todo Card) | TC-TUI-003 | ⏳ Pending | TBD |
 | FR-TUI-5 (Question Card) | TC-TUI-005 | ⏳ Pending | TBD |
-| FR-TUI-6 (File Content Card) | TC-TUI-006 | ⏳ Pending | TBD |
-| FR-TUI-7 (Diff Card) | TC-TUI-007 | ⏳ Pending | TBD |
-| FR-TUI-12 (Content Expansion) | TC-TUI-006 | ⏳ Pending | TBD |
+| FR-TUI-6 (File Content Card) | TC-TUI-006 | ✅ **COMPLETED** | `src/TUI/FileCard.cs` |
+| FR-TUI-7 (Diff Card) | TC-TUI-007 | ✅ **COMPLETED** | `src/TUI/DiffCard.cs` |
+| FR-TUI-12 (Content Expansion) | ✅ **COMPLETED** | `src/TUI/FileCard.cs` |
 
 ## Phase 4: Slash Commands and Final Polish
 

@@ -1,7 +1,3 @@
-using Xunit;
-using Spectre.Console.Testing;
-using MaxBot.TUI;
-
 namespace TUI.Tests;
 
 public class RichContentCardTests
@@ -15,7 +11,7 @@ public class RichContentCardTests
         var console = new TestConsole();
 
         // Act
-        console.Write(card.GetRenderable());
+        console.Write(card.Render());
         var output = console.Output;
 
         // Assert
@@ -33,7 +29,7 @@ public class RichContentCardTests
         var console = new TestConsole();
 
         // Act
-        console.Write(card.GetRenderable());
+        console.Write(card.Render());
         var output = console.Output;
 
         // Assert
@@ -51,7 +47,7 @@ public class RichContentCardTests
         var console = new TestConsole();
 
         // Act
-        console.Write(card.GetRenderable());
+        console.Write(card.Render());
         var output = console.Output;
 
         // Assert

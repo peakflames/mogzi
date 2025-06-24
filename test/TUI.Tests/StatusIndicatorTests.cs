@@ -1,7 +1,3 @@
-using Xunit;
-using Spectre.Console.Testing;
-using MaxBot.TUI;
-
 namespace TUI.Tests;
 
 public class StatusIndicatorTests
@@ -19,7 +15,7 @@ public class StatusIndicatorTests
         
         // Act
         var statusIndicator = new ApiStatusIndicator(tokenCount, elapsedTime);
-        var renderable = statusIndicator.GetRenderable();
+        var renderable = statusIndicator.Render();
         testConsole.Write(renderable);
         
         // Assert
@@ -44,7 +40,7 @@ public class StatusIndicatorTests
         statusIndicator.UpdateTokenCount(75);
         statusIndicator.UpdateElapsedTime(TimeSpan.FromSeconds(3));
         
-        var renderable = statusIndicator.GetRenderable();
+        var renderable = statusIndicator.Render();
         testConsole.Write(renderable);
         
         // Assert
@@ -65,7 +61,7 @@ public class StatusIndicatorTests
         
         // Act
         statusIndicator.Complete();
-        var renderable = statusIndicator.GetRenderable();
+        var renderable = statusIndicator.Render();
         testConsole.Write(renderable);
         
         // Assert

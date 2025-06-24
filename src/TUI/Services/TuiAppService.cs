@@ -1,7 +1,5 @@
 using MaxBot.Services;
-using Microsoft.Extensions.AI;
-using System.Collections.Generic;
-using System.Threading;
+
 
 namespace MaxBot.TUI;
 

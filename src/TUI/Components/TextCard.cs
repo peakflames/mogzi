@@ -1,6 +1,3 @@
-using Spectre.Console;
-using Spectre.Console.Rendering;
-
 namespace MaxBot.TUI;
 
 public class TextCard : ITuiCard
@@ -12,7 +9,7 @@ public class TextCard : ITuiCard
         _text = text;
     }
 
-    public IRenderable GetRenderable()
+    public IRenderable Render()
     {
         return new Markup(_text);
     }

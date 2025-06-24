@@ -1,8 +1,3 @@
-using Xunit;
-using MaxBot.TUI;
-using Spectre.Console.Testing;
-using Spectre.Console;
-
 namespace TUI.Tests;
 
 public class TextCardRenderingTests
@@ -15,7 +10,7 @@ public class TextCardRenderingTests
         var card = new TextCard("Hello, World!");
 
         // Act
-        console.Write(card.GetRenderable());
+        console.Write(card.Render());
 
         // Assert
         Assert.Equal("Hello, World!", console.Output);
