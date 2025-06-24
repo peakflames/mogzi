@@ -9,8 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`search_files` tool (TOR-1.1 Enhancement):** Implemented a new tool for performing regex-based searches across files in the workspace, with support for file globbing and parallel execution.
 - **Attempt Completion Tool (TOR-5.2):** Implemented the `attempt_completion` tool to allow the AI to signal task completion and present a final summary to the user. This completes the core "analyze -> execute -> complete" workflow.
-- Added a new acceptance test for the `attempt_completion` tool.
-- Updated the system prompt to include instructions and best practices for using the `attempt_completion` tool.
+
 
 ## [1.3.2] - 2025-06-23
 

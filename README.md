@@ -1,36 +1,21 @@
-# MaxBot AI Assistant CLI 😻
+# Multi-purpuse Autonomous eXpert (Max) 😻
 
-An interactive command-line chat application featuring streaming responses and support for multiple API providers
+An Autonomous AI agent right in your terminal or CI/CD pipeline and open to multiple API providers.
+
+Perform engineering research, full coding tasks, and multiple workflow with either natural language or shell scripts 👈
 
 ## Features ✨
 
-- Support both Oneshot and Interactive Chat interface with streaming AI responses
-- Supports only OpenAI-compatible APIs 
+- Support both `oneshot` and `Interactive Chat` interface with streaming AI responses
+- Currently supports OpenAI-compatible APIs like Requesty.ai, Openrouter.ai, Supernova, Cerebras, Deepseek, more providers coming soon.
+   - Excellent LLM results with Google Gemini, OpenAI GPT, and Anthropic models.
+
 - Profile-based configuration for easy switching between providers and models
 - Cross-platform support (Windows, MacOS, Linux)
-- LLM can read and write files as well obtain directory listings to learn about your repository (Beta)
+- Control file system access via tool appproval (`readonly` or `all`)
 - Chat history persistence to continue conversations across sessions
 - Session management to list and load previous chat sessions
 - MCP-Support coming soon
-
-## Available Tools 🛠️
-
-MaxBot is equipped with a powerful set of tools to interact with your local system. Here is a summary of the currently implemented and upcoming tools:
-
-| Tool Name           | Status | Notes                                                              | Safety/Security Features                                                                                                                            |
-| ------------------- | ------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `list_files`        | ✅ Implemented | Lists files and directories, supports recursive listing.           | Read-only operation. Constrained to the working directory.                                                                                          |
-| `read_file`         | ✅ Implemented | Reads the content of a specified file. Supports PDF and DOCX.      | Read-only operation. Constrained to the working directory.                                                                                          |
-| `write_file`        | ✅ Implemented | Creates a new file or overwrites an existing one.                  | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic writes with backups and checksums.<br>- Respects read-only file attributes. |
-| `apply_code_patch`  | ✅ Implemented | Applies Git-style unified diff patches for precise code changes.   | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses fuzzy matching for robust patch application.                |
-| `generate_code_patch` | ✅ Implemented | Creates unified diff patches showing changes between content.       | Read-only operation. Generates patches without modifying files.                                                                                     |
-| `preview_patch_application` | ✅ Implemented | Previews what changes a patch would make without applying them.     | Read-only operation. Safe preview of potential changes.                                                                                             |
-| `execute_command`   | ✅ Implemented | Executes shell commands.                                           | - Requires `--tool-approvals all` by default.<br>- Cross-platform aware (uses `cmd`, `zsh`, `bash` appropriately).                                     |
-| `search_files`      | ✅ Implemented | Regex-based search across files for enhanced code analysis.        | Read-only operation. Constrained to the working directory. Supports pattern matching across file contents.                                          |
-| `attempt_completion` | ✅ Implemented | Signals task completion and presents results to the user.          | Read-only operation. Provides structured completion feedback and optional demonstration commands.                                                    |
-| `list_code_definition_names` | 📋 Planned | Lists code definitions (classes, functions, methods) in source files. | Read-only operation. Constrained to the working directory. Provides code structure analysis.                                                        |
-| `mcp_tools`         | 📋 Planned | Model Context Protocol support for external integrations.          | Configurable approval requirements. Enables integration with external services and APIs.                                                            |
-
 
 ### Examples 💡
 
@@ -282,6 +267,24 @@ All chat sessions are stored in the `.maxbot/chats` directory in your user profi
 - macOS: `/Users/<username>/.maxbot/chats/`
 - Linux: `/home/<username>/.maxbot/chats/`
 
+## Available Assistant Tools 🛠️
+
+MaxBot is equipped with a powerful set of tools to interact with your local system. Here is a summary of the currently implemented and upcoming tools:
+
+| Tool Name           | Status | Notes                                                              | Safety/Security Features                                                                                                                            |
+| ------------------- | ------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_files`        | ✅ | Lists files and directories, supports recursive listing.           | Read-only operation. Constrained to the working directory.                                                                                          |
+| `read_file`         | ✅ | Reads the content of a specified file. Supports PDF and DOCX.      | Read-only operation. Constrained to the working directory.                                                                                          |
+| `write_file`        | ✅ | Creates a new file or overwrites an existing one.                  | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic writes with backups and checksums.<br>- Respects read-only file attributes. |
+| `apply_code_patch`  | ✅ | Applies Git-style unified diff patches for precise code changes.   | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses fuzzy matching for robust patch application.                |
+| `generate_code_patch` | ✅ | Creates unified diff patches showing changes between content.       | Read-only operation. Generates patches without modifying files.                                                                                     |
+| `preview_patch_application` | ✅ | Previews what changes a patch would make without applying them.     | Read-only operation. Safe preview of potential changes.                                                                                             |
+| `execute_command`   | ✅ | Executes shell commands.                                           | - Requires `--tool-approvals all` by default.<br>- Cross-platform aware (uses `cmd`, `zsh`, `bash` appropriately).                                     |
+| `search_files`      | ✅ | Regex-based search across files for enhanced code analysis.        | Read-only operation. Constrained to the working directory. Supports pattern matching across file contents.                                          |
+| `attempt_completion` | ✅ | Signals task completion and presents results to the user.          | Read-only operation. Provides structured completion feedback and optional demonstration commands.                                                    |
+| `list_code_definition_names` | Planned | Lists code definitions (classes, functions, methods) in source files. | Read-only operation. Constrained to the working directory. Provides code structure analysis.                                                        |
+| `mcp_tools`         | Planned | Model Context Protocol support for external integrations.          | Configurable approval requirements. Enables integration with external services and APIs.                                                            |
+
 ## Contributing 🤝
 
 Contributions are welcome! Please read the [developer guidelines](.clinerules/developer_guidelines.md) for more information on how to build the project and run tests.
@@ -293,3 +296,7 @@ Copyright (c) 2025 Todd Schavey
 This work is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License.
 To view a copy of this license, visit http://creativecommons.org/licenses/by-nc/4.0/ or send a letter
 to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+
+## Who is Max?
+
+He's the best damn orange cat on the plant. 🐈
