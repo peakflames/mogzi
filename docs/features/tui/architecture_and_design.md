@@ -6,44 +6,48 @@ This document provides the architectural and design specification for the MaxBot
 
 ## 2. Proposed Architecture
 
-The TUI will be built upon an event-driven, decoupled architecture. The core application logic will remain independent of the UI. The UI will be managed by a central `ConsoleRenderer` class, which subscribes to events published by the `AppService` and translates them into TUI updates.
+The TUI will be built upon a **strictly decoupled, event-driven architecture**. The core `MaxBot` library will contain **zero UI dependencies** and will be completely unaware of any user interface.
 
-This approach ensures a clean separation of concerns, enhances testability, and allows the UI to be updated or even replaced without affecting the core business logic.
+The `TUI` project will contain its own UI-specific service (`TuiAppService`) that wraps the core `IAppService`. This service will be responsible for orchestrating calls to the core logic and publishing UI-specific events.
+
+This approach ensures a clean separation of concerns, making the `MaxBot` library reusable across different frontends (TUI, Web API, Blazor, etc.) and enhancing testability.
 
 ### 2.1. Architectural Diagram
 
 ```mermaid
 graph TD
     subgraph "Application Core (MaxBot)"
-        A[AppService] --> B{TuiEventBus};
+        A[IAppService]
         C[ChatClient] --> A;
     end
 
-    subgraph "User Interface (Cli)"
-        D[ConsoleRenderer] -- "Subscribes to" --> B;
-        D --> E[ITuiCard];
-        F[Program.cs] --> D;
+    subgraph "User Interface (TUI Project)"
+        D[TuiAppService] -- "Wraps" --> A;
+        D --> B{TuiEventBus};
+        E[ConsoleRenderer] -- "Subscribes to" --> B;
+        E --> F[ITuiCard];
+        G[Program.cs] --> E;
     end
 
     subgraph "TUI Cards"
         direction TB
-        E --> G[TextCard];
-        E --> H[CommandCard];
-        E --> I[DiffCard];
-        E --> J[...];
+        F --> H[TextCard];
+        F --> I[CommandCard];
+        F --> J[DiffCard];
+        F --> K[...];
     end
 
-    B -- "Publishes ITuiEvent notifications" --> D;
+    B -- "Publishes ITuiEvent notifications" --> E;
 ```
 
 ### 2.2. Data Flow
 
-1.  The `AppService` executes its workflow, processing user input and calling AI tools via the `ChatClient`.
-2.  As the `ChatClient` receives responses or tool outputs, the `AppService` publishes specific, strongly-typed events (e.g., `FileReadEvent`, `CommandStatusChangedEvent`, `QuestionPosedEvent`) to the `TuiEventBus`.
-3.  The `ConsoleRenderer`, running in the `Cli` project, subscribes to these specific event types via synchronous handlers for optimal UI responsiveness.
-4.  Upon receiving an event, the `ConsoleRenderer`'s corresponding handler is invoked immediately.
-5.  The handler instantiates the appropriate `ITuiCard` (e.g., `FileCard`, `CommandCard`) and passes the strongly-typed event data to it.
-6.  The card uses the data to render itself to the console using `Spectre.Console` components. This refined flow ensures better type safety and decouples the renderer from the specifics of tool execution.
+1.  The `TuiAppService` in the `TUI` project calls the core `IAppService.ProcessChatMessageAsync` method.
+2.  The `TuiAppService` iterates over the `IAsyncEnumerable<ChatResponseUpdate>` stream returned by the core service.
+3.  For each update received from the core, the `TuiAppService` creates and publishes a specific, strongly-typed TUI event (e.g., `TextReceivedEvent`, `ToolCallEvent`) to the `TuiEventBus`.
+4.  The `ConsoleRenderer`, also in the `TUI` project, subscribes to these events.
+5.  Upon receiving an event, the `ConsoleRenderer`'s handler instantiates the appropriate `ITuiCard` (e.g., `TextCard`, `CommandCard`) and passes the event data to it.
+6.  The card uses the data to render itself to the console using `Spectre.Console` components. This flow ensures the `MaxBot` core remains completely decoupled from the UI.
 
 ## 3. Component Design
 
@@ -91,7 +95,12 @@ This design ensures:
 
 ```mermaid
 classDiagram
-    class AppService {
+    class IAppService {
+        <<interface>>
+        +ProcessChatMessageAsync()
+    }
+    class TuiAppService {
+        -IAppService appService
         +ProcessChatMessageAsync()
         -PublishEvent(event)
     }
@@ -101,7 +110,6 @@ classDiagram
     }
     class ITuiEvent {
         <<interface>>
-        +DateTime Timestamp
     }
     class ConsoleRenderer {
         +Render()
@@ -109,31 +117,21 @@ classDiagram
     }
     class ITuiCard {
         <<interface>>
-        +Render(console)
+        +GetRenderable()
     }
-    class FileCard {
-        +Render(console)
+    class TextCard {
+        +GetRenderable()
     }
-    class CommandCard {
-        +Render(console)
-    }
-    class QuestionCard {
-        +Render(console)
-    }
-    class FileReadEvent {
-        +DateTime Timestamp
-        +string FilePath
-        +string Content
-        +int LineCount
+    class TextReceivedEvent {
+        +string Text
     }
 
-    AppService --> TuiEventBus : Publishes events
+    TuiAppService --> IAppService : Wraps
+    TuiAppService --> TuiEventBus : Publishes events
     ConsoleRenderer --> TuiEventBus : Subscribes to events
     ConsoleRenderer o-- ITuiCard
-    ITuiCard <|-- FileCard
-    ITuiCard <|-- CommandCard
-    ITuiCard <|-- QuestionCard
-    ITuiEvent <|-- FileReadEvent
+    ITuiCard <|-- TextCard
+    ITuiEvent <|-- TextReceivedEvent
     TuiEventBus ..> ITuiEvent : Uses
 ```
 

@@ -13,7 +13,7 @@ public class TuiEventBus
         _handlers[typeof(T)] = async (e) => await handler((T)e);
     }
 
-    public async Task PublishAsync(ITuiEvent domainEvent)
+    public virtual async Task PublishAsync(ITuiEvent domainEvent)
     {
         if (_handlers.TryGetValue(domainEvent.GetType(), out var handler))
         {
