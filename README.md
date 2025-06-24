@@ -1,12 +1,15 @@
-# MaxBot AI Assistant CLI 😻
+# Multi-purpuse Autonomous eXpert (Max) 😻
 
-Autonomous coding agent right in your terminal and open to multiple API providers
+An Autonomous AI agent right in your terminal or CI/CD pipelinee and open to multiple API providers.
+
+Perform engineering research, full coding tasks, and multiple workflow with either natural language or shell scripts 👈
 
 ## Features ✨
 
 - Support both `oneshot` and `Interactive Chat` interface with streaming AI responses
 - Currently supports OpenAI-compatible APIs like Requesty.ai, Openrouter.ai, Supernova, Cerebras, Deepseek, more providers coming soon.
    - Excellent LLM results with Google Gemini, OpenAI GPT, and Anthropic models.
+
 - Profile-based configuration for easy switching between providers and models
 - Cross-platform support (Windows, MacOS, Linux)
 - Control file system access via tool appproval (`readonly` or `all`)
