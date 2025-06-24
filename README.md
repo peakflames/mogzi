@@ -5,7 +5,8 @@ Autonomous coding agent right in your terminal and open to multiple API provider
 ## Features ✨
 
 - Support both `oneshot` and `Interactive Chat` interface with streaming AI responses
-- Supports OpenAI-compatible APIs, more providers coming soon.
+- Currently supports OpenAI-compatible APIs like Requesty.ai, Openrouter.ai, Supernova, Cerebras, Deepseek, more providers coming soon.
+   - Excellent LLM results with Google Gemini, OpenAI GPT, and Anthropic models.
 - Profile-based configuration for easy switching between providers and models
 - Cross-platform support (Windows, MacOS, Linux)
 - Control file system access via tool appproval (`readonly` or `all`)
