@@ -1,6 +1,6 @@
 # Multi-purpuse Autonomous eXpert (Max) 😻
 
-An Autonomous AI agent right in your terminal or CI/CD pipelinee and open to multiple API providers.
+An Autonomous AI agent right in your terminal or CI/CD pipeline and open to multiple API providers.
 
 Perform engineering research, full coding tasks, and multiple workflow with either natural language or shell scripts 👈
 
