@@ -1,4 +1,4 @@
 using MaxBot.TUI;
 
-var renderer = new ConsoleRenderer();
-renderer.Run();
+// For now, show a demo of the Phase 2 cards we implemented
+Demo.ShowCards();
