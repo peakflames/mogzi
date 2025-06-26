@@ -299,4 +299,4 @@ to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
 
 ## Who is Max?
 
-He's the best damn orange cat on the plant. 🐈
+He's the best damn orange cat on the planet. 🐈
