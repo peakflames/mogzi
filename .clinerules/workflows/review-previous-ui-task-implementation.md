@@ -1,7 +1,7 @@
 <task name="Review Previous UI Task Implementation">
 
 <task_objective>
-Conduct a systematic READ ONLY review of a recently completed UI task implementation by comparing the actual implementation against documented requirements, analyzing code quality and test coverage, and presenting a comprehensive assessment. The workflow operates in READ ONLY MODE and only updates documentation if explicitly requested by the user.
+Conduct a focused review of a recently completed UI task implementation to identify critical gaps between documented requirements and actual implementation, then provide actionable guidance for completion and process improvements to prevent similar issues. The workflow prioritizes practical next steps and team guidance over exhaustive analysis.
 </task_objective>
 
 <detailed_sequence_steps>
@@ -117,67 +117,80 @@ Conduct a systematic READ ONLY review of a recently completed UI task implementa
    - Evaluate the readiness for the next phase of development
    - Check for any blocking issues or prerequisites
 
-## 6. Organize Assessment Findings (READ ONLY MODE)
+## 6. Focus on Critical Gaps and Actionable Insights
 
-1. Organize the assessment findings into a structured analysis.
-   - Create a clear executive summary of the review findings
-   - Organize detailed findings by category (requirements, code quality, tests, etc.)
-   - Provide specific examples and evidence for all assessments
-   - Include both positive findings and areas for improvement
+1. **CRITICAL ASSESSMENT**: Distinguish between structural foundation and functional implementation.
+   - Identify if the task represents placeholder/structural work vs. complete functional implementation
+   - Assess whether "completed" status accurately reflects the documented requirements
+   - Focus on the most critical missing functionality that blocks progress
 
-2. Prepare the assessment analysis with the following sections:
-   - **Executive Summary**: High-level assessment of implementation success
-   - **Task Context**: Description of the reviewed task and its scope
-   - **Requirements Compliance Analysis**: Detailed comparison of implementation vs. requirements
-   - **Implementation Review**: Code quality, architecture compliance, and technical assessment
-   - **Test Coverage Evaluation**: Analysis of test completeness and quality
-   - **Technical Debt Assessment**: Identification of shortcuts, compromises, and future risks
-   - **Integration Analysis**: Assessment of how well the implementation fits with existing systems
-   - **Strengths and Achievements**: Positive aspects of the implementation
-   - **Gaps and Deficiencies**: Areas where implementation falls short of requirements
-   - **Recommendations**: Specific actionable recommendations for improvement
-   - **Next Steps**: Suggested priorities for future development
+2. **PRACTICAL COMPLETION ASSESSMENT**: Evaluate actual vs. claimed completion percentage.
+   - Compare claimed completion status against documented requirements
+   - Provide realistic completion percentage based on functional requirements
+   - Identify the gap between structural implementation and functional requirements
 
-3. Include specific metrics and quantitative assessments where possible.
-   - Count of requirements fully/partially/not implemented
-   - Test coverage statistics and test execution results
-   - Number of files created/modified and lines of code
-   - Technical debt indicators and complexity metrics
+3. **INTEGRATION READINESS**: Assess readiness for next development phase.
+   - Check if required service integrations are implemented (not just referenced)
+   - Verify that architectural components are actually connected and functional
+   - Identify blocking dependencies that prevent forward progress
 
-4. **IMPORTANT**: This workflow operates in READ ONLY MODE - no files are created or modified without explicit user permission.
+4. **ACTIONABLE PRIORITIZATION**: Focus on what needs to be done next.
+   - Prioritize missing functionality by impact and dependency order
+   - Provide realistic time estimates for completing missing work
+   - Identify the critical path for achieving actual task completion
 
-## 7. Present Findings and Offer Documentation Update
+## 7. Provide Team Guidance and Process Improvements
 
-1. Prepare a concise summary of key findings.
-   - Highlight the most critical issues and successes
-   - Prioritize recommendations based on impact and effort
-   - Identify any blocking issues that need immediate attention
-   - Suggest the most logical next steps for continued development
+1. **IMMEDIATE NEXT STEPS**: Present focused, actionable guidance.
+   - Provide specific, prioritized tasks to complete the reviewed implementation
+   - Include realistic time estimates based on actual scope of missing work
+   - Focus on critical functionality that enables forward progress
 
-2. Present the complete review analysis to the user.
-   - Provide a comprehensive executive summary of findings
-   - Include detailed analysis of all assessment categories
-   - Highlight key strengths and critical gaps
-   - Present prioritized recommendations for next steps
-   - Reference specific files, tests, and code sections as evidence
+2. **PROCESS IMPROVEMENT RECOMMENDATIONS**: Address root causes to prevent recurrence.
+   - **Requirements Verification**: Recommend verification steps before marking tasks complete
+   - **Functional vs. Structural Testing**: Distinguish between testing structure vs. testing functionality
+   - **Integration Validation**: Ensure components actually integrate with required services
+   - **Acceptance Criteria Review**: Verify all documented acceptance criteria are met
+   - **Quality Gates**: Recommend specific checkpoints for task completion
 
-3. Ask user about updating documentation (CONDITIONAL FILE EDITING).
-   - Use the `ask_followup_question` tool to ask if the user wants to update `docs/features/ui/current_status_and_next_steps.md` with the review findings and recommendations
-   - Explain that this would add the assessment results and next steps to the existing documentation
-   - Only proceed with file editing if the user explicitly agrees
+3. **DOCUMENTATION UPDATES**: Update project tracking to reflect reality.
+   - **ALWAYS** ask user about updating documentation with corrected status and guidance
+   - Use the `ask_followup_question` tool to confirm documentation updates
+   - Update both `docs/features/ui/current_status_and_next_steps.md` AND `docs/features/ui/project_tracker.md`
+   - Correct completion status, progress percentages, and time estimates
+   - Add specific notes about missing functionality and remaining work
 
-4. If user agrees to documentation update, update the status file.
-   - Use the `read_file` tool to examine the current `docs/features/ui/current_status_and_next_steps.md`
-   - Use the `replace_in_file` tool to add a new section with the review findings
-   - Include the assessment summary, key recommendations, and next priority tasks
-   - Maintain the existing structure and format of the document
+4. **FOCUSED PRESENTATION**: Present concise, actionable findings.
+   - **Executive Summary**: Brief assessment of actual vs. claimed completion
+   - **Critical Gaps**: Top 3-5 missing elements that block progress
+   - **Immediate Priorities**: Specific next steps with time estimates
+   - **Process Improvements**: Concrete recommendations to prevent similar issues
+   - **Updated Documentation**: Corrected project tracking and realistic guidance
 
-5. Use the `attempt_completion` tool to present the final results.
-   - Summarize the review analysis performed
-   - Indicate whether documentation was updated (if user requested)
-   - Provide clear guidance for addressing identified issues
-   - Suggest concrete next steps for continued development
-   - Ensure the review provides actionable insights for future work
+5. **TEAM-ORIENTED GUIDANCE**: Provide constructive direction for improvement.
+   - Focus on helping the team succeed rather than exhaustive criticism
+   - Provide clear, actionable steps for completing the work
+   - Include process improvements to prevent similar gaps in future tasks
+   - Ensure documentation accurately reflects reality for future planning
+
+## 8. Complete Documentation Updates
+
+1. **MANDATORY DOCUMENTATION CORRECTION**: Always offer to update project tracking.
+   - Update `docs/features/ui/current_status_and_next_steps.md` with corrected status and next steps
+   - Update `docs/features/ui/project_tracker.md` with accurate completion status and progress
+   - Provide realistic time estimates and specific missing functionality notes
+   - Ensure future development sessions have accurate information
+
+2. **PROCESS IMPROVEMENT INTEGRATION**: Include lessons learned in documentation.
+   - Add process improvement recommendations to prevent similar issues
+   - Include quality gates and verification steps for future task completion
+   - Provide guidance on distinguishing structural vs. functional implementation
+
+3. Use the `attempt_completion` tool to present the final results.
+   - Summarize the key gaps identified and corrected documentation
+   - Highlight the most critical next steps for task completion
+   - Confirm that project tracking now accurately reflects implementation status
+   - Provide clear guidance for both completing current work and improving future processes
 
 </detailed_sequence_steps>
 
