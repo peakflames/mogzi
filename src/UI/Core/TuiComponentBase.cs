@@ -81,22 +81,19 @@ public abstract class TuiComponentBase : ITuiComponent
     /// <param name="key">Optional key for the effect. If not provided, uses the caller member name.</param>
     protected void UseEffect(Func<Task> effect, object[] dependencies, [System.Runtime.CompilerServices.CallerMemberName] string key = "")
     {
-        if (!_effectDependencies.ContainsKey(key) || !dependencies.SequenceEqual(_effectDependencies[key]))
+        if (!_effectDependencies.TryGetValue(key, out var oldDependencies) || !dependencies.SequenceEqual(oldDependencies))
         {
             _effectDependencies[key] = dependencies;
             
-            // Run effect asynchronously without blocking
-            _ = Task.Run(async () =>
+            // Run effect synchronously for simplicity in this context, can be made async if needed
+            try
             {
-                try
-                {
-                    await effect();
-                }
-                catch (Exception ex)
-                {
-                    Logger?.LogError(ex, "Error running effect in component {ComponentId}", ComponentId);
-                }
-            });
+                effect().GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Error running effect in component {ComponentId}", ComponentId);
+            }
         }
     }
 
@@ -179,21 +176,34 @@ public abstract class TuiComponentBase : ITuiComponent
 /// </summary>
 internal static class StateChangeNotifier
 {
+    private static readonly object _lock = new();
     private static readonly List<Action<string>> _listeners = new();
 
     public static void AddListener(Action<string> listener)
     {
-        _listeners.Add(listener);
+        lock (_lock)
+        {
+            _listeners.Add(listener);
+        }
     }
 
     public static void RemoveListener(Action<string> listener)
     {
-        _listeners.Remove(listener);
+        lock (_lock)
+        {
+            _listeners.Remove(listener);
+        }
     }
 
     public static void NotifyStateChanged(string componentId)
     {
-        foreach (var listener in _listeners)
+        List<Action<string>> localListeners;
+        lock (_lock)
+        {
+            localListeners = new List<Action<string>>(_listeners);
+        }
+
+        foreach (var listener in localListeners)
         {
             try
             {
