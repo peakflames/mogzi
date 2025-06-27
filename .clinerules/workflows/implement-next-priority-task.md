@@ -15,6 +15,7 @@ This workflow automates the implementation of the next priority task from the pr
 
 2. Read the project plan to understand current status and priorities.
    - Use the `read_file` tool to examine `docs/project_plan.md`.
+   - Use the `read_file` tool to examine `docs/features/ui/current_status_and_next_steps.md` if it exists
    - Analyze the content to identify tasks, their priorities, and current implementation status.
 
 3. Cross-reference with existing specifications and trace matrix.
