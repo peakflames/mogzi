@@ -16,3 +16,5 @@ global using UI.State;
 global using UI.Rendering;
 global using UI.Layout;
 global using Microsoft.Extensions.AI;
+global using UI.Components;
+global using Microsoft.Extensions.Configuration;

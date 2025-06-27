@@ -1,4 +1,4 @@
-using UI.Components;
+
 
 namespace UI;
 
@@ -16,7 +16,7 @@ public static class Program
     {
         // Setup dependency injection
         var services = new ServiceCollection();
-        ConfigureServices(services);
+        ConfigureServices(services, args);
         
         var serviceProvider = services.BuildServiceProvider();
 
@@ -46,7 +46,7 @@ public static class Program
     /// <summary>
     /// Configures the dependency injection container.
     /// </summary>
-    private static void ConfigureServices(IServiceCollection services)
+    private static void ConfigureServices(IServiceCollection services, string[] args)
     {
         // Add logging
         services.AddLogging(builder =>
@@ -57,6 +57,31 @@ public static class Program
 
         // Add Spectre.Console
         services.AddSingleton<IAnsiConsole>(AnsiConsole.Console);
+
+        // Add core services
+        services.AddSingleton<IWorkingDirectoryProvider, DefaultWorkingDirectoryProvider>();
+        
+        var chatClientResult = ChatClient.Create(
+            "maxbot.config.json",
+            null, // Use default profile
+            "readonly",
+            "chat",
+            (details, color) => {},
+            false
+        );
+
+        if (chatClientResult.IsSuccess)
+        {
+            services.AddSingleton(chatClientResult.Value);
+        }
+        else
+        {
+            throw new InvalidOperationException($"Failed to create ChatClient: {string.Join(", ", chatClientResult.Errors.Select(e => e.Message))}");
+        }
+
+        services.AddSingleton<IAppService, AppService>();
+        services.AddSingleton<HistoryManager>();
+        services.AddSingleton<StateManager>();
 
         // Add UI components
         services.AddSingleton<LayoutManager>();

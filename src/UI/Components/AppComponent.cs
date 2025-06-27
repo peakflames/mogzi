@@ -7,23 +7,63 @@ public class AppComponent : TuiComponentBase
     private readonly StateManager _stateManager;
     private readonly LayoutManager _layoutManager;
 
+    private readonly HeaderComponent _header;
+    private readonly StaticHistoryComponent _staticHistory;
+    private readonly DynamicContentComponent _dynamicContent;
+    private readonly InputComponent _input;
+    private readonly FooterComponent _footer;
+
     public AppComponent(
         IAppService appService,
         HistoryManager historyManager,
         StateManager stateManager,
-        LayoutManager layoutManager)
+        LayoutManager layoutManager,
+        HeaderComponent header,
+        StaticHistoryComponent staticHistory,
+        DynamicContentComponent dynamicContent,
+        InputComponent input,
+        FooterComponent footer)
     {
         _appService = appService;
         _historyManager = historyManager;
         _stateManager = stateManager;
         _layoutManager = layoutManager;
+        _header = header;
+        _staticHistory = staticHistory;
+        _dynamicContent = dynamicContent;
+        _input = input;
+        _footer = footer;
     }
 
-    public override Task<IRenderable> RenderAsync(RenderContext context)
+    public override async Task<IRenderable> RenderAsync(RenderContext context)
     {
-        // The layout manager will be responsible for rendering children.
-        // For now, return a simple panel.
-        return Task.FromResult<IRenderable>(new Panel("AppComponent"));
+        var layoutResult = _layoutManager.CalculateLayout(context.TerminalSize);
+
+        // Static Zone
+        var staticRows = new Rows(
+            await _header.RenderAsync(context),
+            await _staticHistory.RenderAsync(context),
+            await _footer.RenderAsync(context)
+        );
+        var staticZone = new Panel(staticRows)
+            .Header("Static Zone");
+        staticZone.Height = layoutResult.StaticZoneConstraints.Height;
+
+        // Dynamic Zone
+        var dynamicRows = new Rows(
+            await _dynamicContent.RenderAsync(context),
+            await _input.RenderAsync(context)
+        );
+        var dynamicZone = new Panel(dynamicRows)
+            .Header("Dynamic Zone");
+        dynamicZone.Height = layoutResult.DynamicZoneConstraints.Height;
+
+        var grid = new Grid()
+            .AddColumn(new GridColumn())
+            .AddRow(staticZone)
+            .AddRow(dynamicZone);
+
+        return grid;
     }
 
     public async Task ProcessUserInput(string input)

@@ -66,4 +66,30 @@ public class AppComponentTests
         cancellationTokenSource.Cancel();
         await runTask;
     }
+
+    [Fact]
+    public async Task RenderAsync_WithLayoutManager_ReturnsStructuredGrid()
+    {
+        // Arrange
+        var (app, provider) = SetupTestApp("test response");
+        var appComponent = provider.GetRequiredService<AppComponent>();
+        var terminalSize = new TerminalSize(120, 40);
+        var constraints = new LayoutConstraints(terminalSize.Height, terminalSize.Width);
+        var context = new RenderContext(constraints, terminalSize);
+
+        // Act
+        var result = await appComponent.RenderAsync(context);
+
+        // Assert
+        var grid = result.Should().BeOfType<Grid>().Subject;
+        grid.Rows.Should().HaveCount(2); // Static Zone, Dynamic Zone
+
+        // Inspect Static Zone
+        var staticZone = grid.Rows[0][0].Should().BeOfType<Panel>().Subject;
+        staticZone.Header?.Text.Should().Be("Static Zone");
+
+        // Inspect Dynamic Zone
+        var dynamicZone = grid.Rows[1][0].Should().BeOfType<Panel>().Subject;
+        dynamicZone.Header?.Text.Should().Be("Dynamic Zone");
+    }
 }

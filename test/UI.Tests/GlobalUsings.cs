@@ -21,3 +21,4 @@ global using UI.Layout;
 global using UI.Rendering;
 global using UI.State;
 global using Xunit;
+global using Microsoft.Extensions.Configuration;
