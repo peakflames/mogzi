@@ -3,7 +3,7 @@ namespace UI.Rendering;
 /// <summary>
 /// Core rendering engine for the TUI application.
 /// </summary>
-public sealed class TuiRenderer : IDisposable
+public sealed class TuiRenderer : IAsyncDisposable
 {
     private readonly IAnsiConsole _console;
     private readonly StateManager _stateManager;
@@ -245,7 +245,7 @@ public sealed class TuiRenderer : IDisposable
     /// <summary>
     /// Disposes the renderer and stops the render loop.
     /// </summary>
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (_isDisposed) return;
 
@@ -256,7 +256,11 @@ public sealed class TuiRenderer : IDisposable
 
         try
         {
-            _renderLoop.Wait(TimeSpan.FromSeconds(1));
+            await _renderLoop;
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected
         }
         catch (Exception ex)
         {
@@ -279,6 +283,11 @@ public sealed class TuiRenderer : IDisposable
         _logger?.LogDebug("TuiRenderer disposed");
 
         GC.SuppressFinalize(this);
+    }
+
+    public void Dispose()
+    {
+        DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 }
 

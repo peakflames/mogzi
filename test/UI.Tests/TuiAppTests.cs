@@ -6,7 +6,7 @@ using Spectre.Console;
 
 namespace UI.Tests;
 
-public class TuiAppTests : IDisposable
+public class TuiAppTests : IAsyncLifetime
 {
     private readonly List<TuiApp> _appsToDispose = new();
 
@@ -423,13 +423,15 @@ public class TuiAppTests : IDisposable
         return services.BuildServiceProvider();
     }
 
-    public void Dispose()
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public async Task DisposeAsync()
     {
         foreach (var app in _appsToDispose)
         {
             try
             {
-                app.Dispose();
+                await app.DisposeAsync();
             }
             catch
             {

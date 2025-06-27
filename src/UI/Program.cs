@@ -1,3 +1,5 @@
+using UI.Components;
+
 namespace UI;
 
 /// <summary>
@@ -23,9 +25,9 @@ public static class Program
             // Create and run the TUI application
             using var app = new TuiApp(serviceProvider);
             
-            // Register a simple demo component
-            var demoComponent = new DemoComponent();
-            app.RegisterComponent(demoComponent, RenderZone.Static);
+            // Register the main application component
+            var appComponent = serviceProvider.GetRequiredService<AppComponent>();
+            app.RegisterComponent(appComponent, RenderZone.Static);
 
             // Run the application
             return await app.RunAsync(args);
@@ -55,60 +57,14 @@ public static class Program
 
         // Add Spectre.Console
         services.AddSingleton<IAnsiConsole>(AnsiConsole.Console);
-    }
-}
 
-/// <summary>
-/// Simple demo component to test the UI framework.
-/// </summary>
-internal sealed class DemoComponent : TuiComponentBase
-{
-    private readonly TuiState<int> _counter;
-    private readonly TuiState<DateTime> _lastUpdate;
-
-    public DemoComponent()
-    {
-        _counter = UseState(0, "counter");
-        _lastUpdate = UseState(DateTime.UtcNow, "lastUpdate");
-
-        // Update counter every second
-        UseEffect(async () =>
-        {
-            while (!IsDisposed)
-            {
-                await Task.Delay(1000);
-                if (!IsDisposed)
-                {
-                    _counter.Value++;
-                    _lastUpdate.Value = DateTime.UtcNow;
-                }
-            }
-        }, Array.Empty<object>());
-    }
-
-    public override async Task<IRenderable> RenderAsync(RenderContext context)
-    {
-        await Task.CompletedTask;
-
-        var panel = new Panel(new Rows(
-            new Text($"MaxBot UI Framework Demo"),
-            new Text($"Counter: {_counter.Value}"),
-            new Text($"Last Update: {_lastUpdate.Value:HH:mm:ss}"),
-            new Text($"Terminal Size: {context.TerminalSize.Width}x{context.TerminalSize.Height}"),
-            new Text($"Component ID: {ComponentId[..8]}..."),
-            new Text(""),
-            new Text("Press Ctrl+C to exit")
-        ))
-        .Header("Demo Component")
-        .Border(BoxBorder.Rounded)
-        .BorderColor(Color.Green);
-
-        return panel;
-    }
-
-    public override bool ShouldUpdate(RenderContext context)
-    {
-        // Update every time since we have a counter
-        return true;
+        // Add UI components
+        services.AddSingleton<LayoutManager>();
+        services.AddSingleton<HeaderComponent>();
+        services.AddSingleton<StaticHistoryComponent>();
+        services.AddSingleton<DynamicContentComponent>();
+        services.AddSingleton<InputComponent>();
+        services.AddSingleton<FooterComponent>();
+        services.AddSingleton<AppComponent>();
     }
 }

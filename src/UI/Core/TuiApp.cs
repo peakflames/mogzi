@@ -3,7 +3,7 @@ namespace UI.Core;
 /// <summary>
 /// Main application class for the Terminal User Interface.
 /// </summary>
-public sealed class TuiApp : IDisposable
+public sealed class TuiApp : IAsyncDisposable, IDisposable
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<TuiApp> _logger;
@@ -317,7 +317,7 @@ public sealed class TuiApp : IDisposable
     /// <summary>
     /// Disposes the application and cleans up resources.
     /// </summary>
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (_isDisposed) return;
 
@@ -341,7 +341,10 @@ public sealed class TuiApp : IDisposable
         _registeredComponents.Clear();
 
         // Dispose services
-        _renderer?.Dispose();
+        if (_renderer != null)
+        {
+            await _renderer.DisposeAsync();
+        }
         _stateManager?.Dispose();
         _cancellationTokenSource?.Dispose();
 
@@ -353,6 +356,11 @@ public sealed class TuiApp : IDisposable
         _logger?.LogDebug("TuiApp disposed");
 
         GC.SuppressFinalize(this);
+    }
+
+    public void Dispose()
+    {
+        DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 }
 

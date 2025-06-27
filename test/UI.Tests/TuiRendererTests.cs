@@ -245,7 +245,7 @@ public class TuiRendererTests : IDisposable
     }
 
     [Fact]
-    public async Task Dispose_WaitsForRenderLoopToStop()
+    public void Dispose_WaitsForRenderLoopToStop()
     {
         // Arrange
         var renderer = CreateRenderer();
