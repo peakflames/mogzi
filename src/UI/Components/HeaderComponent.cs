@@ -38,7 +38,7 @@ public class HeaderComponent : TuiComponentBase
             _logger?.LogError(ex, "Error rendering HeaderComponent");
             
             // Fallback rendering in case of errors
-            var errorPanel = new Panel(new Text("[red]Error loading header[/]"))
+            var errorPanel = new Panel(new Markup("[red]Error loading header[/]"))
                 .Header("MaxBot - Error")
                 .Border(BoxBorder.Rounded)
                 .BorderColor(Color.Red);
@@ -138,7 +138,7 @@ public class HeaderComponent : TuiComponentBase
     {
         // For narrow terminals, just show status and message count
         var messageCount = _historyManager.GetCompletedMessages().Count;
-        return new Text($"[green]{operationStatus}[/] | [blue]{messageCount} msgs[/]");
+        return new Markup($"[green]{operationStatus}[/] | [blue]{messageCount} msgs[/]");
     }
 
     private string GetConnectionStatus()

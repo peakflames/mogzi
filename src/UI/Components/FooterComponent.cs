@@ -38,7 +38,7 @@ public class FooterComponent : TuiComponentBase
             _logger?.LogError(ex, "Error rendering FooterComponent");
             
             // Fallback rendering in case of errors
-            var errorPanel = new Panel(new Text("[red]Error loading footer[/]"))
+            var errorPanel = new Panel(new Markup("[red]Error loading footer[/]"))
                 .Header("Footer - Error")
                 .Border(BoxBorder.Rounded)
                 .BorderColor(Color.Red);
@@ -143,7 +143,7 @@ public class FooterComponent : TuiComponentBase
         var applicationStatus = GetApplicationStatus();
         var essentialShortcuts = GetEssentialShortcuts();
         
-        return new Text($"[green]{applicationStatus}[/] | [yellow]{essentialShortcuts}[/]");
+        return new Markup($"[green]{applicationStatus}[/] | [yellow]{essentialShortcuts}[/]");
     }
 
     private Color GetFooterBorderColor()

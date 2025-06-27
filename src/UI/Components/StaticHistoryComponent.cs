@@ -27,7 +27,7 @@ public class StaticHistoryComponent : TuiComponentBase
         {
             var roleText = message.Role == ChatRole.User ? "[blue]User[/]" : "[green]Assistant[/]";
             var messageText = $"{roleText}: {message.Text}";
-            messageRenderables.Add(new Text(messageText));
+            messageRenderables.Add(new Markup(messageText));
         }
 
         var content = new Rows(messageRenderables);

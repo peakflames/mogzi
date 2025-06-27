@@ -245,8 +245,10 @@ public sealed class TuiApp : IAsyncDisposable, IDisposable
 
         try
         {
-            // Main loop - just wait for cancellation
-            // The renderer runs its own loop, and components manage their own state
+            // Start the keyboard event handling task
+            var keyboardTask = HandleKeyboardEventsAsync(cancellationToken);
+            
+            // Main loop - handle statistics and other background tasks
             while (!cancellationToken.IsCancellationRequested)
             {
                 // Update statistics
@@ -255,6 +257,9 @@ public sealed class TuiApp : IAsyncDisposable, IDisposable
                 // Wait a bit before next iteration
                 await Task.Delay(100, cancellationToken);
             }
+
+            // Wait for keyboard task to complete
+            await keyboardTask;
 
             return 0;
         }
@@ -267,6 +272,125 @@ public sealed class TuiApp : IAsyncDisposable, IDisposable
             _logger.LogError(ex, "Error in main application loop");
             return 1;
         }
+    }
+
+    /// <summary>
+    /// Handles keyboard events from the terminal.
+    /// </summary>
+    private async Task HandleKeyboardEventsAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogDebug("Starting keyboard event handling");
+
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                // Check if a key is available without blocking
+                if (Console.KeyAvailable)
+                {
+                    var keyInfo = Console.ReadKey(true); // true = don't display the key
+                    await ProcessKeyInputAsync(keyInfo);
+                }
+                else
+                {
+                    // Small delay to prevent busy waiting
+                    await Task.Delay(16, cancellationToken); // ~60 FPS polling rate
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when cancellation is requested
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in keyboard event handling");
+        }
+
+        _logger.LogDebug("Keyboard event handling stopped");
+    }
+
+    /// <summary>
+    /// Processes a single key input event.
+    /// </summary>
+    private async Task ProcessKeyInputAsync(ConsoleKeyInfo keyInfo)
+    {
+        try
+        {
+            // Handle global keyboard shortcuts first
+            if (keyInfo.Key == ConsoleKey.C && keyInfo.Modifiers.HasFlag(ConsoleModifiers.Control))
+            {
+                // Ctrl+C - Request cancellation
+                _logger.LogInformation("Ctrl+C detected, requesting shutdown");
+                _cancellationTokenSource.Cancel();
+                return;
+            }
+
+            // Find the InputComponent and forward the key event
+            var inputComponent = _registeredComponents
+                .OfType<AppComponent>()
+                .FirstOrDefault()?
+                .GetInputComponent();
+
+            if (inputComponent != null)
+            {
+                await HandleInputComponentKeyAsync(inputComponent, keyInfo);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing key input: {Key}", keyInfo.Key);
+        }
+    }
+
+    /// <summary>
+    /// Handles key input for the InputComponent.
+    /// </summary>
+    private async Task HandleInputComponentKeyAsync(InputComponent inputComponent, ConsoleKeyInfo keyInfo)
+    {
+        switch (keyInfo.Key)
+        {
+            case ConsoleKey.Enter:
+                // Submit current input
+                inputComponent.SubmitCurrentInput();
+                break;
+
+            case ConsoleKey.UpArrow:
+                // Navigate up in command history
+                inputComponent.NavigateCommandHistory(up: true);
+                break;
+
+            case ConsoleKey.DownArrow:
+                // Navigate down in command history
+                inputComponent.NavigateCommandHistory(up: false);
+                break;
+
+            case ConsoleKey.Backspace:
+                // Remove last character
+                var currentText = inputComponent.GetCurrentInput();
+                if (currentText.Length > 0)
+                {
+                    inputComponent.SetCurrentInput(currentText[..^1]);
+                }
+                break;
+
+            case ConsoleKey.Escape:
+                // Clear current input
+                inputComponent.ClearCurrentInput();
+                break;
+
+            default:
+                // Handle regular character input
+                if (!char.IsControl(keyInfo.KeyChar))
+                {
+                    var existingText = inputComponent.GetCurrentInput();
+                    inputComponent.SetCurrentInput(existingText + keyInfo.KeyChar);
+                }
+                break;
+        }
+
+        // Trigger a render update after input changes
+        await ForceRenderAsync();
     }
 
     /// <summary>

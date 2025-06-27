@@ -44,7 +44,7 @@ public class InputComponent : TuiComponentBase
             _logger?.LogError(ex, "Error rendering InputComponent");
             
             // Fallback rendering in case of errors
-            var errorPanel = new Panel(new Text("[red]Error loading input[/]"))
+            var errorPanel = new Panel(new Markup("[red]Error loading input[/]"))
                 .Header("Input - Error")
                 .Border(BoxBorder.Rounded)
                 .BorderColor(Color.Red);
@@ -152,12 +152,12 @@ public class InputComponent : TuiComponentBase
     private IRenderable BuildNarrowInputContent()
     {
         var inputDisplay = string.IsNullOrEmpty(_currentInput) ? "[dim]Type your message...[/]" : _currentInput;
-        return new Text($"[blue]>[/] [white]{inputDisplay}[/]");
+        return new Markup($"[blue]>[/] [white]{inputDisplay}[/]");
     }
 
     private IRenderable BuildDisabledInputContent()
     {
-        return new Text("[dim]Input disabled - AI is processing...[/]");
+        return new Markup("[dim]Input disabled - AI is processing...[/]");
     }
 
     private Color GetInputBorderColor()
