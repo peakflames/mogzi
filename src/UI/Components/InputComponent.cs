@@ -247,26 +247,37 @@ public class InputComponent : TuiComponentBase
         
         if (up)
         {
-            // Navigate up (older commands)
-            if (_commandHistoryIndex < _commandHistory.Count - 1)
+            // Navigate up (older commands) - start from most recent and go backwards
+            if (_commandHistoryIndex == -1)
             {
-                _commandHistoryIndex++;
-                _currentInput = _commandHistory[_commandHistory.Count - 1 - _commandHistoryIndex];
+                // First time navigating up - go to most recent command (last in list)
+                _commandHistoryIndex = _commandHistory.Count - 1;
+                _currentInput = _commandHistory[_commandHistoryIndex];
             }
+            else if (_commandHistoryIndex > 0)
+            {
+                // Go to older command (earlier in list)
+                _commandHistoryIndex--;
+                _currentInput = _commandHistory[_commandHistoryIndex];
+            }
+            // If already at oldest (index 0), stay there
         }
         else
         {
             // Navigate down (newer commands)
-            if (_commandHistoryIndex > 0)
+            if (_commandHistoryIndex >= 0 && _commandHistoryIndex < _commandHistory.Count - 1)
             {
-                _commandHistoryIndex--;
-                _currentInput = _commandHistory[_commandHistory.Count - 1 - _commandHistoryIndex];
+                // Go to newer command (later in list)
+                _commandHistoryIndex++;
+                _currentInput = _commandHistory[_commandHistoryIndex];
             }
-            else if (_commandHistoryIndex == 0)
+            else if (_commandHistoryIndex == _commandHistory.Count - 1)
             {
+                // Go back to empty input (beyond newest)
                 _commandHistoryIndex = -1;
                 _currentInput = string.Empty;
             }
+            // If already at newest (empty), stay there
         }
     }
 
@@ -274,9 +285,14 @@ public class InputComponent : TuiComponentBase
     {
         if (string.IsNullOrWhiteSpace(command)) return;
         
-        // Avoid duplicates at the end of history
-        if (_commandHistory.Count > 0 && _commandHistory[^1] == command) return;
+        // Check if command already exists
+        if (_commandHistory.Contains(command))
+        {
+            // Don't add duplicates - just ignore
+            return;
+        }
         
+        // Add the command to the end (most recent)
         _commandHistory.Add(command);
         
         // Limit history size (keep last 100 commands)
