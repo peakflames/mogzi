@@ -1,3 +1,14 @@
 global using Xunit;
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Threading;
+global using System.Threading.Tasks;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Logging;
+global using Spectre.Console;
+global using Spectre.Console.Rendering;
 global using UI.Core;
 global using UI.State;
+global using UI.Layout;
+global using UI.Rendering;

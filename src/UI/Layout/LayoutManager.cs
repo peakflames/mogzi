@@ -33,6 +33,9 @@ public sealed class LayoutManager
         var effectiveWidth = Math.Max(terminalSize.Width, _configuration.MinimumWidth);
         var effectiveHeight = Math.Max(terminalSize.Height, _configuration.MinimumHeight);
 
+        // Create effective terminal size (may be larger than input if minimums were enforced)
+        var effectiveTerminalSize = new TerminalSize(effectiveWidth, effectiveHeight);
+
         // Calculate available height after accounting for margins
         var availableHeight = effectiveHeight - _configuration.TopMargin - _configuration.BottomMargin;
         var availableWidth = effectiveWidth - _configuration.LeftMargin - _configuration.RightMargin;
@@ -56,7 +59,7 @@ public sealed class LayoutManager
         );
 
         var result = new LayoutResult(
-            terminalSize,
+            effectiveTerminalSize,
             staticConstraints,
             dynamicConstraints,
             availableWidth,

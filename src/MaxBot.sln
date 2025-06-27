@@ -11,9 +11,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cli.Tests", "..\test\Cli.Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MaxBot.Tests", "..\test\MaxBot.Tests\MaxBot.Tests.csproj", "{35D308FE-EA85-43B8-AC45-8CD35C0EB3B0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TUI", "TUI\TUI.csproj", "{33FDD441-4256-4270-8D08-333F72DCAF61}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UI", "UI\UI.csproj", "{33FDD441-4256-4270-8D08-333F72DCAF61}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TUI.Tests", "..\test\TUI.Tests\TUI.Tests.csproj", "{61FBD1CD-8E53-4FC3-9359-2F811BC984B5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UI.Tests", "..\test\UI.Tests\UI.Tests.csproj", "{61FBD1CD-8E53-4FC3-9359-2F811BC984B5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
