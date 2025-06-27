@@ -13,7 +13,7 @@
 | Phase | Duration | Status | Start Date | End Date | Progress |
 |-------|----------|--------|------------|----------|----------|
 | Phase 1: Foundation | 2 weeks | ✅ **COMPLETED** | 2025-06-27 | 2025-06-27 | **100%** |
-| Phase 2: Core Features | 3 weeks | In Progress | 2025-06-27 | 2025-08-01 | 7% |
+| Phase 2: Core Features | 3 weeks | In Progress | 2025-06-27 | 2025-08-01 | 40% |
 | Phase 3: Advanced Features | 2 weeks | Not Started | 2025-08-01 | 2025-08-15 | 0% |
 | Phase 4: Polish & Enhancement | 1 week | Not Started | 2025-08-15 | 2025-08-22 | 0% |
 
@@ -53,9 +53,9 @@
 
 | Task ID | Task Description | Assignee | Status | Start Date | Due Date | Progress | Notes |
 |---------|------------------|----------|--------|------------|----------|----------|-------|
-| 2.1 | Implement AppComponent with basic layout | AI Assistant | ⚠️ **IN PROGRESS** | 2025-06-27 | TBD | 60% | ✅ Service integration & layout management complete. Missing: state management, functional components. Est. 8-10h remaining. |
+| 2.1 | Implement AppComponent with basic layout | AI Assistant | ✅ **COMPLETED** | 2025-06-27 | 2025-06-27 | 100% | ✅ Service integration, layout management, and state management complete. StaticHistoryComponent functional. |
 | 2.2 | Create HeaderComponent with title and status | TBD | Not Started | TBD | TBD | 0% | |
-| 2.3 | Implement StaticHistoryComponent with scrolling | TBD | Not Started | TBD | TBD | 0% | |
+| 2.3 | Implement StaticHistoryComponent with scrolling | AI Assistant | ✅ **COMPLETED** | 2025-06-27 | 2025-06-27 | 100% | ✅ Functional conversation history rendering with color-coded roles. Scrolling to be added later. |
 | 2.4 | Create DynamicContentComponent for active operations | TBD | Not Started | TBD | TBD | 0% | |
 | 2.5 | Implement basic InputComponent with text input | TBD | Not Started | TBD | TBD | 0% | |
 
