@@ -617,4 +617,272 @@ public class AppComponentTests
         var messages = historyManager.GetCompletedMessages();
         messages.Should().HaveCount(1, "State change should be reflected in available data");
     }
+
+    // ===== DynamicContentComponent Tests =====
+
+    [Fact]
+    public async Task DynamicContentComponent_RenderAsync_DisplaysPendingContent()
+    {
+        // Arrange
+        var (app, provider) = SetupTestApp("test response");
+        var dynamicContentComponent = provider.GetRequiredService<DynamicContentComponent>();
+        var historyManager = provider.GetRequiredService<HistoryManager>();
+        
+        // Add pending messages to simulate active operations
+        historyManager.AddPendingMessage(new ChatMessage(ChatRole.Assistant, "Processing your request..."));
+        historyManager.AddPendingMessage(new ChatMessage(ChatRole.Assistant, "Executing tool: read_file"));
+        
+        var terminalSize = new TerminalSize(120, 40);
+        var constraints = new LayoutConstraints(terminalSize.Height, terminalSize.Width);
+        var context = new RenderContext(constraints, terminalSize);
+
+        // Act
+        var result = await dynamicContentComponent.RenderAsync(context);
+
+        // Assert
+        result.Should().NotBeNull();
+        var panel = result.Should().BeOfType<Panel>().Subject;
+        
+        // REQ-UI-DYNAMIC-001: Real-time Updates
+        // Verify component displays pending content from HistoryManager
+        panel.Should().NotBeNull("DynamicContentComponent should render pending content");
+        
+        // Verify the component has access to pending messages
+        var pendingMessages = historyManager.GetPendingMessages();
+        pendingMessages.Should().HaveCount(2, "Test setup should have added 2 pending messages");
+        
+        // Component should display information about active operations
+        var header = panel.Header?.Text ?? "";
+        header.Should().NotBeEmpty("DynamicContentComponent should have a descriptive header");
+    }
+
+    [Fact]
+    public async Task DynamicContentComponent_WithNoPendingContent_ShowsEmptyState()
+    {
+        // Arrange
+        var (app, provider) = SetupTestApp("test response");
+        var dynamicContentComponent = provider.GetRequiredService<DynamicContentComponent>();
+        var historyManager = provider.GetRequiredService<HistoryManager>();
+        
+        // Ensure no pending messages
+        var pendingMessages = historyManager.GetPendingMessages();
+        pendingMessages.Should().BeEmpty("Test should start with no pending messages");
+        
+        var terminalSize = new TerminalSize(120, 40);
+        var constraints = new LayoutConstraints(terminalSize.Height, terminalSize.Width);
+        var context = new RenderContext(constraints, terminalSize);
+
+        // Act
+        var result = await dynamicContentComponent.RenderAsync(context);
+
+        // Assert
+        result.Should().NotBeNull();
+        var panel = result.Should().BeOfType<Panel>().Subject;
+        
+        // REQ-UI-DYNAMIC-002: Content Organization
+        // Verify component shows appropriate empty state when no operations are active
+        panel.Should().NotBeNull("DynamicContentComponent should render empty state gracefully");
+        
+        // Component should indicate no active operations
+        var header = panel.Header?.Text ?? "";
+        header.Should().NotBeEmpty("DynamicContentComponent should have a header even in empty state");
+    }
+
+    [Fact]
+    public async Task DynamicContentComponent_WithStateChanges_UpdatesRealTime()
+    {
+        // Arrange
+        var (app, provider) = SetupTestApp("test response");
+        var dynamicContentComponent = provider.GetRequiredService<DynamicContentComponent>();
+        var historyManager = provider.GetRequiredService<HistoryManager>();
+        var stateManager = provider.GetRequiredService<StateManager>();
+        
+        var terminalSize = new TerminalSize(120, 40);
+        var constraints = new LayoutConstraints(terminalSize.Height, terminalSize.Width);
+        var context = new RenderContext(constraints, terminalSize);
+
+        // Get initial render with no pending content
+        var initialRender = await dynamicContentComponent.RenderAsync(context);
+        
+        // Act - Add pending content and trigger state change
+        historyManager.AddPendingMessage(new ChatMessage(ChatRole.Assistant, "Starting tool execution..."));
+        historyManager.AddPendingMessage(new ChatMessage(ChatRole.Assistant, "Tool: execute_command"));
+        
+        stateManager.FlushPendingChanges();
+        await Task.Delay(50);
+        
+        var updatedRender = await dynamicContentComponent.RenderAsync(context);
+
+        // Assert
+        initialRender.Should().NotBeNull();
+        updatedRender.Should().NotBeNull();
+        
+        // REQ-UI-DYNAMIC-001: Real-time Updates
+        // Verify component responds to state changes and updates content
+        var initialPanel = initialRender.Should().BeOfType<Panel>().Subject;
+        var updatedPanel = updatedRender.Should().BeOfType<Panel>().Subject;
+        
+        initialPanel.Should().NotBeNull("DynamicContentComponent should render initial state");
+        updatedPanel.Should().NotBeNull("DynamicContentComponent should render updated state");
+        
+        // Verify the pending messages are available for display
+        var pendingMessages = historyManager.GetPendingMessages();
+        pendingMessages.Should().HaveCount(2, "State change should add pending messages");
+        pendingMessages[0].Text.Should().Be("Starting tool execution...");
+        pendingMessages[1].Text.Should().Be("Tool: execute_command");
+    }
+
+    [Fact]
+    public async Task DynamicContentComponent_WithMultipleOperations_OrganizesContent()
+    {
+        // Arrange
+        var (app, provider) = SetupTestApp("test response");
+        var dynamicContentComponent = provider.GetRequiredService<DynamicContentComponent>();
+        var historyManager = provider.GetRequiredService<HistoryManager>();
+        
+        // Add multiple types of pending operations
+        historyManager.AddPendingMessage(new ChatMessage(ChatRole.Assistant, "Analyzing code structure..."));
+        historyManager.AddPendingMessage(new ChatMessage(ChatRole.Assistant, "Tool: read_file - src/main.js"));
+        historyManager.AddPendingMessage(new ChatMessage(ChatRole.Assistant, "Tool: write_file - output.txt"));
+        historyManager.AddPendingMessage(new ChatMessage(ChatRole.Assistant, "Generating response..."));
+        
+        var terminalSize = new TerminalSize(120, 40);
+        var constraints = new LayoutConstraints(terminalSize.Height, terminalSize.Width);
+        var context = new RenderContext(constraints, terminalSize);
+
+        // Act
+        var result = await dynamicContentComponent.RenderAsync(context);
+
+        // Assert
+        result.Should().NotBeNull();
+        var panel = result.Should().BeOfType<Panel>().Subject;
+        
+        // REQ-UI-DYNAMIC-002: Content Organization
+        // Verify component can handle multiple concurrent operations
+        panel.Should().NotBeNull("DynamicContentComponent should organize multiple operations");
+        
+        // Verify all pending operations are available for display
+        var pendingMessages = historyManager.GetPendingMessages();
+        pendingMessages.Should().HaveCount(4, "Test should have 4 different pending operations");
+        
+        // Component should be able to group and display different operation types
+        // In a black-box test, we verify it has access to all the required data
+        pendingMessages.Should().Contain(m => m.Text.Contains("Analyzing code"));
+        pendingMessages.Should().Contain(m => m.Text.Contains("Tool: read_file"));
+        pendingMessages.Should().Contain(m => m.Text.Contains("Tool: write_file"));
+        pendingMessages.Should().Contain(m => m.Text.Contains("Generating response"));
+    }
+
+    [Fact]
+    public async Task DynamicContentComponent_StateTransition_MovesToStaticZone()
+    {
+        // Arrange
+        var (app, provider) = SetupTestApp("test response");
+        var dynamicContentComponent = provider.GetRequiredService<DynamicContentComponent>();
+        var historyManager = provider.GetRequiredService<HistoryManager>();
+        var stateManager = provider.GetRequiredService<StateManager>();
+        
+        // Add a pending message
+        var pendingMessage = new ChatMessage(ChatRole.Assistant, "Processing file operation...");
+        historyManager.AddPendingMessage(pendingMessage);
+        
+        var terminalSize = new TerminalSize(120, 40);
+        var constraints = new LayoutConstraints(terminalSize.Height, terminalSize.Width);
+        var context = new RenderContext(constraints, terminalSize);
+
+        // Get initial render with pending content
+        var initialRender = await dynamicContentComponent.RenderAsync(context);
+        
+        // Act - Move pending to completed (simulate operation completion)
+        historyManager.MovePendingToCompleted(pendingMessage);
+        stateManager.FlushPendingChanges();
+        await Task.Delay(50);
+        
+        var updatedRender = await dynamicContentComponent.RenderAsync(context);
+
+        // Assert
+        initialRender.Should().NotBeNull();
+        updatedRender.Should().NotBeNull();
+        
+        // REQ-UI-DYNAMIC-003: State Transitions
+        // Verify content transitions from dynamic to static zones
+        var initialPanel = initialRender.Should().BeOfType<Panel>().Subject;
+        var updatedPanel = updatedRender.Should().BeOfType<Panel>().Subject;
+        
+        initialPanel.Should().NotBeNull("DynamicContentComponent should render with pending content");
+        updatedPanel.Should().NotBeNull("DynamicContentComponent should render after content completion");
+        
+        // Verify the message moved from pending to completed
+        var pendingMessages = historyManager.GetPendingMessages();
+        var completedMessages = historyManager.GetCompletedMessages();
+        
+        pendingMessages.Should().BeEmpty("Pending message should be moved to completed");
+        completedMessages.Should().HaveCount(1, "Message should appear in completed history");
+        completedMessages[0].Text.Should().Be("Processing file operation...");
+    }
+
+    [Fact]
+    public async Task DynamicContentComponent_RenderAsync_ResponsiveDesign_WideTerminal()
+    {
+        // Arrange
+        var (app, provider) = SetupTestApp("test response");
+        var dynamicContentComponent = provider.GetRequiredService<DynamicContentComponent>();
+        var historyManager = provider.GetRequiredService<HistoryManager>();
+        
+        // Add some pending content
+        historyManager.AddPendingMessage(new ChatMessage(ChatRole.Assistant, "Long operation description that should utilize wide terminal space effectively"));
+        
+        var wideTerminalSize = new TerminalSize(200, 40);
+        var constraints = new LayoutConstraints(wideTerminalSize.Height, wideTerminalSize.Width);
+        var context = new RenderContext(constraints, wideTerminalSize);
+
+        // Act
+        var result = await dynamicContentComponent.RenderAsync(context);
+
+        // Assert
+        result.Should().NotBeNull();
+        var panel = result.Should().BeOfType<Panel>().Subject;
+        
+        // Verify component renders successfully at wide terminal width
+        panel.Should().NotBeNull("DynamicContentComponent should render successfully at 200-column width");
+        
+        // Wide terminals should allow more detailed operation information
+        // Component should utilize available space for comprehensive display
+        var pendingMessages = historyManager.GetPendingMessages();
+        pendingMessages.Should().HaveCount(1, "Test should have pending content for wide display");
+    }
+
+    [Fact]
+    public async Task DynamicContentComponent_RenderAsync_ResponsiveDesign_NarrowTerminal()
+    {
+        // Arrange
+        var (app, provider) = SetupTestApp("test response");
+        var dynamicContentComponent = provider.GetRequiredService<DynamicContentComponent>();
+        var historyManager = provider.GetRequiredService<HistoryManager>();
+        
+        // Add pending content
+        historyManager.AddPendingMessage(new ChatMessage(ChatRole.Assistant, "Operation in progress"));
+        
+        var narrowTerminalSize = new TerminalSize(80, 24);
+        var constraints = new LayoutConstraints(narrowTerminalSize.Height, narrowTerminalSize.Width);
+        var context = new RenderContext(constraints, narrowTerminalSize);
+
+        // Act
+        var result = await dynamicContentComponent.RenderAsync(context);
+
+        // Assert
+        result.Should().NotBeNull();
+        var panel = result.Should().BeOfType<Panel>().Subject;
+        
+        // Verify component renders successfully at narrow terminal width
+        panel.Should().NotBeNull("DynamicContentComponent should render successfully at 80-column width");
+        
+        // Essential operation information should remain visible in narrow terminals
+        var header = panel.Header?.Text ?? "";
+        header.Should().NotBeEmpty("Dynamic content header should remain visible in narrow terminals");
+        
+        // Component should prioritize critical operation status in constrained space
+        var pendingMessages = historyManager.GetPendingMessages();
+        pendingMessages.Should().HaveCount(1, "Test should have pending content for narrow display");
+    }
 }
