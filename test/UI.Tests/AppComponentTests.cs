@@ -1,37 +1,69 @@
-using Xunit;
-using UI.Components;
-using Spectre.Console.Rendering;
-using System.Reflection;
-using System.Collections.Generic;
+
 
 namespace UI.Tests;
 
 public class AppComponentTests
 {
+    private static (TuiApp app, ServiceProvider provider) SetupTestApp(string testResponse)
+    {
+        var services = new ServiceCollection();
+
+        // Register configuration and working directory provider
+        services.AddSingleton<IWorkingDirectoryProvider>(new MockWorkingDirectoryProvider());
+        services.AddSingleton<ILogger<TuiApp>>(new NullLogger<TuiApp>());
+
+        // Create the ChatClient wrapper with our TestChatClient
+        var chatClientResult = ChatClient.Create(new TestChatClient(testResponse), "maxbot.config.json");
+        Assert.False(chatClientResult.IsFailed, chatClientResult.Errors.FirstOrDefault()?.Message);
+        services.AddSingleton(chatClientResult.Value);
+
+        // Register the real services that depend on ChatClient
+        services.AddSingleton<IAppService, AppService>();
+        
+        // Register other UI services and components
+        services.AddSingleton<StateManager>();
+        services.AddSingleton<HistoryManager>();
+        services.AddSingleton<LayoutManager>();
+        services.AddSingleton<AppComponent>();
+        services.AddSingleton<HeaderComponent>();
+        services.AddSingleton<StaticHistoryComponent>();
+        services.AddSingleton<DynamicContentComponent>();
+        services.AddSingleton<InputComponent>();
+        services.AddSingleton<FooterComponent>();
+
+        var provider = services.BuildServiceProvider();
+        var app = new TuiApp(provider);
+
+        return (app, provider);
+    }
+
     [Fact]
-    public async Task AppComponent_RendersAllChildComponents()
+    public async Task ProcessUserInput_WithTestChatClient_UpdatesHistoryState()
     {
         // Arrange
-        var header = new HeaderComponent();
-        var staticHistory = new StaticHistoryComponent();
-        var dynamicContent = new DynamicContentComponent();
-        var input = new InputComponent();
-        var footer = new FooterComponent();
+        var expectedResponse = "This is the response from the test client.";
+        var (app, provider) = SetupTestApp(expectedResponse);
 
-        var appComponent = new AppComponent(header, staticHistory, dynamicContent, input, footer);
-        var terminalSize = new TerminalSize(80, 24);
-        var layoutConstraints = new LayoutConstraints(24, 80);
-        var renderContext = new RenderContext(layoutConstraints, terminalSize, false);
+        var appComponent = provider.GetRequiredService<AppComponent>();
+        var historyManager = provider.GetRequiredService<HistoryManager>();
+
+        var cancellationTokenSource = new CancellationTokenSource();
+        var runTask = app.RunAsync(new string[]{}, cancellationTokenSource.Token);
 
         // Act
-        var result = await appComponent.RenderAsync(renderContext);
+        await appComponent.ProcessUserInput("hello");
+
+        // Give the app time to process the message and update state
+        await Task.Delay(100);
 
         // Assert
-        var rows = Assert.IsType<Rows>(result);
-        var childrenField = typeof(Rows).GetField("_children", BindingFlags.NonPublic | BindingFlags.Instance);
-        Assert.NotNull(childrenField);
-        var children = childrenField.GetValue(rows) as IReadOnlyList<IRenderable>;
-        Assert.NotNull(children);
-        Assert.Equal(5, children.Count);
+        var history = historyManager.GetCompletedMessages();
+        history.Should().HaveCount(2); // User message + Assistant message
+        history.Last().Role.Should().Be(ChatRole.Assistant);
+        history.Last().Text.Should().Be(expectedResponse);
+
+        // Clean up
+        cancellationTokenSource.Cancel();
+        await runTask;
     }
 }

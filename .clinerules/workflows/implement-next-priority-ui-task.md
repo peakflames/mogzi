@@ -40,7 +40,10 @@ This workflow automates the implementation of the next priority task for the UI 
 1. Read relevant specification files to extract TORs for the identified task.
    - Look for both explicit TOR statements and implied requirements.
 
-2. Document the specific TORs that need to be implemented.
+2. **Gather Context from Developer Documentation.**
+   - Before forming a plan, search for and read any related developer documentation (e.g., in `docs/` folders) that might provide context on the APIs, patterns, or components involved. This prevents errors based on incorrect assumptions.
+
+3. Document the specific TORs that need to be implemented.
    - Extract functional requirements, performance criteria, and acceptance criteria.
    - Identify any dependencies on other components or systems.
    - Create a clear mapping between requirements and testable outcomes.
@@ -55,9 +58,16 @@ This workflow automates the implementation of the next priority task for the UI 
    - If TORs are ambiguous, use `ask_followup_question` to clarify with the user.
    - Document any assumptions made about unclear requirements.
 
+5. **Check in with user.**
+   - Summarize the findings from the TOR analysis.
+   - Use `ask_followup_question` to ensure the user is following along and to clarify any points before proceeding.
+
 ## 3. Propose Implementation Plan and Seek Approval
 
-1. Formulate a detailed implementation plan based on the analysis.
+1. **Find Existing Patterns.**
+   - Before creating a new implementation or test, search the codebase for existing examples that follow a similar pattern. Use these as a reference to ensure consistency with project conventions. For example, for testing one must always use black box testing philosphy and the implementation example can be found at `test/Cli.Tests/BlackBoxTests.cs`.
+
+2. Formulate a detailed implementation plan based on the analysis.
    - Outline the files that will be created or modified.
    - Describe the automation tests that will be implemented to verify the TORs.
    - Detail the feature implementation steps.
@@ -68,6 +78,10 @@ This workflow automates the implementation of the next priority task for the UI 
 
 3. Await user confirmation before proceeding.
    - Do not proceed to the next step until the user approves the proposed plan.
+
+4. **Check in with user.**
+   - After approval, confirm with the user before starting test creation.
+   - Use `ask_followup_question` to ensure the user is ready to move to the implementation phase.
 
 ## 4. Create Automation Tests
 
@@ -99,35 +113,40 @@ This workflow automates the implementation of the next priority task for the UI 
    - Link TORs to their corresponding test implementations with specific test method names.
    - Include test file paths and line numbers for precise traceability.
 
+6. **Check in with user.**
+   - Summarize the tests that have been created.
+   - Explain that the next step is to write the feature code to make the tests pass.
+   - Use `ask_followup_question` to confirm the user is ready to proceed.
+
 ## 5. Implement Required Features
 
-1. Analyze the failing tests to understand what functionality needs to be implemented.
-   - Run the new tests using the `execute_command` tool to see current failures.
-   - Document what features are missing or need modification.
-   - Prioritize implementation order based on dependencies and complexity.
+1.  Analyze the failing tests to understand what functionality needs to be implemented.
+    - Run the new tests using the `execute_command` tool to see current failures.
+    - Document what features are missing or need modification.
+    - Prioritize implementation order based on dependencies and complexity.
 
-2. Plan the implementation approach.
-   - Identify which existing files need modification vs. new files needed.
-   - Consider the minimal viable implementation that satisfies the TORs.
-   - Plan for incremental development with frequent validation points.
+2.  **Engage user in an interactive implementation loop.**
+    - For each main aspect of the feature:
+        i. **Propose a small implementation step.**
+           - Outline the specific change (e.g., "Next, I will add the `IAppService` dependency to the `AppComponent` constructor.").
+           - Use `ask_followup_question` to get user approval before writing code.
+        ii. **Implement the approved step.**
+           - Use `write_to_file` or `replace_in_file` to make the code change.
+        iii. **Run tests to validate the step.**
+           - Use `execute_command` to run the relevant tests.
+           - Share the result with the user.
+        iv. **Repeat** until all tests pass and the feature is complete.
 
-3. Implement features incrementally with frequent testing.
-   - Start with the simplest implementation that makes one test pass.
-   - Use the `write_to_file` or `replace_in_file` tools to implement features.
-   - Follow existing code patterns and architectural conventions.
-   - Run tests after each significant change using the `execute_command` tool.
-   - Make incremental improvements based on test feedback.
+3.  Ensure code quality and maintainability throughout the process.
+    - Add appropriate error handling and input validation.
+    - Include meaningful comments and documentation.
+    - Follow the project's coding standards and conventions.
+    - Consider edge cases and boundary conditions.
 
-4. Ensure code quality and maintainability.
-   - Add appropriate error handling and input validation.
-   - Include meaningful comments and documentation.
-   - Follow the project's coding standards and conventions.
-   - Consider edge cases and boundary conditions.
-
-5. Validate implementation completeness.
-   - Ensure all TOR requirements are satisfied by the implementation.
-   - Verify that the implementation integrates properly with existing code.
-   - Check that no existing functionality is broken.
+4.  Validate final implementation completeness.
+    - Ensure all TOR requirements are satisfied by the implementation.
+    - Verify that the implementation integrates properly with existing code.
+    - Check that no existing functionality is broken.
 
 ## 6. Execute Verification
 
@@ -155,6 +174,11 @@ This workflow automates the implementation of the next priority task for the UI 
    - Note any TORs that may need refinement.
    - Identify potential improvements for future iterations.
    - Record any technical debt introduced.
+
+6. **Check in with user.**
+   - Announce that the verification is complete.
+   - Explain that the final step is to generate the summary report.
+   - Use `ask_followup_question` to confirm before proceeding.
 
 ## 7. Generate Summary Report
 
@@ -193,8 +217,9 @@ This workflow automates the implementation of the next priority task for the UI 
    - Update implementation and verification status percentages.
    - Ensure the next recommended task is clearly documented for future sessions.
 
-6. Update System Prompt and Documentation.
-   - Analyze `src/MaxBot/Prompts/SystemPrompt.cs` to determine if the new tool requires any changes to the system prompt.
+6. **Confirm and Update Documentation (If Required).**
+   - Use `ask_followup_question` to confirm if `CHANGELOG.md` and `README.md` should be updated.
+   - If approved, analyze `src/MaxBot/Prompts/SystemPrompt.cs` to determine if the new tool requires any changes to the system prompt.
    - Append a user-facing update to `CHANGELOG.md`.
    - Update `README.md` to reflect the new tool's status and capabilities.
 

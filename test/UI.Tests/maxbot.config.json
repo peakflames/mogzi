@@ -1,16 +1,18 @@
 {
-    "maxbotConfig": {
-        "defaultMode": "chat",
-        "apiProviders": [
-            {
+  "maxbotConfig": {
+    "toolApprovals": "all",
+    "debug": false,
+    "apiProviders": [
+      {
                 "name": "RequestyAI",
-                "type": "OpenAI-Compatible",
+        "type": "OpenAI-Compatible",
                 "apiKey": "YOUR-KEY-HERE",
                 "baseUrl": "https://router.requesty.ai/v1"
-            }
-        ],
-        "profiles": [
-            {
+      }
+    ],
+    "profiles": [
+      {
+                "default": true,
                 "name": "gpt",
                 "apiProvider": "RequestyAI",
                 "modelId": "openai/gpt-4.1-mini"
@@ -22,11 +24,11 @@
                 "modelId": "google/gemini-2.5-flash"
             },
             {
+                "default": true,
                 "name": "sonnet",
                 "apiProvider": "RequestyAI",
                 "modelId": "coding/claude-4-sonnet"
-            }
-        ],
-        "tool_approvals": "All"
-    }
+      }
+    ]
+  }
 }

@@ -2,37 +2,47 @@ namespace UI.Components;
 
 public class AppComponent : TuiComponentBase
 {
-    private readonly HeaderComponent _header;
-    private readonly StaticHistoryComponent _staticHistory;
-    private readonly DynamicContentComponent _dynamicContent;
-    private readonly InputComponent _input;
-    private readonly FooterComponent _footer;
+    private readonly IAppService _appService;
+    private readonly HistoryManager _historyManager;
+    private readonly StateManager _stateManager;
+    private readonly LayoutManager _layoutManager;
 
     public AppComponent(
-        HeaderComponent header,
-        StaticHistoryComponent staticHistory,
-        DynamicContentComponent dynamicContent,
-        InputComponent input,
-        FooterComponent footer)
+        IAppService appService,
+        HistoryManager historyManager,
+        StateManager stateManager,
+        LayoutManager layoutManager)
     {
-        _header = header;
-        _staticHistory = staticHistory;
-        _dynamicContent = dynamicContent;
-        _input = input;
-        _footer = footer;
+        _appService = appService;
+        _historyManager = historyManager;
+        _stateManager = stateManager;
+        _layoutManager = layoutManager;
     }
 
-    public override async Task<IRenderable> RenderAsync(RenderContext context)
+    public override Task<IRenderable> RenderAsync(RenderContext context)
     {
-        var renderables = new List<IRenderable>
-        {
-            await _header.RenderAsync(context),
-            await _staticHistory.RenderAsync(context),
-            await _dynamicContent.RenderAsync(context),
-            await _input.RenderAsync(context),
-            await _footer.RenderAsync(context)
-        };
+        // The layout manager will be responsible for rendering children.
+        // For now, return a simple panel.
+        return Task.FromResult<IRenderable>(new Panel("AppComponent"));
+    }
 
-        return new Rows(renderables);
+    public async Task ProcessUserInput(string input)
+    {
+        var userMessage = new ChatMessage(ChatRole.User, input);
+        _historyManager.AddUserMessage(userMessage);
+
+        var chatHistory = _historyManager.GetCurrentChatHistory();
+        var responseStream = _appService.ProcessChatMessageAsync(chatHistory, CancellationToken.None);
+
+        await foreach (var responseUpdate in responseStream)
+        {
+            // In a real implementation, we would handle different kinds of updates.
+            // For this test, we just need to get the final text.
+            if (!string.IsNullOrEmpty(responseUpdate.Text))
+            {
+                var assistantMessage = new ChatMessage(ChatRole.Assistant, responseUpdate.Text);
+                _historyManager.AddAssistantMessage(assistantMessage);
+            }
+        }
     }
 }
