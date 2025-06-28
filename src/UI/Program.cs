@@ -28,12 +28,8 @@ public static class Program
 
         try
         {
-            // Create and run the TUI application
-            using var app = new TuiApp(serviceProvider);
-            
-            // Register the main application component
-            var appComponent = serviceProvider.GetRequiredService<AppComponent>();
-            app.RegisterComponent(appComponent, RenderZone.Static);
+            // Create and run the simplified FlexColumn TUI application
+            using var app = new FlexColumnTuiApp(serviceProvider);
 
             // Run the application
             return await app.RunAsync(args);
@@ -97,5 +93,8 @@ public static class Program
         services.AddSingleton<InputComponent>();
         services.AddSingleton<FooterComponent>();
         services.AddSingleton<AppComponent>();
+        
+        // Add the new flex column app component
+        services.AddSingleton<FlexColumnAppComponent>();
     }
 }

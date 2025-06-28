@@ -17,18 +17,18 @@ public static class FlexColumnPrototype
         
         // Initialize the chat state
         var chatHistory = new List<ChatMessage>();
-        var currentState = ChatState.Input;
+        var currentState = UI.Components.ChatState.Input;
         var currentInput = "";
         var toolProgress = "";
         
         // Add initial welcome messages to history
-        chatHistory.Add(new ChatMessage(MessageType.System, "🔷 GEMINI"));
-        chatHistory.Add(new ChatMessage(MessageType.System, ""));
-        chatHistory.Add(new ChatMessage(MessageType.System, "Tips for getting started:"));
-        chatHistory.Add(new ChatMessage(MessageType.System, "1. Ask questions, edit files, or run commands."));
-        chatHistory.Add(new ChatMessage(MessageType.System, "2. Be specific for the best results."));
-        chatHistory.Add(new ChatMessage(MessageType.System, "3. Create GEMINI.md files to customize your interactions with Gemini."));
-        chatHistory.Add(new ChatMessage(MessageType.System, "4. /help for more information."));
+        chatHistory.Add(new ChatMessage(ChatRole.System, "Max"));
+        chatHistory.Add(new ChatMessage(ChatRole.System, ""));
+        chatHistory.Add(new ChatMessage(ChatRole.System, "Tips for getting started:"));
+        chatHistory.Add(new ChatMessage(ChatRole.System, "1. Ask questions, edit files, or run commands."));
+        chatHistory.Add(new ChatMessage(ChatRole.System, "2. Be specific for the best results."));
+        chatHistory.Add(new ChatMessage(ChatRole.System, "3. Create an .max/AGENT.md files to customize your interactions with Max."));
+        chatHistory.Add(new ChatMessage(ChatRole.System, "4. /help for more information."));
 
         // Create a single column layout that flows naturally (like flex-col)
         var layout = new Spectre.Console.Layout("Root")
@@ -78,10 +78,10 @@ public static class FlexColumnPrototype
 
         // Final message
         await Task.Delay(1000, cancellationToken);
-        chatHistory.Add(new ChatMessage(MessageType.System, ""));
-        chatHistory.Add(new ChatMessage(MessageType.System, "[green]✅ Flex column prototype completed![/]"));
-        chatHistory.Add(new ChatMessage(MessageType.System, "This demonstrates the correct Gemini-CLI layout pattern."));
-        UpdateFlexColumnLayout(layout, chatHistory, ChatState.Input, "", "");
+        chatHistory.Add(new ChatMessage(ChatRole.System, ""));
+        chatHistory.Add(new ChatMessage(ChatRole.System, "[green]✅ Flex column prototype completed![/]"));
+        chatHistory.Add(new ChatMessage(ChatRole.System, "This demonstrates the correct Gemini-CLI layout pattern."));
+        UpdateFlexColumnLayout(layout, chatHistory, UI.Components.ChatState.Input, "", "");
         ctx.Refresh();
         
         await Task.Delay(1000, cancellationToken);
@@ -104,7 +104,7 @@ public static class FlexColumnPrototype
             if (cancellationToken.IsCancellationRequested) break;
             
             currentInput += c;
-            UpdateFlexColumnLayout(layout, chatHistory, ChatState.Input, currentInput, "");
+            UpdateFlexColumnLayout(layout, chatHistory, UI.Components.ChatState.Input, currentInput, "");
             ctx.Refresh();
             
             await Task.Delay(50, cancellationToken); // Typing speed
@@ -123,14 +123,14 @@ public static class FlexColumnPrototype
         CancellationToken cancellationToken)
     {
         // Add user message to history
-        chatHistory.Add(new ChatMessage(MessageType.User, 
+        chatHistory.Add(new ChatMessage(ChatRole.User, 
             "lets make a html and js file that shows off the power of tailwind. Makes sure to bring in tailwind from a CDn etc"));
         
         // Add empty line for spacing
-        chatHistory.Add(new ChatMessage(MessageType.System, ""));
+        chatHistory.Add(new ChatMessage(ChatRole.System, ""));
         
         // Clear input and show thinking state
-        UpdateFlexColumnLayout(layout, chatHistory, ChatState.Thinking, "", "");
+        UpdateFlexColumnLayout(layout, chatHistory, UI.Components.ChatState.Thinking, "", "");
         ctx.Refresh();
         
         await Task.Delay(500, cancellationToken);
@@ -149,7 +149,7 @@ public static class FlexColumnPrototype
         var currentResponse = "";
         
         // Add empty AI message to history
-        chatHistory.Add(new ChatMessage(MessageType.Assistant, ""));
+        chatHistory.Add(new ChatMessage(ChatRole.Assistant, ""));
         
         // Stream the response character by character
         foreach (char c in aiResponse)
@@ -158,16 +158,16 @@ public static class FlexColumnPrototype
             
             currentResponse += c;
             // Update the last message (AI response) in history
-            chatHistory[chatHistory.Count - 1] = new ChatMessage(MessageType.Assistant, currentResponse);
+            chatHistory[chatHistory.Count - 1] = new ChatMessage(ChatRole.Assistant, currentResponse);
             
-            UpdateFlexColumnLayout(layout, chatHistory, ChatState.Thinking, "", "");
+            UpdateFlexColumnLayout(layout, chatHistory, UI.Components.ChatState.Thinking, "", "");
             ctx.Refresh();
             
             await Task.Delay(30, cancellationToken); // Streaming speed
         }
         
         // Add spacing after AI response
-        chatHistory.Add(new ChatMessage(MessageType.System, ""));
+        chatHistory.Add(new ChatMessage(ChatRole.System, ""));
         
         await Task.Delay(1000, cancellationToken);
     }
@@ -199,7 +199,7 @@ public static class FlexColumnPrototype
             for (int i = 0; i < duration; i += updateDelay)
             {
                 var progress = $"{stepName} (esc to cancel, {TimeSpan.FromMilliseconds(i).TotalSeconds}s)";
-                UpdateFlexColumnLayout(layout, chatHistory, ChatState.ToolExecution, "", progress);
+                UpdateFlexColumnLayout(layout, chatHistory, UI.Components.ChatState.ToolExecution, "", progress);
                 ctx.Refresh();
 
                 await Task.Delay(updateDelay, cancellationToken);
@@ -207,25 +207,10 @@ public static class FlexColumnPrototype
         }
 
         // Add tool completion message to history
-        chatHistory.Add(new ChatMessage(MessageType.System, "[green]✅ Files created successfully![/]"));
-        chatHistory.Add(new ChatMessage(MessageType.System, "• index.html - Main HTML file with Tailwind CSS"));
-        chatHistory.Add(new ChatMessage(MessageType.System, "• script.js - Interactive JavaScript functionality"));
-        chatHistory.Add(new ChatMessage(MessageType.System, ""));
-        // Add tool completion message to history
-        chatHistory.Add(new ChatMessage(MessageType.System, "[green]✅ Files created successfully![/]"));
-        chatHistory.Add(new ChatMessage(MessageType.System, "• index.html - Main HTML file with Tailwind CSS"));
-        chatHistory.Add(new ChatMessage(MessageType.System, "• script.js - Interactive JavaScript functionality"));
-        chatHistory.Add(new ChatMessage(MessageType.System, ""));
-        // Add tool completion message to history
-        chatHistory.Add(new ChatMessage(MessageType.System, "[green]✅ Files created successfully![/]"));
-        chatHistory.Add(new ChatMessage(MessageType.System, "• index.html - Main HTML file with Tailwind CSS"));
-        chatHistory.Add(new ChatMessage(MessageType.System, "• script.js - Interactive JavaScript functionality"));
-        chatHistory.Add(new ChatMessage(MessageType.System, ""));
-        // Add tool completion message to history
-        chatHistory.Add(new ChatMessage(MessageType.System, "[green]✅ Files created successfully![/]"));
-        chatHistory.Add(new ChatMessage(MessageType.System, "• index.html - Main HTML file with Tailwind CSS"));
-        chatHistory.Add(new ChatMessage(MessageType.System, "• script.js - Interactive JavaScript functionality"));
-        chatHistory.Add(new ChatMessage(MessageType.System, ""));
+        chatHistory.Add(new ChatMessage(ChatRole.System, "[green]✅ Files created successfully![/]"));
+        chatHistory.Add(new ChatMessage(ChatRole.System, "• index.html - Main HTML file with Tailwind CSS"));
+        chatHistory.Add(new ChatMessage(ChatRole.System, "• script.js - Interactive JavaScript functionality"));
+        chatHistory.Add(new ChatMessage(ChatRole.System, ""));
     }
 
     /// <summary>
@@ -237,10 +222,25 @@ public static class FlexColumnPrototype
         LiveDisplayContext ctx, 
         CancellationToken cancellationToken)
     {
-        UpdateFlexColumnLayout(layout, chatHistory, ChatState.Input, "", "");
+        UpdateFlexColumnLayout(layout, chatHistory, UI.Components.ChatState.Input, "", "");
         ctx.Refresh();
         
         await Task.Delay(1000, cancellationToken);
+    }
+
+    /// <summary>
+    /// Converts ChatRole to MessageType for UI rendering.
+    /// </summary>
+    private static UI.Components.MessageType GetMessageType(ChatMessage message)
+    {
+        if (message.Role == ChatRole.User)
+            return UI.Components.MessageType.User;
+        else if (message.Role == ChatRole.Assistant)
+            return UI.Components.MessageType.Assistant;
+        else if (message.Role == ChatRole.System)
+            return UI.Components.MessageType.System;
+        else
+            return UI.Components.MessageType.System;
     }
 
     /// <summary>
@@ -249,51 +249,53 @@ public static class FlexColumnPrototype
     private static void UpdateFlexColumnLayout(
         Spectre.Console.Layout layout,
         List<ChatMessage> chatHistory,
-        ChatState state,
+        UI.Components.ChatState state,
         string currentInput,
         string toolProgress)
     {
         // Create all content as a single flowing column
         var contentItems = new List<IRenderable>();
 
-        MessageType? prevMessageType = null;
+        UI.Components.MessageType? prevMessageType = null;
 
         // Add all chat history with more vertical spacing
         foreach (var message in chatHistory)
         {
-            if (!string.IsNullOrEmpty(message.Content))
+            if (!string.IsNullOrEmpty(message.Text))
             {
+                var messageType = GetMessageType(message);
+                
                 // Add extra spacing after when messages types change
-                if (prevMessageType != message.Type)
+                if (prevMessageType != messageType)
                 {
                     contentItems.Add(new Text(""));
                 }
-                
-                var prefix = message.Type switch
+
+                var prefix = messageType switch
                 {
-                    MessageType.User => "[dim]>[/] ",
-                    MessageType.Assistant => "✦ ",
-                    MessageType.System => "",
+                    UI.Components.MessageType.User => "[dim]>[/] ",
+                    UI.Components.MessageType.Assistant => "✦ ",
+                    UI.Components.MessageType.System => "",
                     _ => ""
                 };
 
-                var color = message.Type switch
+                var color = messageType switch
                 {
-                    MessageType.User => "dim",
-                    MessageType.Assistant => "white",
-                    MessageType.System => "grey69",
+                    UI.Components.MessageType.User => "dim",
+                    UI.Components.MessageType.Assistant => "white",
+                    UI.Components.MessageType.System => "grey69",
                     _ => "white"
                 };
 
-                contentItems.Add(new Markup($"[{color}]{prefix}{message.Content}[/]"));
+                contentItems.Add(new Markup($"[{color}]{prefix}{message.Text}[/]"));
 
                 // Add extra spacing after when messages types change
-                if (prevMessageType != message.Type)
+                if (prevMessageType != messageType)
                 {
                     contentItems.Add(new Text(""));
                 }
 
-                prevMessageType = message.Type;
+                prevMessageType = messageType;
             }
         }
 
@@ -304,9 +306,9 @@ public static class FlexColumnPrototype
         // Add current state component at the bottom (like the last item in flex-col)
         var bottomComponent = state switch
         {
-            ChatState.Input => CreateFlexInputComponent(currentInput),
-            ChatState.Thinking => CreateFlexThinkingComponent(),
-            ChatState.ToolExecution => CreateFlexToolExecutionComponent(toolProgress),
+            UI.Components.ChatState.Input => CreateFlexInputComponent(currentInput),
+            UI.Components.ChatState.Thinking => CreateFlexThinkingComponent(),
+            UI.Components.ChatState.ToolExecution => CreateFlexToolExecutionComponent(toolProgress),
             _ => CreateFlexInputComponent(currentInput)
         };
 

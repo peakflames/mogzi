@@ -35,17 +35,6 @@ public static class PrototypeRunner
             
             switch (prototypeType.ToLower())
             {
-                case "live":
-                case "widget":
-                    await LiveWidgetPrototype.RunAsync(cts.Token);
-                    break;
-                    
-                case "scrolling":
-                case "chat":
-                    await ScrollingChatPrototype.RunAsync(cts.Token);
-                    break;
-                    
-                case "flex":
                 case "column":
                 default:
                     await FlexColumnPrototype.RunAsync(cts.Token);

@@ -94,7 +94,7 @@
             "request": "launch",
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/src/UI/bin/Debug/net9.0/maxbot-ui.dll",
-            "args": [],
+            "args": ["--prototype", "flex"],
             "cwd": "~/",
             "stopAtEntry": false,
             "console": "integratedTerminal",
