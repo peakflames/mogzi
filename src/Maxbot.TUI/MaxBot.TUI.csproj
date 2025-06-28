@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <AssemblyName>max</AssemblyName>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -9,10 +10,6 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <AssemblyName>maxbot-ui</AssemblyName>
   </PropertyGroup>
-
-  <ItemGroup>
-    <InternalsVisibleTo Include="UI.Tests" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Spectre.Console" Version="0.49.1" />

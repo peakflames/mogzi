@@ -1,11 +1,11 @@
-namespace UI.Core;
+namespace Maxbot.TUI.App;
 
 /// <summary>
 /// Simplified TUI application specifically designed for the flex column layout pattern.
 /// This bypasses the complex RenderZone system and runs Spectre.Console Live directly.
 /// Based on the working FlexColumnPrototype pattern.
 /// </summary>
-public sealed class FlexColumnTuiApp : IAsyncDisposable, IDisposable
+public sealed class FlexColumnTuiApp : IDisposable
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<FlexColumnTuiApp> _logger;
@@ -97,7 +97,7 @@ public sealed class FlexColumnTuiApp : IAsyncDisposable, IDisposable
                 cancellationToken, _cancellationTokenSource.Token);
 
             // Initialize the application
-            await InitializeAsync(args, combinedCts.Token);
+            Initialize(args);
 
             // Mark as running
             _isRunning = true;
@@ -131,7 +131,7 @@ public sealed class FlexColumnTuiApp : IAsyncDisposable, IDisposable
     /// <summary>
     /// Initializes the application.
     /// </summary>
-    private async Task InitializeAsync(string[] args, CancellationToken cancellationToken)
+    private void Initialize(string[] args)
     {
         _logger.LogDebug("Initializing FlexColumn TUI application");
 
@@ -400,7 +400,7 @@ public sealed class FlexColumnTuiApp : IAsyncDisposable, IDisposable
     /// <summary>
     /// Disposes the application and cleans up resources.
     /// </summary>
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
         if (_isDisposed) return;
 
@@ -425,11 +425,6 @@ public sealed class FlexColumnTuiApp : IAsyncDisposable, IDisposable
         _logger?.LogDebug("FlexColumnTuiApp disposed");
 
         GC.SuppressFinalize(this);
-    }
-
-    public void Dispose()
-    {
-        DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 
     // Input handling methods

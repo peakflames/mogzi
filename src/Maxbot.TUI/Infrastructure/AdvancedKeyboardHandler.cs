@@ -1,4 +1,4 @@
-namespace UI.Core;
+namespace Maxbot.TUI.Infrastructure;
 
 /// <summary>
 /// Advanced keyboard input handler with event-driven architecture and key combination support.

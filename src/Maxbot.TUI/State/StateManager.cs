@@ -1,4 +1,4 @@
-namespace UI.State;
+namespace Maxbot.TUI.State;
 
 /// <summary>
 /// Manages global state changes and coordinates re-rendering across the application.
@@ -56,7 +56,7 @@ public sealed class StateManager : IDisposable
         _debounceTimer = new Timer(OnDebounceTimerElapsed, null, Timeout.Infinite, Timeout.Infinite);
         
         // Subscribe to component state changes
-        Core.StateChangeNotifier.AddListener(NotifyStateChanged);
+        // Core.StateChangeNotifier.AddListener(NotifyStateChanged);
     }
 
     /// <summary>
@@ -212,7 +212,7 @@ public sealed class StateManager : IDisposable
         _isDisposed = true;
 
         // Unsubscribe from state change notifications
-        Core.StateChangeNotifier.RemoveListener(NotifyStateChanged);
+        // Core.StateChangeNotifier.RemoveListener(NotifyStateChanged);
 
         // Dispose the timer
         _debounceTimer?.Dispose();

@@ -1,4 +1,4 @@
-namespace UI.State;
+namespace Maxbot.TUI.State;
 
 public class HistoryManager
 {
