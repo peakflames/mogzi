@@ -49,6 +49,7 @@ This workflow automates the implementation of the next priority task for the UI 
    - Outline the files that will be created or modified.
    - Detail the feature implementation steps.
    - Detail what the User will be able to tangible see when manually running the with the new changes.
+   - Optionally, as it is expensive, one can obtain addiitonal knowledge from the Gemini CLI UI codebase (typescript) at `tmp/gemini-cli/packages/cli/src`
 
 2. Present the plan to the user for approval before implementing.
    - Use the `ask_followup_question` tool to present the summarized plan.
@@ -59,12 +60,7 @@ This workflow automates the implementation of the next priority task for the UI 
 
 ## 4. Implement Required Features
 
-1.  Analyze the failing tests to understand what functionality needs to be implemented.
-    - Run the new tests using the `execute_command` tool to see current failures.
-    - Document what features are missing or need modification.
-    - Prioritize implementation order based on dependencies and complexity.
-
-2.  **Engage user in an interactive implementation loop.**
+1.  **Engage user in an interactive implementation loop.**
     - For each main aspect of the feature:
         i. **Propose a small implementation step.**
            - Outline the specific change (e.g., "Next, I will add the `IAppService` dependency to the `AppComponent` constructor.").
@@ -76,13 +72,13 @@ This workflow automates the implementation of the next priority task for the UI 
            - Share the result with the user.
         iv. **Repeat** until all tests pass and the feature is complete.
 
-3.  Ensure code quality and maintainability throughout the process.
+2.  Ensure code quality and maintainability throughout the process.
     - Add appropriate error handling and input validation.
     - Include meaningful comments and documentation.
     - Follow the project's coding standards and conventions.
     - Consider edge cases and boundary conditions.
 
-4.  Validate final implementation completeness.
+3.  Validate final implementation completeness.
     - Ensure all TOR requirements are satisfied by the implementation.
     - Verify that the implementation integrates properly with existing code.
     - Check that no existing functionality is broken.

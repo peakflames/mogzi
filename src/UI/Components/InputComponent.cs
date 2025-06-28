@@ -11,6 +11,12 @@ public class InputComponent : TuiComponentBase
     private int _commandHistoryIndex = -1;
     private bool _isInputEnabled = true;
     private readonly List<string> _commandHistory = new();
+    
+    // Enhanced input features for advanced keyboard handling
+    private int _cursorPosition = 0;
+    private int _selectionStart = -1;
+    private int _selectionEnd = -1;
+    private bool _hasSelection = false;
 
     public InputComponent(
         HistoryManager historyManager,
@@ -229,6 +235,7 @@ public class InputComponent : TuiComponentBase
     {
         _currentInput = input ?? string.Empty;
         _commandHistoryIndex = -1; // Reset history navigation
+        ResetCursorAndSelection();
     }
 
     public void SetInputEnabled(bool enabled)
@@ -327,5 +334,258 @@ public class InputComponent : TuiComponentBase
         ClearCurrentInput();
         
         OnInputSubmitted(inputToSubmit);
+    }
+
+    // Enhanced keyboard handling methods for advanced input features
+    
+    /// <summary>
+    /// Inserts a character at the current cursor position.
+    /// </summary>
+    public void InsertCharacter(char character)
+    {
+        if (!_isInputEnabled) return;
+        
+        // Clear selection if any
+        if (_hasSelection)
+        {
+            DeleteSelection();
+        }
+        
+        // Ensure cursor position is valid
+        _cursorPosition = Math.Max(0, Math.Min(_cursorPosition, _currentInput.Length));
+        
+        // Insert character at cursor position
+        _currentInput = _currentInput.Insert(_cursorPosition, character.ToString());
+        _cursorPosition++;
+        
+        _commandHistoryIndex = -1; // Reset history navigation
+    }
+    
+    /// <summary>
+    /// Deletes the character before the cursor (backspace).
+    /// </summary>
+    public void DeleteCharacterBefore()
+    {
+        if (!_isInputEnabled || _currentInput.Length == 0) return;
+        
+        // If there's a selection, delete it
+        if (_hasSelection)
+        {
+            DeleteSelection();
+            return;
+        }
+        
+        // Ensure cursor position is valid
+        _cursorPosition = Math.Max(0, Math.Min(_cursorPosition, _currentInput.Length));
+        
+        if (_cursorPosition > 0)
+        {
+            _currentInput = _currentInput.Remove(_cursorPosition - 1, 1);
+            _cursorPosition--;
+        }
+        
+        _commandHistoryIndex = -1; // Reset history navigation
+    }
+    
+    /// <summary>
+    /// Deletes the character after the cursor (delete key).
+    /// </summary>
+    public void DeleteCharacterAfter()
+    {
+        if (!_isInputEnabled || _currentInput.Length == 0) return;
+        
+        // If there's a selection, delete it
+        if (_hasSelection)
+        {
+            DeleteSelection();
+            return;
+        }
+        
+        // Ensure cursor position is valid
+        _cursorPosition = Math.Max(0, Math.Min(_cursorPosition, _currentInput.Length));
+        
+        if (_cursorPosition < _currentInput.Length)
+        {
+            _currentInput = _currentInput.Remove(_cursorPosition, 1);
+        }
+        
+        _commandHistoryIndex = -1; // Reset history navigation
+    }
+    
+    /// <summary>
+    /// Moves the cursor to the specified position.
+    /// </summary>
+    public void MoveCursor(int position)
+    {
+        _cursorPosition = Math.Max(0, Math.Min(position, _currentInput.Length));
+        ClearSelection();
+    }
+    
+    /// <summary>
+    /// Moves the cursor left by one position.
+    /// </summary>
+    public void MoveCursorLeft(bool extendSelection = false)
+    {
+        if (_cursorPosition > 0)
+        {
+            if (extendSelection)
+            {
+                if (!_hasSelection)
+                {
+                    _selectionStart = _cursorPosition;
+                    _hasSelection = true;
+                }
+                _cursorPosition--;
+                _selectionEnd = _cursorPosition;
+            }
+            else
+            {
+                _cursorPosition--;
+                ClearSelection();
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Moves the cursor right by one position.
+    /// </summary>
+    public void MoveCursorRight(bool extendSelection = false)
+    {
+        if (_cursorPosition < _currentInput.Length)
+        {
+            if (extendSelection)
+            {
+                if (!_hasSelection)
+                {
+                    _selectionStart = _cursorPosition;
+                    _hasSelection = true;
+                }
+                _cursorPosition++;
+                _selectionEnd = _cursorPosition;
+            }
+            else
+            {
+                _cursorPosition++;
+                ClearSelection();
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Moves the cursor to the beginning of the input.
+    /// </summary>
+    public void MoveCursorToStart(bool extendSelection = false)
+    {
+        if (extendSelection)
+        {
+            if (!_hasSelection)
+            {
+                _selectionStart = _cursorPosition;
+                _hasSelection = true;
+            }
+            _cursorPosition = 0;
+            _selectionEnd = _cursorPosition;
+        }
+        else
+        {
+            _cursorPosition = 0;
+            ClearSelection();
+        }
+    }
+    
+    /// <summary>
+    /// Moves the cursor to the end of the input.
+    /// </summary>
+    public void MoveCursorToEnd(bool extendSelection = false)
+    {
+        if (extendSelection)
+        {
+            if (!_hasSelection)
+            {
+                _selectionStart = _cursorPosition;
+                _hasSelection = true;
+            }
+            _cursorPosition = _currentInput.Length;
+            _selectionEnd = _cursorPosition;
+        }
+        else
+        {
+            _cursorPosition = _currentInput.Length;
+            ClearSelection();
+        }
+    }
+    
+    /// <summary>
+    /// Gets the current cursor position.
+    /// </summary>
+    public int GetCursorPosition()
+    {
+        return _cursorPosition;
+    }
+    
+    /// <summary>
+    /// Gets whether there is currently a text selection.
+    /// </summary>
+    public bool HasSelection()
+    {
+        return _hasSelection;
+    }
+    
+    /// <summary>
+    /// Gets the selected text, if any.
+    /// </summary>
+    public string GetSelectedText()
+    {
+        if (!_hasSelection) return string.Empty;
+        
+        var start = Math.Min(_selectionStart, _selectionEnd);
+        var end = Math.Max(_selectionStart, _selectionEnd);
+        var length = end - start;
+        
+        if (start >= 0 && start < _currentInput.Length && length > 0)
+        {
+            return _currentInput.Substring(start, Math.Min(length, _currentInput.Length - start));
+        }
+        
+        return string.Empty;
+    }
+    
+    /// <summary>
+    /// Clears the current text selection.
+    /// </summary>
+    public void ClearSelection()
+    {
+        _hasSelection = false;
+        _selectionStart = -1;
+        _selectionEnd = -1;
+    }
+    
+    /// <summary>
+    /// Deletes the currently selected text.
+    /// </summary>
+    private void DeleteSelection()
+    {
+        if (!_hasSelection) return;
+        
+        var start = Math.Min(_selectionStart, _selectionEnd);
+        var end = Math.Max(_selectionStart, _selectionEnd);
+        var length = end - start;
+        
+        if (start >= 0 && start < _currentInput.Length && length > 0)
+        {
+            _currentInput = _currentInput.Remove(start, Math.Min(length, _currentInput.Length - start));
+            _cursorPosition = start;
+        }
+        
+        ClearSelection();
+    }
+    
+    /// <summary>
+    /// Resets cursor position and selection when input changes externally.
+    /// </summary>
+    private void ResetCursorAndSelection()
+    {
+        _cursorPosition = Math.Min(_cursorPosition, _currentInput.Length);
+        ClearSelection();
     }
 }

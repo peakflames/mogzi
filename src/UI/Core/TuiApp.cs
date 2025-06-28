@@ -13,6 +13,7 @@ public sealed class TuiApp : IAsyncDisposable, IDisposable
     private readonly IAnsiConsole _console;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly List<ITuiComponent> _registeredComponents = new();
+    private readonly AdvancedKeyboardHandler _keyboardHandler;
     private bool _isRunning = false;
     private bool _isDisposed = false;
 
@@ -56,10 +57,21 @@ public sealed class TuiApp : IAsyncDisposable, IDisposable
         _renderer = new TuiRenderer(_console, _stateManager, _layoutManager, 
             _serviceProvider.GetService<ILogger<TuiRenderer>>());
 
+        // Initialize the advanced keyboard handler
+        _keyboardHandler = new AdvancedKeyboardHandler(_serviceProvider.GetService<ILogger<AdvancedKeyboardHandler>>());
+        
         // Subscribe to renderer events
         _renderer.RenderCompleted += OnRenderCompleted;
+        
+        // Subscribe to keyboard events
+        _keyboardHandler.KeyPressed += OnKeyPressed;
+        _keyboardHandler.KeyCombinationPressed += OnKeyCombinationPressed;
+        _keyboardHandler.CharacterTyped += OnCharacterTyped;
+        
+        // Register enhanced key bindings
+        RegisterEnhancedKeyBindings();
 
-        _logger.LogDebug("TuiApp initialized");
+        _logger.LogDebug("TuiApp initialized with advanced keyboard handling");
     }
 
     /// <summary>
@@ -203,7 +215,8 @@ public sealed class TuiApp : IAsyncDisposable, IDisposable
             TotalFrames = _renderer.TotalFrames,
             LastRenderTimeMs = _renderer.LastRenderTimeMs,
             StateManagerStats = _stateManager.GetStatistics(),
-            TerminalSize = TerminalSize.Current
+            TerminalSize = TerminalSize.Current,
+            KeyboardStatistics = _keyboardHandler.GetStatistics()
         };
     }
 
@@ -245,8 +258,8 @@ public sealed class TuiApp : IAsyncDisposable, IDisposable
 
         try
         {
-            // Start the keyboard event handling task
-            var keyboardTask = HandleKeyboardEventsAsync(cancellationToken);
+            // Start the advanced keyboard event handling task
+            var keyboardTask = _keyboardHandler.StartAsync(cancellationToken);
             
             // Main loop - handle statistics and other background tasks
             while (!cancellationToken.IsCancellationRequested)
@@ -258,7 +271,8 @@ public sealed class TuiApp : IAsyncDisposable, IDisposable
                 await Task.Delay(100, cancellationToken);
             }
 
-            // Wait for keyboard task to complete
+            // Stop keyboard handler and wait for completion
+            await _keyboardHandler.StopAsync();
             await keyboardTask;
 
             return 0;
@@ -275,122 +289,192 @@ public sealed class TuiApp : IAsyncDisposable, IDisposable
     }
 
     /// <summary>
-    /// Handles keyboard events from the terminal.
+    /// Registers enhanced key bindings for improved functionality.
     /// </summary>
-    private async Task HandleKeyboardEventsAsync(CancellationToken cancellationToken)
+    private void RegisterEnhancedKeyBindings()
     {
-        _logger.LogDebug("Starting keyboard event handling");
-
-        try
+        // Global shortcuts
+        _keyboardHandler.RegisterKeyBinding(ConsoleKey.C, ConsoleModifiers.Control, args =>
         {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                // Check if a key is available without blocking
-                if (Console.KeyAvailable)
-                {
-                    var keyInfo = Console.ReadKey(true); // true = don't display the key
-                    await ProcessKeyInputAsync(keyInfo);
-                }
-                else
-                {
-                    // Small delay to prevent busy waiting
-                    await Task.Delay(16, cancellationToken); // ~60 FPS polling rate
-                }
-            }
-        }
-        catch (OperationCanceledException)
+            _logger.LogInformation("Ctrl+C detected, requesting shutdown");
+            _cancellationTokenSource.Cancel();
+            args.Handled = true;
+        });
+
+        _keyboardHandler.RegisterKeyBinding(ConsoleKey.L, ConsoleModifiers.Control, args =>
         {
-            // Expected when cancellation is requested
-        }
-        catch (Exception ex)
+            _logger.LogDebug("Ctrl+L detected, clearing screen");
+            _console.Clear();
+            _ = ForceRenderAsync(); // Fire and forget
+            args.Handled = true;
+        });
+
+        // Input shortcuts for command history navigation
+        _keyboardHandler.RegisterKeyBinding(ConsoleKey.P, ConsoleModifiers.Control, args =>
         {
-            _logger.LogError(ex, "Error in keyboard event handling");
-        }
-
-        _logger.LogDebug("Keyboard event handling stopped");
-    }
-
-    /// <summary>
-    /// Processes a single key input event.
-    /// </summary>
-    private async Task ProcessKeyInputAsync(ConsoleKeyInfo keyInfo)
-    {
-        try
-        {
-            // Handle global keyboard shortcuts first
-            if (keyInfo.Key == ConsoleKey.C && keyInfo.Modifiers.HasFlag(ConsoleModifiers.Control))
-            {
-                // Ctrl+C - Request cancellation
-                _logger.LogInformation("Ctrl+C detected, requesting shutdown");
-                _cancellationTokenSource.Cancel();
-                return;
-            }
-
-            // Find the InputComponent and forward the key event
-            var inputComponent = _registeredComponents
-                .OfType<AppComponent>()
-                .FirstOrDefault()?
-                .GetInputComponent();
-
+            var inputComponent = GetInputComponent();
             if (inputComponent != null)
             {
-                await HandleInputComponentKeyAsync(inputComponent, keyInfo);
+                inputComponent.NavigateCommandHistory(up: true);
+                _ = ForceRenderAsync(); // Fire and forget
+                args.Handled = true;
+            }
+        });
+
+        _keyboardHandler.RegisterKeyBinding(ConsoleKey.N, ConsoleModifiers.Control, args =>
+        {
+            var inputComponent = GetInputComponent();
+            if (inputComponent != null)
+            {
+                inputComponent.NavigateCommandHistory(up: false);
+                _ = ForceRenderAsync(); // Fire and forget
+                args.Handled = true;
+            }
+        });
+
+        // External editor placeholder (Ctrl+E)
+        _keyboardHandler.RegisterKeyBinding(ConsoleKey.E, ConsoleModifiers.Control, args =>
+        {
+            _logger.LogDebug("Ctrl+E detected - external editor feature placeholder");
+            // TODO: Implement external editor integration in future phases
+            args.Handled = true;
+        });
+
+        _logger.LogDebug("Enhanced key bindings registered");
+    }
+
+    /// <summary>
+    /// Handles general key press events.
+    /// </summary>
+    private async void OnKeyPressed(object? sender, KeyPressEventArgs e)
+    {
+        if (e.Handled) return;
+
+        try
+        {
+            var inputComponent = GetInputComponent();
+            if (inputComponent == null) return;
+
+            // Handle navigation and editing keys
+            switch (e.Key)
+            {
+                case ConsoleKey.Enter:
+                    inputComponent.SubmitCurrentInput();
+                    e.Handled = true;
+                    break;
+
+                case ConsoleKey.UpArrow:
+                    inputComponent.NavigateCommandHistory(up: true);
+                    e.Handled = true;
+                    break;
+
+                case ConsoleKey.DownArrow:
+                    inputComponent.NavigateCommandHistory(up: false);
+                    e.Handled = true;
+                    break;
+
+                case ConsoleKey.LeftArrow:
+                    var extendLeft = e.Modifiers.HasFlag(ConsoleModifiers.Shift);
+                    inputComponent.MoveCursorLeft(extendLeft);
+                    e.Handled = true;
+                    break;
+
+                case ConsoleKey.RightArrow:
+                    var extendRight = e.Modifiers.HasFlag(ConsoleModifiers.Shift);
+                    inputComponent.MoveCursorRight(extendRight);
+                    e.Handled = true;
+                    break;
+
+                case ConsoleKey.Home:
+                    var extendHome = e.Modifiers.HasFlag(ConsoleModifiers.Shift);
+                    inputComponent.MoveCursorToStart(extendHome);
+                    e.Handled = true;
+                    break;
+
+                case ConsoleKey.End:
+                    var extendEnd = e.Modifiers.HasFlag(ConsoleModifiers.Shift);
+                    inputComponent.MoveCursorToEnd(extendEnd);
+                    e.Handled = true;
+                    break;
+
+                case ConsoleKey.Backspace:
+                    inputComponent.DeleteCharacterBefore();
+                    e.Handled = true;
+                    break;
+
+                case ConsoleKey.Delete:
+                    inputComponent.DeleteCharacterAfter();
+                    e.Handled = true;
+                    break;
+
+                case ConsoleKey.Escape:
+                    inputComponent.ClearCurrentInput();
+                    e.Handled = true;
+                    break;
+            }
+
+            if (e.Handled)
+            {
+                await ForceRenderAsync();
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing key input: {Key}", keyInfo.Key);
+            _logger.LogError(ex, "Error handling key press: {Key}", e.Key);
         }
     }
 
     /// <summary>
-    /// Handles key input for the InputComponent.
+    /// Handles key combination events.
     /// </summary>
-    private async Task HandleInputComponentKeyAsync(InputComponent inputComponent, ConsoleKeyInfo keyInfo)
+    private async void OnKeyCombinationPressed(object? sender, KeyCombinationEventArgs e)
     {
-        switch (keyInfo.Key)
+        if (e.Handled) return;
+
+        try
         {
-            case ConsoleKey.Enter:
-                // Submit current input
-                inputComponent.SubmitCurrentInput();
-                break;
-
-            case ConsoleKey.UpArrow:
-                // Navigate up in command history
-                inputComponent.NavigateCommandHistory(up: true);
-                break;
-
-            case ConsoleKey.DownArrow:
-                // Navigate down in command history
-                inputComponent.NavigateCommandHistory(up: false);
-                break;
-
-            case ConsoleKey.Backspace:
-                // Remove last character
-                var currentText = inputComponent.GetCurrentInput();
-                if (currentText.Length > 0)
-                {
-                    inputComponent.SetCurrentInput(currentText[..^1]);
-                }
-                break;
-
-            case ConsoleKey.Escape:
-                // Clear current input
-                inputComponent.ClearCurrentInput();
-                break;
-
-            default:
-                // Handle regular character input
-                if (!char.IsControl(keyInfo.KeyChar))
-                {
-                    var existingText = inputComponent.GetCurrentInput();
-                    inputComponent.SetCurrentInput(existingText + keyInfo.KeyChar);
-                }
-                break;
+            // Key combinations are handled by registered bindings
+            // This event is for any unhandled combinations
+            _logger.LogDebug("Unhandled key combination: {Key} + {Modifiers}", e.Key, e.Modifiers);
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling key combination: {Key} + {Modifiers}", e.Key, e.Modifiers);
+        }
+    }
 
-        // Trigger a render update after input changes
-        await ForceRenderAsync();
+    /// <summary>
+    /// Handles character typed events.
+    /// </summary>
+    private async void OnCharacterTyped(object? sender, CharacterTypedEventArgs e)
+    {
+        if (e.Handled) return;
+
+        try
+        {
+            var inputComponent = GetInputComponent();
+            if (inputComponent != null)
+            {
+                inputComponent.InsertCharacter(e.Character);
+                await ForceRenderAsync();
+                e.Handled = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling character typed: {Character}", e.Character);
+        }
+    }
+
+    /// <summary>
+    /// Gets the current InputComponent from registered components.
+    /// </summary>
+    private InputComponent? GetInputComponent()
+    {
+        return _registeredComponents
+            .OfType<AppComponent>()
+            .FirstOrDefault()?
+            .GetInputComponent();
     }
 
     /// <summary>
@@ -402,6 +486,9 @@ public sealed class TuiApp : IAsyncDisposable, IDisposable
 
         try
         {
+            // Stop keyboard handler
+            await _keyboardHandler.StopAsync();
+
             // Unmount all components
             foreach (var component in _registeredComponents)
             {
@@ -449,6 +536,9 @@ public sealed class TuiApp : IAsyncDisposable, IDisposable
 
         // Cancel any running operations
         _cancellationTokenSource.Cancel();
+
+        // Dispose keyboard handler
+        _keyboardHandler?.Dispose();
 
         // Dispose components
         foreach (var component in _registeredComponents)
@@ -515,7 +605,8 @@ public sealed record ApplicationStatistics(
     double LastRenderTimeMs = 0.0,
     IReadOnlyDictionary<string, object>? StateManagerStats = null,
     TerminalSize? TerminalSize = null,
-    RenderStatistics? LastRenderStatistics = null)
+    RenderStatistics? LastRenderStatistics = null,
+    KeyboardStatistics? KeyboardStatistics = null)
 {
     /// <summary>
     /// Gets whether the application is performing well.
