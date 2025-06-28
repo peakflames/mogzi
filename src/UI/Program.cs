@@ -14,6 +14,12 @@ public static class Program
     /// <returns>Exit code.</returns>
     public static async Task<int> Main(string[] args)
     {
+        // Check if we should run the Live widget prototype
+        if (args.Length > 0 && args[0] == "--prototype")
+        {
+            return await UI.Prototypes.PrototypeRunner.RunPrototypeAsync(args);
+        }
+
         // Setup dependency injection
         var services = new ServiceCollection();
         ConfigureServices(services, args);

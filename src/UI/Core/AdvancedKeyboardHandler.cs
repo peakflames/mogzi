@@ -223,6 +223,8 @@ public sealed class AdvancedKeyboardHandler : IDisposable
         {
             _logger?.LogError(ex, "Error processing key input: {Key}", keyInfo.Key);
         }
+
+        await Task.CompletedTask;
     }
 
     /// <summary>

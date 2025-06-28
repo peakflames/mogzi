@@ -441,6 +441,8 @@ public sealed class TuiApp : IAsyncDisposable, IDisposable
         {
             _logger.LogError(ex, "Error handling key combination: {Key} + {Modifiers}", e.Key, e.Modifiers);
         }
+
+        await Task.CompletedTask;
     }
 
     /// <summary>
