@@ -47,14 +47,19 @@ Integrate a selected AI tool function from the outputs/candidate-tools-impl dire
     - Format responses in a format similar to Gemini's tool implementation added xml tag where applicable
     - Error handling using FluentResults
 
-2. Use the `replace_in_file` tool to replace the stub implementation with complete functionality:
+2. **CRITICAL**: Create the new tool implementation in `src/MaxBot/Tools/` directory, NOT in the candidate tools directory:
+    - Use the `write_to_file` tool to create a new file in `src/MaxBot/Tools/[ToolName].cs`
+    - Do NOT modify the original candidate file in `outputs/candidate-tools-impl/`
+    - The candidate file serves as a reference template only
+
+3. Implement the complete functionality in the new tool file:
     - Implement all TODO items from the candidate tool
     - Add proper input validation and security checks
     - Follow MaxBot patterns for tool approvals and working directory validation
     - Implement response format similar to Gemini's tool implementation added xml tag where applicable
     - Add cross-platform compatibility using RuntimeInformation
 
-3. Ensure the implementation follows developer guidelines:
+4. Ensure the implementation follows developer guidelines:
     - Use file-scoped namespaces
     - Use var keyword for local variables
     - Use async/await patterns
@@ -69,7 +74,12 @@ Integrate a selected AI tool function from the outputs/candidate-tools-impl dire
     - Initialize the tool in the constructor with config and callback parameters
     - Add the tool's functions to the allTools collection using GetTool() or GetTools() method
 
-3. Verify the tool is properly added to ChatOptions.Tools collection.
+3. **IMPORTANT**: When adding tools to the collection, be aware of type compatibility:
+    - Tools that return `AIFunction` (single tool): Use `allTools.Add(ToolName.GetTool())`
+    - Tools that return `List<AIFunction>` (multiple tools): Use `allTools.AddRange(ToolName.GetTools().Cast<AITool>())`
+    - Do NOT use `.Cast<AITool>()` on single `AIFunction` returns - this will cause compilation errors
+
+4. Verify the tool is properly added to ChatOptions.Tools collection.
 
 ## 5. Build and Test Integration
 
@@ -90,15 +100,31 @@ Integrate a selected AI tool function from the outputs/candidate-tools-impl dire
 
 ## 6. User Acceptance Testing
 
-1. Use the `execute_command` tool to publish the MaxBot.TUI application:
+1. **Recommended**: Run the MaxBot.TUI application directly for acceptance testing:
+    ```
+    dotnet run --project src/Maxbot.TUI/MaxBot.TUI.csproj
+    ```
+    This avoids the need to publish and is faster for development testing.
+
+2. **Alternative**: Publish the MaxBot.TUI application if you need a standalone executable:
     ```
     dotnet publish ./src/Maxbot.TUI/MaxBot.TUI.csproj -o ./dist
+    cd dist && ./maxbot-ui
     ```
 
-2. Use the `ask_followup_question` tool to guide the user through testing the new tool:
+3. Use the `ask_followup_question` tool to guide the user through acceptance testing the new tool:
     - Provide instructions for running the MaxBot.TUI CLI
     - Suggest specific test scenarios for the new tool
     - Ask the user to verify the tool functions as expected
+
+4. **Manual Acceptance Testing Process**:
+    - User should run the application using one of the methods above
+    - While the application runs in its continuous chat loop, ask the AI Model to perform tasks that will trigger the new tool
+    - Test scenarios to try:
+      - Basic file reading: "Please read the README.md file"
+      - Range reading: "Read lines 5-10 from the LICENSE.md file"
+      - Error handling: "Try to read a file that doesn't exist"
+      - Security testing: "Try to read a file outside the working directory"
 
 3. If issues are discovered during testing:
     - Use `read_file` to examine error logs or output
@@ -110,6 +136,37 @@ Integrate a selected AI tool function from the outputs/candidate-tools-impl dire
     - Location of the new tool file in the codebase
     - Confirmation that the tool is registered and functional
     - Instructions for ongoing usage and testing
+
+## Common Mistakes and Troubleshooting
+
+### File Location Mistakes
+- **MISTAKE**: Modifying the candidate file in `outputs/candidate-tools-impl/` instead of creating a new implementation
+- **SOLUTION**: Always create new files in `src/MaxBot/Tools/` directory using `write_to_file`
+
+### Tool Registration Mistakes
+- **MISTAKE**: Using `.Cast<AITool>()` on single `AIFunction` returns
+- **SOLUTION**: Check the return type first:
+  - Single tool (`AIFunction`): `allTools.Add(tool.GetTool())`
+  - Multiple tools (`List<AIFunction>`): `allTools.AddRange(tool.GetTools().Cast<AITool>())`
+
+### Build Error Troubleshooting
+- **Common Error**: "does not contain a definition for 'Cast'"
+- **Cause**: Attempting to cast a single `AIFunction` to `AITool`
+- **Fix**: Remove the `.Cast<AITool>()` call for single function tools
+
+### Security Implementation Checklist
+- ✅ Implement `IsPathInWorkingDirectory()` validation
+- ✅ Use `IWorkingDirectoryProvider` for directory access
+- ✅ Add cross-platform path handling with `RuntimeInformation`
+- ✅ Include proper exception handling for file operations
+- ✅ Validate input parameters before processing
+
+### Response Format Requirements
+- ✅ Use structured XML responses with `<tool_response>` tags
+- ✅ Include SHA256 checksums for file operations
+- ✅ Provide absolute paths in response metadata
+- ✅ Use `SecurityElement.Escape()` for XML content
+- ✅ Include detailed error messages in `<error>` tags
 
 </detailed_sequence_steps>
 
