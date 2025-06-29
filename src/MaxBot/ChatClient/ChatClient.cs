@@ -34,8 +34,6 @@ public partial class ChatClient
     private string _mode { get; init; }
 
     public ChatOptions ChatOptions { get; init; }
-
-    private FileSystemTools FileSystemTools { get; init; }
     private SystemTools SystemTools { get; init; }
     private DiffPatchTools DiffPatchTools { get; init; }
 
@@ -64,12 +62,10 @@ public partial class ChatClient
 
         // SystemPrompt is now a computed property, so we don't need to set it here
 
-        FileSystemTools = new FileSystemTools(config, llmResponseDetailsCallback);
         SystemTools = new SystemTools(config, llmResponseDetailsCallback);
         DiffPatchTools = new DiffPatchTools(config, llmResponseDetailsCallback);
 
         var allTools = new List<AITool>();
-        allTools.AddRange(FileSystemTools.GetTools().Cast<AITool>());
         allTools.AddRange(SystemTools.GetTools().Cast<AITool>());
         allTools.AddRange(DiffPatchTools.GetTools().Cast<AITool>());
 
