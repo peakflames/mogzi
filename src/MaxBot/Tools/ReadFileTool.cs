@@ -1,0 +1,241 @@
+using Microsoft.Extensions.AI;
+using MaxBot.Domain;
+using System.ComponentModel;
+using System.Security;
+using System.Security.Cryptography;
+using System.Text;
+using System.Runtime.InteropServices;
+
+namespace MaxBot.Tools;
+
+public class ReadFileTool
+{
+    private readonly MaxbotConfiguration _config;
+    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = null;
+    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
+
+    public ReadFileTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
+    {
+        _config = config;
+        _llmResponseDetailsCallback = llmResponseDetailsCallback;
+        _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
+    }
+
+    public AIFunction GetTool()
+    {
+        return AIFunctionFactory.Create(
+            ReadFile,
+            new AIFunctionFactoryOptions
+            {
+                Name = "read_file",
+                Description = "Reads and returns the content of a specified file from the local filesystem. Handles text files and can read specific line ranges for large files."
+            });
+    }
+
+    public async Task<string> ReadFile(
+        [Description("The path to the file to read (relative to the current working directory). Use forward slashes for cross-platform compatibility.")] string path,
+        [Description("The 0-based line number to start reading from (optional). Requires 'limit' to be set.")] int? offset = null,
+        [Description("The maximum number of lines to read (optional). Use with 'offset' to paginate through large files.")] int? limit = null)
+    {
+        _llmResponseDetailsCallback?.Invoke($"Reading file '{path}'{(offset.HasValue ? $" from line {offset}" : "")}{(limit.HasValue ? $" (limit: {limit} lines)" : "")}.", ConsoleColor.DarkGray);
+
+        try
+        {
+            // Validate parameters
+            var validationError = ValidateParameters(path, offset, limit);
+            if (validationError != null)
+            {
+                return CreateErrorResponse("read_file", validationError);
+            }
+
+            var workingDirectory = _workingDirectoryProvider.GetCurrentDirectory();
+            var absolutePath = Path.GetFullPath(Path.Combine(workingDirectory, path));
+
+            // Security validation - ensure path is within working directory
+            if (!IsPathInWorkingDirectory(absolutePath, workingDirectory))
+            {
+                return CreateErrorResponse("read_file", "Path is outside working directory");
+            }
+
+            // Check if file exists
+            if (!File.Exists(absolutePath))
+            {
+                return CreateErrorResponse("read_file", $"File not found: {path}");
+            }
+
+            // Check if file is readable
+            var fileInfo = new FileInfo(absolutePath);
+            if (!HasReadPermission(fileInfo))
+            {
+                return CreateErrorResponse("read_file", $"File is not readable: {path}");
+            }
+
+            // Read file content
+            string content;
+            if (offset.HasValue || limit.HasValue)
+            {
+                content = await ReadFileWithRange(absolutePath, offset, limit);
+            }
+            else
+            {
+                content = await File.ReadAllTextAsync(absolutePath);
+            }
+
+            var checksum = ComputeSha256(content);
+            var lineCount = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None).Length;
+
+            return CreateSuccessResponse(path, absolutePath, content, checksum, lineCount, offset, limit);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return CreateErrorResponse("read_file", $"Access denied reading file: {path}");
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return CreateErrorResponse("read_file", $"Directory not found for file: {path}");
+        }
+        catch (FileNotFoundException)
+        {
+            return CreateErrorResponse("read_file", $"File not found: {path}");
+        }
+        catch (IOException ex)
+        {
+            return CreateErrorResponse("read_file", $"I/O error reading file: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            if (_config.Debug)
+            {
+                _llmResponseDetailsCallback?.Invoke($"ERROR: Error reading file. {ex.Message}", ConsoleColor.Red);
+            }
+            return CreateErrorResponse("read_file", $"Unexpected error: {ex.Message}");
+        }
+    }
+
+    private string? ValidateParameters(string path, int? offset, int? limit)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return "Path cannot be empty or whitespace";
+        }
+
+        // Normalize path separators for cross-platform compatibility
+        path = path.Replace('\\', '/');
+
+        // Check for invalid characters
+        var invalidChars = Path.GetInvalidPathChars();
+        if (path.Any(c => invalidChars.Contains(c)))
+        {
+            return "Path contains invalid characters";
+        }
+
+        // Validate offset and limit parameters
+        if (offset.HasValue && offset.Value < 0)
+        {
+            return "Offset must be a non-negative number";
+        }
+
+        if (limit.HasValue && limit.Value <= 0)
+        {
+            return "Limit must be a positive number";
+        }
+
+        if (offset.HasValue && !limit.HasValue)
+        {
+            return "When offset is specified, limit must also be specified";
+        }
+
+        return null;
+    }
+
+    private bool IsPathInWorkingDirectory(string absolutePath, string workingDirectory)
+    {
+        try
+        {
+            var normalizedAbsolutePath = Path.GetFullPath(absolutePath);
+            var normalizedWorkingDirectory = Path.GetFullPath(workingDirectory);
+
+            // Ensure both paths end with directory separator for proper comparison
+            if (!normalizedWorkingDirectory.EndsWith(Path.DirectorySeparatorChar.ToString()) &&
+                !normalizedWorkingDirectory.EndsWith(Path.AltDirectorySeparatorChar.ToString()))
+            {
+                normalizedWorkingDirectory += Path.DirectorySeparatorChar;
+            }
+
+            return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory, 
+                RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool HasReadPermission(FileInfo fileInfo)
+    {
+        try
+        {
+            // Try to open the file for reading to check permissions
+            using var stream = fileInfo.OpenRead();
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task<string> ReadFileWithRange(string absolutePath, int? offset, int? limit)
+    {
+        var lines = await File.ReadAllLinesAsync(absolutePath);
+        
+        var startLine = offset ?? 0;
+        var endLine = limit.HasValue ? Math.Min(startLine + limit.Value, lines.Length) : lines.Length;
+        
+        if (startLine >= lines.Length)
+        {
+            return string.Empty;
+        }
+
+        var selectedLines = lines.Skip(startLine).Take(endLine - startLine);
+        return string.Join(Environment.NewLine, selectedLines);
+    }
+
+    private string CreateSuccessResponse(string relativePath, string absolutePath, string content, string checksum, int lineCount, int? offset, int? limit)
+    {
+        var notes = new StringBuilder();
+        notes.AppendLine($"Successfully read file {relativePath}");
+        notes.AppendLine($"Total lines: {lineCount}");
+        notes.AppendLine($"Content size: {content.Length} characters");
+        
+        if (offset.HasValue || limit.HasValue)
+        {
+            notes.AppendLine($"Range: lines {offset ?? 0} to {(offset ?? 0) + (limit ?? lineCount) - 1}");
+        }
+
+        return $@"<tool_response tool_name=""read_file"">
+    <notes>{SecurityElement.Escape(notes.ToString().Trim())}</notes>
+    <result status=""SUCCESS"" absolute_path=""{SecurityElement.Escape(absolutePath)}"" sha256_checksum=""{checksum}"" />
+    <content_on_disk>{SecurityElement.Escape(content)}</content_on_disk>
+</tool_response>";
+    }
+
+    private string CreateErrorResponse(string toolName, string error)
+    {
+        return $@"<tool_response tool_name=""{toolName}"">
+    <result status=""FAILED"" />
+    <error>{SecurityElement.Escape(error)}</error>
+</tool_response>";
+    }
+
+    private static string ComputeSha256(string content)
+    {
+        using var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(content));
+        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+    }
+}
