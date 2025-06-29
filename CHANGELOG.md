@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.4] - TBD
 
-- TBD
+- **TUI Phase 2: Command execution and status feedback**
+  - CommandCard for command visualization with real-time status
+  - ApiStatusIndicator for API call progress tracking
+  - RichContentCard for rich text content rendering (renamed from MarkdownCard)
+  - Enhanced event system with command and API status events
+  - Comprehensive test coverage with 18 passing tests
 
 ## [1.3.3] - 2025-06-23
 

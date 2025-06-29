@@ -346,3 +346,6 @@ These patterns ensure consistency, security, and proper LLM integration across a
 ## Microsoft.Extensions.AI Developer Docs
 
 - docs\llmctx\usage-of-microsoft-extensions-ai.md
+
+
+ULTRA IMPORTANT: ALWAYS use GlobalUsings and Black Black Testing over unit testings
