@@ -170,7 +170,7 @@
 
 ## 4. Related Documentation
 
-- **[Tool Specifications](tools/_index.md)** - Detailed specifications for individual MaxBot tools
+- **[Tool Specifications](05_ai_tool_op_requirements.md)** - Detailed specifications for individual MaxBot tools
 - **[Traceability Matrix](trace_matrix.md)** - Requirements traceability and verification status mapping
 - **System Architecture** - High-level system design and component relationships
 - **User Documentation** - End-user guides and operational procedures

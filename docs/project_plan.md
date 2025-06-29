@@ -22,7 +22,7 @@
 ### Gap Analysis Summary
 - **Implementation Gap**: 7 of 24 requirements require full implementation.
 - **Verification Gap**: 7 of 24 requirements require test development and execution.
-- **Documentation Gap**: The [Traceability Matrix](specs/trace_matrix.md) has been updated to reflect Phase 1 completion.
+- **Documentation Gap**: The [Traceability Matrix](trace_matrix.md) has been updated to reflect Phase 1 completion.
 
 ### Tool Implementation Status
 
