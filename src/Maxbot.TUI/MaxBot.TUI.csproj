@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../MaxBot/MaxBot.csproj" />
+    <ProjectReference Include="..\MaxBot.PawPrints\MaxBot.PawPrints.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,4 @@
-namespace Maxbot.TUI.State;
+namespace MaxBot.TUI.State;
 
 public class HistoryManager
 {
@@ -24,6 +24,16 @@ public class HistoryManager
 
     public void AddAssistantMessage(ChatMessage message)
     {
+        _completedMessages.Add(message);
+        NotifyStateChanged();
+    }
+
+    public void UpdateLastMessage(ChatMessage message)
+    {
+        if (_completedMessages.Any())
+        {
+            _completedMessages.RemoveAt(_completedMessages.Count - 1);
+        }
         _completedMessages.Add(message);
         NotifyStateChanged();
     }

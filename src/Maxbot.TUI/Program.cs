@@ -1,6 +1,8 @@
 
 
-namespace Maxbot.TUI;
+using MaxBot.PawPrints;
+
+namespace MaxBot.TUI;
 
 /// <summary>
 /// Entry point for the UI application.
@@ -14,6 +16,14 @@ public static class Program
     /// <returns>Exit code.</returns>
     public static async Task<int> Main(string[] args)
     {
+        // Check if terminal is ready for TUI operations
+        /*if (!ConsoleExtensions.IsTerminalReady())
+        {
+            Console.WriteLine("Error: Terminal is not suitable for TUI operations.");
+            Console.WriteLine("Please run this application in a proper terminal environment.");
+            return 1;
+        }*/
+
         // Setup dependency injection
         var services = new ServiceCollection();
         ConfigureServices(services, args);
@@ -22,11 +32,17 @@ public static class Program
 
         try
         {
-            // Create and run the simplified FlexColumn TUI application
-            using var app = new FlexColumnTuiApp(serviceProvider);
+            // Create and run the FlexColumn TUI application
+            var app = serviceProvider.GetRequiredService<FlexColumnTuiApp>();
 
             // Run the application
-            return await app.RunAsync(args);
+            await app.RunAsync(args);
+            return 0;
+        }
+        catch (OperationCanceledException)
+        {
+            Console.WriteLine("Application cancelled by user.");
+            return 0;
         }
         catch (Exception ex)
         {
@@ -78,5 +94,9 @@ public static class Program
         services.AddSingleton<IAppService, AppService>();
         services.AddSingleton<HistoryManager>();
         services.AddSingleton<StateManager>();
+
+        // Add TUI infrastructure components
+        services.AddSingleton<FlexColumnTuiApp>();
+        services.AddSingleton<IScrollbackTerminal, ScrollbackTerminal>();
     }
 }
