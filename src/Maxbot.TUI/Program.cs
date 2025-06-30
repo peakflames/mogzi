@@ -37,7 +37,7 @@ public static class Program
                 .WithDescription("Start interactive chat mode (default)")
                 .WithExample(new[] { "chat" })
                 .WithExample(new[] { "chat", "--verbosity", "normal" })
-                .WithExample(new[] { "chat", "--profile", "development" });
+                .WithExample(new[] { "chat", "--profile", "Sonnet" });
                 
             config.AddCommand<NonInteractiveCommand>("run")
                 .WithDescription("Run a single prompt non-interactively")
