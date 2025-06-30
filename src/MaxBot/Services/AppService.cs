@@ -1,22 +1,16 @@
-using FluentResults;
-using MaxBot.Domain;
-using Microsoft.Extensions.AI;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace MaxBot.Services;
 
 /// <summary>
 /// Implementation of the core application service
 /// </summary>
-public class AppService : IAppService
+/// <remarks>
+/// Initializes a new instance of the AppService class
+/// </remarks>
+/// <param name="chatClient">The chat client</param>
+public class AppService(ChatClient chatClient) : IAppService
 {
-    private readonly ChatClient _chatClient;
-    private readonly ChatHistoryService _chatHistoryService;
+    private readonly ChatClient _chatClient = chatClient;
+    private readonly ChatHistoryService _chatHistoryService = new ChatHistoryService();
 
     /// <summary>
     /// Gets the system prompt
@@ -27,21 +21,11 @@ public class AppService : IAppService
     /// Gets the chat options
     /// </summary>
     public ChatOptions ChatOptions => _chatClient.ChatOptions;
-    
+
     /// <summary>
     /// Gets the chat client
     /// </summary>
     public ChatClient ChatClient => _chatClient;
-
-    /// <summary>
-    /// Initializes a new instance of the AppService class
-    /// </summary>
-    /// <param name="chatClient">The chat client</param>
-    public AppService(ChatClient chatClient)
-    {
-        _chatClient = chatClient;
-        _chatHistoryService = new ChatHistoryService();
-    }
 
     /// <summary>
     /// Creates a new chat session
@@ -60,7 +44,7 @@ public class AppService : IAppService
     /// <returns>The loaded chat history, or null if the session doesn't exist</returns>
     public async Task<List<ChatMessage>?> LoadChatSessionAsync(string sessionId, string systemPrompt)
     {
-        string sessionPath = Path.Combine(_chatHistoryService.GetBasePath(), sessionId);
+        var sessionPath = Path.Combine(_chatHistoryService.GetBasePath(), sessionId);
         if (!Directory.Exists(sessionPath))
         {
             return null;
@@ -111,7 +95,7 @@ public class AppService : IAppService
             // Update the system message with the current system prompt
             chatHistory[0] = new ChatMessage(ChatRole.System, _chatClient.SystemPrompt);
         }
-        
+
         return _chatClient.ChatClientMEAI.GetStreamingResponseAsync(chatHistory, _chatClient.ChatOptions, cancellationToken);
     }
 

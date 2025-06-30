@@ -11,11 +11,12 @@ internal class LineOffsetStrategy : IFuzzyMatchingStrategy
 
     public PatchResult TryApply(string content, UnifiedDiff patch)
     {
-        var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None).ToList();
-
         for (var offset = -10; offset <= 10; offset++)
         {
-            if (offset == 0) continue;
+            if (offset == 0)
+            {
+                continue;
+            }
 
             var adjustedPatch = AdjustHunkLineNumbers(patch, offset);
             var result = new PatchApplicator().ApplyPatch(content, adjustedPatch);

@@ -1,5 +1,3 @@
-using Microsoft.Extensions.AI;
-using MaxBot.Domain;
 using System.ComponentModel;
 using System.Security;
 using System.Security.Cryptography;
@@ -8,18 +6,11 @@ using System.Runtime.InteropServices;
 
 namespace MaxBot.Tools;
 
-public class ReadTextFileTool
+public class ReadTextFileTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
 {
-    private readonly MaxbotConfiguration _config;
-    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = null;
-    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
-
-    public ReadTextFileTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
-    {
-        _config = config;
-        _llmResponseDetailsCallback = llmResponseDetailsCallback;
-        _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
-    }
+    private readonly MaxbotConfiguration _config = config;
+    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = llmResponseDetailsCallback;
+    private readonly IWorkingDirectoryProvider _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
 
     public AIFunction GetTool()
     {
@@ -71,18 +62,11 @@ public class ReadTextFileTool
             }
 
             // Read text file content
-            string content;
-            if (offset.HasValue || limit.HasValue)
-            {
-                content = await ReadFileWithRange(absolutePath, offset, limit);
-            }
-            else
-            {
-                content = await File.ReadAllTextAsync(absolutePath);
-            }
-
+            var content = offset.HasValue || limit.HasValue
+                ? await ReadFileWithRange(absolutePath, offset, limit)
+                : await File.ReadAllTextAsync(absolutePath);
             var checksum = ComputeSha256(content);
-            var lineCount = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None).Length;
+            var lineCount = content.Split(["\r\n", "\r", "\n"], StringSplitOptions.None).Length;
 
             return CreateSuccessResponse(absolute_path, absolutePath, content, checksum, lineCount, offset, limit);
         }
@@ -159,7 +143,7 @@ public class ReadTextFileTool
             var normalizedWorkingDirectory = Path.GetFullPath(workingDirectory);
 
             // Check if the path is exactly the working directory
-            if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory, 
+            if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory,
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
             {
                 return true;
@@ -172,7 +156,7 @@ public class ReadTextFileTool
                 normalizedWorkingDirectory += Path.DirectorySeparatorChar;
             }
 
-            return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory, 
+            return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory,
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
         }
         catch
@@ -202,10 +186,10 @@ public class ReadTextFileTool
     private async Task<string> ReadFileWithRange(string absolutePath, int? offset, int? limit)
     {
         var lines = await File.ReadAllLinesAsync(absolutePath);
-        
+
         var startLine = offset ?? 0;
         var endLine = limit.HasValue ? Math.Min(startLine + limit.Value, lines.Length) : lines.Length;
-        
+
         if (startLine >= lines.Length)
         {
             return string.Empty;
@@ -218,13 +202,13 @@ public class ReadTextFileTool
     private string CreateSuccessResponse(string relativePath, string absolutePath, string content, string checksum, int lineCount, int? offset, int? limit)
     {
         var notes = new StringBuilder();
-        notes.AppendLine($"Successfully read text file {relativePath}");
-        notes.AppendLine($"Total lines: {lineCount}");
-        notes.AppendLine($"Content size: {content.Length} characters");
-        
+        _ = notes.AppendLine($"Successfully read text file {relativePath}");
+        _ = notes.AppendLine($"Total lines: {lineCount}");
+        _ = notes.AppendLine($"Content size: {content.Length} characters");
+
         if (offset.HasValue || limit.HasValue)
         {
-            notes.AppendLine($"Range: lines {offset ?? 0} to {(offset ?? 0) + (limit ?? lineCount) - 1}");
+            _ = notes.AppendLine($"Range: lines {offset ?? 0} to {(offset ?? 0) + (limit ?? lineCount) - 1}");
         }
 
         return $@"<tool_response tool_name=""read_text_file"">

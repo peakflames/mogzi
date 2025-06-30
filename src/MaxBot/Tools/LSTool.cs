@@ -1,5 +1,3 @@
-using Microsoft.Extensions.AI;
-using MaxBot.Domain;
 using System.ComponentModel;
 using System.Security;
 using System.Security.Cryptography;
@@ -9,18 +7,11 @@ using System.Text.RegularExpressions;
 
 namespace MaxBot.Tools;
 
-public class LSTool
+public class LSTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
 {
-    private readonly MaxbotConfiguration _config;
-    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = null;
-    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
-
-    public LSTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
-    {
-        _config = config;
-        _llmResponseDetailsCallback = llmResponseDetailsCallback;
-        _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
-    }
+    private readonly MaxbotConfiguration _config = config;
+    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = llmResponseDetailsCallback;
+    private readonly IWorkingDirectoryProvider _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
 
     public AIFunction GetTool()
     {
@@ -72,7 +63,7 @@ public class LSTool
 
             // Parse ignore patterns from comma-separated string
             var ignorePatterns = ParseIgnorePatterns(ignore);
-            
+
             // Get directory entries
             var entries = GetDirectoryEntries(absolutePath, ignorePatterns, respect_git_ignore ?? true, workingDirectory);
 
@@ -84,8 +75,16 @@ public class LSTool
             // Sort entries (directories first, then alphabetically)
             entries.Sort((a, b) =>
             {
-                if (a.IsDirectory && !b.IsDirectory) return -1;
-                if (!a.IsDirectory && b.IsDirectory) return 1;
+                if (a.IsDirectory && !b.IsDirectory)
+                {
+                    return -1;
+                }
+
+                if (!a.IsDirectory && b.IsDirectory)
+                {
+                    return 1;
+                }
+
                 return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
             });
 
@@ -121,10 +120,9 @@ public class LSTool
             return null;
         }
 
-        return ignore.Split(',', StringSplitOptions.RemoveEmptyEntries)
+        return [.. ignore.Split(',', StringSplitOptions.RemoveEmptyEntries)
                     .Select(pattern => pattern.Trim())
-                    .Where(pattern => !string.IsNullOrWhiteSpace(pattern))
-                    .ToArray();
+                    .Where(pattern => !string.IsNullOrWhiteSpace(pattern))];
     }
 
     private string? ValidateParameters(string path)
@@ -158,7 +156,7 @@ public class LSTool
             var normalizedWorkingDirectory = Path.GetFullPath(workingDirectory);
 
             // Check if the path is exactly the working directory
-            if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory, 
+            if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory,
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
             {
                 return true;
@@ -171,7 +169,7 @@ public class LSTool
                 normalizedWorkingDirectory += Path.DirectorySeparatorChar;
             }
 
-            return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory, 
+            return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory,
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
         }
         catch
@@ -185,7 +183,7 @@ public class LSTool
         try
         {
             // Try to enumerate the directory to check permissions
-            Directory.EnumerateFileSystemEntries(directoryPath).Take(1).ToList();
+            _ = Directory.EnumerateFileSystemEntries(directoryPath).Take(1).ToList();
             return true;
         }
         catch (UnauthorizedAccessException)
@@ -210,7 +208,7 @@ public class LSTool
             foreach (var entry in fileSystemEntries)
             {
                 var entryName = Path.GetFileName(entry);
-                
+
                 // Skip if matches ignore patterns
                 if (ShouldIgnore(entryName, ignorePatterns))
                 {
@@ -299,7 +297,7 @@ public class LSTool
             var regexPattern = "^" + Regex.Escape(pattern)
                 .Replace(@"\*", ".*")
                 .Replace(@"\?", ".") + "$";
-            
+
             return Regex.IsMatch(fileName, regexPattern, RegexOptions.IgnoreCase);
         }
         catch
@@ -337,7 +335,7 @@ public class LSTool
             {
                 if (pattern.StartsWith("*."))
                 {
-                    var extension = pattern.Substring(1);
+                    var extension = pattern[1..];
                     if (fileName.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
                     {
                         return true;
@@ -356,15 +354,17 @@ public class LSTool
             {
                 // This is a simplified check - a full implementation would properly parse .gitignore syntax
                 var gitIgnoreContent = File.ReadAllText(gitIgnorePath);
-                var lines = gitIgnoreContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                
+                var lines = gitIgnoreContent.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+
                 foreach (var line in lines)
                 {
                     var trimmedLine = line.Trim();
                     if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.StartsWith("#"))
+                    {
                         continue;
+                    }
 
-                    if (MatchesGlobPattern(fileName, trimmedLine) || 
+                    if (MatchesGlobPattern(fileName, trimmedLine) ||
                         MatchesGlobPattern(relativePath.Replace('\\', '/'), trimmedLine))
                     {
                         return true;
@@ -383,22 +383,22 @@ public class LSTool
     private string CreateSuccessResponse(string relativePath, string absolutePath, List<DirectoryEntry> entries, string checksum)
     {
         var notes = new StringBuilder();
-        notes.AppendLine($"Successfully listed directory {relativePath}");
-        notes.AppendLine($"Found {entries.Count} entries");
-        
+        _ = notes.AppendLine($"Successfully listed directory {relativePath}");
+        _ = notes.AppendLine($"Found {entries.Count} entries");
+
         var directoryCount = entries.Count(e => e.IsDirectory);
         var fileCount = entries.Count - directoryCount;
-        notes.AppendLine($"Directories: {directoryCount}, Files: {fileCount}");
+        _ = notes.AppendLine($"Directories: {directoryCount}, Files: {fileCount}");
 
         // Create directory listing content
         var content = new StringBuilder();
-        content.AppendLine($"Directory listing for {relativePath}:");
-        
+        _ = content.AppendLine($"Directory listing for {relativePath}:");
+
         foreach (var entry in entries)
         {
             var prefix = entry.IsDirectory ? "[DIR] " : "";
             var sizeInfo = entry.IsDirectory ? "" : $" ({FormatFileSize(entry.Size)})";
-            content.AppendLine($"{prefix}{entry.Name}{sizeInfo}");
+            _ = content.AppendLine($"{prefix}{entry.Name}{sizeInfo}");
         }
 
         return $@"<tool_response tool_name=""list_directory"">
@@ -444,18 +444,21 @@ public class LSTool
 
     private static string FormatFileSize(long bytes)
     {
-        if (bytes == 0) return "0 B";
-        
-        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        if (bytes == 0)
+        {
+            return "0 B";
+        }
+
+        string[] sizes = ["B", "KB", "MB", "GB", "TB"];
         var order = 0;
         var size = (double)bytes;
-        
+
         while (size >= 1024 && order < sizes.Length - 1)
         {
             order++;
             size /= 1024;
         }
-        
+
         return $"{size:0.##} {sizes[order]}";
     }
 

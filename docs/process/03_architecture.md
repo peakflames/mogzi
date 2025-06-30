@@ -81,25 +81,80 @@ sequenceDiagram
 
 **Dependency Injection Pattern:**
 ```csharp
-// Service registration in Program.cs
-services.AddSingleton<IAnsiConsole>(AnsiConsole.Console);
-services.AddSingleton<IWorkingDirectoryProvider, DefaultWorkingDirectoryProvider>();
-services.AddSingleton<IAppService, AppService>();
-services.AddSingleton<HistoryManager>();
-services.AddSingleton<StateManager>();
-services.AddSingleton<FlexColumnTuiApp>();
-services.AddSingleton<IScrollbackTerminal, ScrollbackTerminal>();
+// Service registration in ServiceConfiguration.cs
+public static void ConfigureServices(IServiceCollection services)
+{
+    // Add logging - file logging only to keep UI clean
+    services.AddLogging(builder =>
+    {
+        builder.AddProvider(new FileLoggerProvider(LogLevel.Warning));
+        builder.SetMinimumLevel(LogLevel.Warning);
+    });
+
+    // Add Spectre.Console
+    services.AddSingleton<IAnsiConsole>(AnsiConsole.Console);
+
+    // Add core services
+    services.AddSingleton<IWorkingDirectoryProvider, DefaultWorkingDirectoryProvider>();
+    
+    // Create ChatClient with error handling
+    var chatClientResult = ChatClient.Create(
+        "maxbot.config.json",
+        null, // Use default profile
+        null,
+        "chat",
+        (details, color) => {},
+        false
+    );
+
+    if (chatClientResult.IsSuccess)
+    {
+        services.AddSingleton(chatClientResult.Value);
+    }
+    else
+    {
+        throw new InvalidOperationException($"Failed to create ChatClient: {string.Join(", ", chatClientResult.Errors.Select(e => e.Message))}");
+    }
+
+    services.AddSingleton<IAppService, AppService>();
+    services.AddSingleton<HistoryManager>();
+    services.AddSingleton<StateManager>();
+
+    // Add TUI infrastructure components
+    services.AddSingleton<FlexColumnTuiApp>();
+    services.AddSingleton<IScrollbackTerminal, ScrollbackTerminal>();
+}
 ```
 
 **Service Lifecycle Management:**
-- **Singleton Services**: Core application services, UI components, and state managers
-- **Factory Pattern**: ChatClient creation with Result<T> pattern for error handling
+- **Singleton Services**: All core services use singleton lifetime for shared state
+- **Factory Pattern**: ChatClient.Create() factory method with comprehensive error handling
 - **Interface Segregation**: Clean abstractions (IAppService, IScrollbackTerminal, IWorkingDirectoryProvider)
+- **Service Validation**: ChatClient creation validates configuration before service registration
+- **Error Propagation**: Service registration failures throw InvalidOperationException with detailed error messages
+
+**Service Dependencies:**
+```csharp
+// IAppService implementation with constructor injection
+public class AppService : IAppService
+{
+    private readonly ChatClient _chatClient;
+    private readonly ChatHistoryService _chatHistoryService;
+
+    public AppService(ChatClient chatClient)
+    {
+        _chatClient = chatClient;
+        _chatHistoryService = new ChatHistoryService(); // Direct instantiation
+    }
+}
+```
 
 **Error Handling Architecture:**
-- **FluentResults Pattern**: Used throughout for functional error handling
+- **FluentResults Pattern**: Used throughout for functional error handling without exceptions
 - **Result<T> Returns**: ChatClient.Create() returns Result<ChatClient> for safe initialization
 - **Exception Boundaries**: Try-catch blocks in tool implementations with structured error responses
+- **Service Validation**: Configuration validation during service registration prevents runtime failures
+- **Graceful Degradation**: Services handle missing dependencies and configuration errors appropriately
 
 ## Domain Layer Architecture
 
@@ -130,30 +185,107 @@ MaxbotConfigurationRoot -> MaxbotConfiguration -> ApiProvider[], Profile[]
 **Tool Registration Pattern:**
 ```csharp
 // Individual tool classes with AIFunction factory pattern
-public AIFunction GetTool() => AIFunctionFactory.Create(MethodName, options);
+public class ReadTextFileTool
+{
+    private readonly MaxbotConfiguration _config;
+    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback;
+    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
 
-// Centralized tool registration in ChatClient
+    public AIFunction GetTool()
+    {
+        return AIFunctionFactory.Create(
+            ReadTextFile,
+            new AIFunctionFactoryOptions
+            {
+                Name = "read_text_file",
+                Description = "Reads and returns the content of a text file from the local filesystem..."
+            });
+    }
+}
+
+// Centralized tool registration in ChatClient constructor
 var allTools = new List<AITool>();
 allTools.AddRange(SystemTools.GetTools().Cast<AITool>());
-allTools.Add(ReadFileTool.GetTool());
-// ... other tools
+allTools.AddRange(DiffPatchTools.GetTools().Cast<AITool>());
+allTools.Add(ReadTextFileTool.GetTool());
+allTools.Add(ReadImageFileTool.GetTool());
+allTools.Add(WriteFileTool.GetTool());
+allTools.Add(EditTool.GetTool());
+allTools.Add(LSTool.GetTool());
+allTools.Add(GrepTool.GetTool());
+allTools.Add(ShellTool.GetTool());
+
+ChatOptions = new ChatOptions { Tools = allTools };
 ```
 
 **Tool Security Model:**
-- **Tool Approval System**: readonly/all modes for security control
-- **Working Directory Enforcement**: All file operations restricted to working directory
-- **Parameter Validation**: Comprehensive input validation in each tool
-- **Structured Responses**: XML-formatted tool responses with status and error handling
+```csharp
+// Working directory validation in every file tool
+private bool IsPathInWorkingDirectory(string absolutePath, string workingDirectory)
+{
+    try
+    {
+        var normalizedAbsolutePath = Path.GetFullPath(absolutePath);
+        var normalizedWorkingDirectory = Path.GetFullPath(workingDirectory);
+
+        // Platform-specific case sensitivity handling
+        return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory, 
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? 
+                StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    }
+    catch { return false; }
+}
+
+// Tool approval checking
+if (requiresApproval && _config.ToolApprovals.Equals("readonly", StringComparison.OrdinalIgnoreCase))
+{
+    return "Execution of this command requires approval. Please run with --tool-approvals all...";
+}
+```
+
+**Tool Implementation Pattern:**
+- **Constructor Injection**: MaxbotConfiguration, callback delegates, and IWorkingDirectoryProvider
+- **Parameter Validation**: ValidateParameters() method with comprehensive input checking
+- **Security Boundaries**: IsPathInWorkingDirectory() and HasReadPermission() validation
+- **Structured Responses**: XML-formatted responses with status, error handling, and metadata
+- **Error Handling**: Try-catch blocks with specific exception types and debug information
+- **Callback Integration**: Optional llmResponseDetailsCallback for UI feedback
+
+**Tool Response Format:**
+```xml
+<tool_response tool_name="read_text_file">
+    <notes>Successfully read text file path/to/file.txt
+Total lines: 150
+Content size: 4567 characters</notes>
+    <result status="SUCCESS" absolute_path="/full/path/to/file.txt" sha256_checksum="abc123..." />
+    <content_on_disk>actual file content here</content_on_disk>
+</tool_response>
+
+<!-- Error response format -->
+<tool_response tool_name="read_text_file">
+    <result status="FAILED" />
+    <error>File not found: /path/to/missing/file.txt</error>
+</tool_response>
+```
 
 **Available Tools:**
-- **SystemTools**: execute_command, attempt_completion
-- **DiffPatchTools**: Unified diff generation and patch application
-- **ReadFileTool**: Secure file reading with range support
-- **WriteFileTool**: File creation and modification
-- **EditTool**: In-place file editing
-- **LSTool**: Directory listing and file system exploration
-- **GrepTool**: Text search across files
-- **ShellTool**: Command execution with platform detection
+- **SystemTools**: execute_command (with platform detection), attempt_completion (task completion)
+- **DiffPatchTools**: generate_code_patch, apply_code_patch, preview_patch_application
+- **ReadTextFileTool**: Secure file reading with range support (offset/limit parameters)
+- **ReadImageFileTool**: Image file reading with base64 encoding
+- **WriteFileTool**: File creation and modification with backup and validation
+- **EditTool**: In-place file editing with search/replace operations
+- **LSTool**: Directory listing and file system exploration with filtering
+- **GrepTool**: Text search across files with regex support
+- **ShellTool**: Command execution with cross-platform shell detection
+
+**Tool Security Architecture:**
+- **Path Validation**: All file operations validate paths are within working directory
+- **Permission Checking**: File access permissions validated before operations
+- **Input Sanitization**: Parameter validation prevents injection attacks
+- **Error Message Security**: Generic error messages prevent information disclosure
+- **Approval System**: Two-tier approval system (readonly/all) for operation control
+- **Debug Mode**: Conditional detailed error information for development
 
 ## Integration Architecture
 

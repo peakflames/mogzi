@@ -15,18 +15,18 @@ on:
   workflow_dispatch:
     inputs:
       create_prerelease:
-        description: 'Create pre-release from develop branch'
+        description: 'Create developmental release from develop branch'
         required: true
         default: false
         type: boolean
       prerelease_name:
-        description: 'Pre-release name (e.g., "Beta 1", "RC 2")'
+        description: 'Developmental release name (e.g., "Beta 1", "RC 2")'
         required: false
         type: string
         default: 'Development Build'
 
 env:
-  PROJECT_PATH: src/Cli/Cli.csproj
+  PROJECT_PATH: src/MaxBot.TUI/MaxBot.TUI.csproj
   PROJECT_NAME: max
   DOTNET_VERSION: '9.0.x'
 

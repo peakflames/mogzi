@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MaxBot", "MaxBot\MaxBot.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MaxBot.Tests", "..\test\MaxBot.Tests\MaxBot.Tests.csproj", "{35D308FE-EA85-43B8-AC45-8CD35C0EB3B0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MaxBot.TUI", "Maxbot.TUI\MaxBot.TUI.csproj", "{8F92D787-16B4-4677-BB4A-EF458D15A4B6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MaxBot.TUI", "MaxBot.TUI\MaxBot.TUI.csproj", "{8F92D787-16B4-4677-BB4A-EF458D15A4B6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MaxBot.PawPrints", "MaxBot.PawPrints\MaxBot.PawPrints.csproj", "{70A264AE-F705-45C6-8379-5348CF9F07FC}"
 EndProject

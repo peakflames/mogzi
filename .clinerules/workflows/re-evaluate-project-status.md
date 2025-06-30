@@ -11,13 +11,12 @@ This workflow systematically re-evaluates the actual implementation progress of 
 
 1. Examine the project structure and identify key documentation artifacts.
    - Use the `list_files` tool to understand the current project structure.
-   - Identify documentation directories (typically `docs/`, `specs/`, etc.).
-   - Locate key files: project plans, traceability matrices, system requirements, changelogs, and README files.
+   - Identify documentation directories (typically `docs/`)
+   - Locate key files: project plans, traceability matrices, system requirements, references, and README files.
 
 2. Read existing project documentation to understand documented status.
    - Use the `read_file` tool to examine `docs/project_plan.md` for current implementation status claims.
-   - Use the `read_file` tool to examine `docs/specs/trace_matrix.md` for requirement verification status.
-   - Use the `read_file` tool to examine `docs/specs/_index.md` or similar system requirements documents.
+   - Use the `read_file` tool to examine `docs/process/trace_matrix.md` for requirement verification status.
    - Note documented completion percentages, phase status, and verification claims.
 
 3. Identify potential sources of actual implementation evidence.
@@ -44,17 +43,12 @@ This workflow systematically re-evaluates the actual implementation progress of 
    - Use the `search_files` tool to find test cases related to specific requirements.
    - Identify comprehensive test suites, integration tests, and acceptance tests.
 
-3. Cross-reference CHANGELOG and README with actual code.
-   - Verify that claimed features in CHANGELOG.md actually exist in the codebase.
-   - Check that README.md feature descriptions match implemented functionality.
-   - Identify any implemented features not documented in user-facing documentation.
-
-4. Examine acceptance tests and integration evidence.
+3. Examine acceptance tests and integration evidence.
    - Use the `read_file` tool to examine acceptance test scripts (e.g., `test/local_exe_acceptance.ps1`).
    - Look for end-to-end testing that demonstrates working functionality.
    - Identify any automated verification of system integration.
 
-5. Document findings systematically.
+4. Document findings systematically.
    - Create a mapping between requirements and actual implementation evidence.
    - Note discrepancies between documented status and actual implementation.
    - Identify requirements that are implemented but not documented as such.

@@ -1,5 +1,3 @@
-using Microsoft.Extensions.AI;
-using MaxBot.Domain;
 using System.ComponentModel;
 using System.Security;
 using System.Security.Cryptography;
@@ -7,18 +5,11 @@ using System.Runtime.InteropServices;
 
 namespace MaxBot.Tools;
 
-public class ReadImageFileTool
+public class ReadImageFileTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
 {
-    private readonly MaxbotConfiguration _config;
-    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = null;
-    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
-
-    public ReadImageFileTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
-    {
-        _config = config;
-        _llmResponseDetailsCallback = llmResponseDetailsCallback;
-        _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
-    }
+    private readonly MaxbotConfiguration _config = config;
+    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = llmResponseDetailsCallback;
+    private readonly IWorkingDirectoryProvider _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
 
     public AIFunction GetTool()
     {
@@ -141,7 +132,7 @@ public class ReadImageFileTool
             var normalizedWorkingDirectory = Path.GetFullPath(workingDirectory);
 
             // Check if the path is exactly the working directory
-            if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory, 
+            if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory,
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
             {
                 return true;
@@ -154,7 +145,7 @@ public class ReadImageFileTool
                 normalizedWorkingDirectory += Path.DirectorySeparatorChar;
             }
 
-            return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory, 
+            return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory,
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
         }
         catch

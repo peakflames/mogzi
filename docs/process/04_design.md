@@ -21,11 +21,44 @@ public interface IAppService
 ```
 
 **AppService Implementation Design:**
-- **Constructor Injection**: Takes ChatClient and creates ChatHistoryService
-- **System Prompt Management**: Dynamic system prompt generation via ChatClient
-- **Session Management**: Delegates to ChatHistoryService for persistence
+```csharp
+public class AppService : IAppService
+{
+    private readonly ChatClient _chatClient;
+    private readonly ChatHistoryService _chatHistoryService;
+
+    public AppService(ChatClient chatClient)
+    {
+        _chatClient = chatClient;
+        _chatHistoryService = new ChatHistoryService();
+    }
+
+    public IAsyncEnumerable<ChatResponseUpdate> ProcessChatMessageAsync(List<ChatMessage> chatHistory, CancellationToken cancellationToken)
+    {
+        // Ensure the first message is the system prompt with the current value
+        if (chatHistory.Count > 0 && chatHistory[0].Role == ChatRole.System)
+        {
+            // Update the system message with the current system prompt
+            chatHistory[0] = new ChatMessage(ChatRole.System, _chatClient.SystemPrompt);
+        }
+        
+        return _chatClient.ChatClientMEAI.GetStreamingResponseAsync(chatHistory, _chatClient.ChatOptions, cancellationToken);
+    }
+
+    public int CalculateTokenMetrics(List<ChatMessage> chatHistory)
+    {
+        return MaxBot.Utils.ApiMetricUtils.GetSimplisticTokenCount(chatHistory);
+    }
+}
+```
+
+**Implementation Patterns:**
+- **Constructor Injection**: Takes ChatClient and creates ChatHistoryService directly
+- **System Prompt Management**: Dynamic system prompt injection into chat history
+- **Session Management**: Delegates to ChatHistoryService for persistence operations
 - **Streaming Processing**: Returns IAsyncEnumerable<ChatResponseUpdate> for real-time updates
-- **Token Metrics**: Uses ApiMetricUtils for token counting
+- **Token Metrics**: Uses ApiMetricUtils for simplistic token counting
+- **System Message Updates**: Ensures current system prompt is always used in conversations
 
 **ChatHistoryService Design:**
 - **File-Based Persistence**: JSON serialization of chat sessions
@@ -124,35 +157,214 @@ chatClient = new OpenAIClient(
 ```
 
 **System Prompt Generation:**
+```csharp
+// System prompt is now a computed property that regenerates each time it's accessed
+public string SystemPrompt => Promptinator.GetSystemPrompt(
+    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+    OperatingSystem.ToString(),
+    DefaultShell,
+    Username,
+    Hostname,
+    Directory.GetCurrentDirectory(),
+    Config,
+    _mode);
+```
+
+**ChatClient Constructor Design:**
+```csharp
+private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
+{
+    ChatClientMEAI = chatClient;
+    Config = config;
+    ActiveProfile = activeProfile;
+    ActiveApiProvider = activeApiProvider;
+    _mode = mode;
+
+    // Platform detection and environment setup
+    OperatingSystem = Environment.OSVersion.Platform;
+    DefaultShell = OperatingSystem switch
+    {
+        PlatformID.Win32NT => "powershell",
+        PlatformID.MacOSX => "zsh",
+        _ => "bash"
+    };
+
+    Username = Environment.UserName;
+    Hostname = System.Net.Dns.GetHostName();
+
+    // Tool instantiation with dependency injection
+    SystemTools = new SystemTools(config, llmResponseDetailsCallback);
+    DiffPatchTools = new DiffPatchTools(config, llmResponseDetailsCallback);
+    ReadTextFileTool = new ReadTextFileTool(config, llmResponseDetailsCallback);
+    ReadImageFileTool = new ReadImageFileTool(config, llmResponseDetailsCallback);
+    WriteFileTool = new WriteFileTool(config, llmResponseDetailsCallback);
+    EditTool = new EditTool(config, llmResponseDetailsCallback);
+    LSTool = new LSTool(config, llmResponseDetailsCallback);
+    GrepTool = new GrepTool(config, llmResponseDetailsCallback);
+    ShellTool = new ShellTool(config, llmResponseDetailsCallback);
+
+    // Tool registration and ChatOptions configuration
+    var allTools = new List<AITool>();
+    allTools.AddRange(SystemTools.GetTools().Cast<AITool>());
+    allTools.AddRange(DiffPatchTools.GetTools().Cast<AITool>());
+    allTools.Add(ReadTextFileTool.GetTool());
+    allTools.Add(ReadImageFileTool.GetTool());
+    allTools.Add(WriteFileTool.GetTool());
+    allTools.Add(EditTool.GetTool());
+    allTools.Add(LSTool.GetTool());
+    allTools.Add(GrepTool.GetTool());
+    allTools.Add(ShellTool.GetTool());
+
+    ChatOptions = new ChatOptions { Tools = allTools };
+}
+```
+
+**Design Patterns:**
 - **Dynamic Generation**: Computed property that regenerates on each access
 - **Environment Context**: Includes current time, OS, shell, username, hostname, working directory
 - **Configuration Integration**: Includes configuration and mode information
 - **Promptinator Integration**: Uses centralized prompt generation system
+- **Tool Composition**: All tools instantiated with shared configuration and callback
+- **Centralized Registration**: All tools registered in ChatOptions for AI function calling
 
 ## Tool Implementation Design
 
 **Base Tool Pattern:**
 ```csharp
-public class ReadFileTool
+public class ReadTextFileTool
 {
     private readonly MaxbotConfiguration _config;
     private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
 
-    public AIFunction GetTool() => AIFunctionFactory.Create(ReadFile, options);
+    public ReadTextFileTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
+    {
+        _config = config;
+        _llmResponseDetailsCallback = llmResponseDetailsCallback;
+        _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
+    }
+
+    public AIFunction GetTool()
+    {
+        return AIFunctionFactory.Create(
+            ReadTextFile,
+            new AIFunctionFactoryOptions
+            {
+                Name = "read_text_file",
+                Description = "Reads and returns the content of a text file from the local filesystem. Supports reading specific line ranges for large files."
+            });
+    }
     
-    public async Task<string> ReadFile(
-        [Description("...")] string absolute_path,
-        [Description("...")] int? offset = null,
-        [Description("...")] int? limit = null)
+    public async Task<string> ReadTextFile(
+        [Description("The absolute path to the text file to read. Relative paths are not supported.")] string absolute_path,
+        [Description("Optional: The 0-based line number to start reading from. Requires 'limit' to be set.")] int? offset = null,
+        [Description("Optional: Maximum number of lines to read. Use with 'offset' to paginate through large files.")] int? limit = null)
+    {
+        // Implementation with comprehensive validation and error handling
+    }
 }
 ```
 
 **Tool Security Implementation:**
-- **Path Validation**: IsPathInWorkingDirectory() method for security boundaries
-- **Parameter Validation**: ValidateParameters() method for input sanitization
-- **Permission Checking**: HasReadPermission() for file access validation
-- **Error Responses**: Structured XML error responses with security context
+```csharp
+// Comprehensive parameter validation
+private string? ValidateParameters(string path, int? offset, int? limit)
+{
+    if (string.IsNullOrWhiteSpace(path))
+        return "Path cannot be empty or whitespace";
+
+    // Check if path is absolute
+    if (!Path.IsPathRooted(path))
+        return $"File path must be absolute, but was relative: {path}. You must provide an absolute path.";
+
+    // Check for invalid characters
+    var invalidChars = Path.GetInvalidPathChars();
+    if (path.Any(c => invalidChars.Contains(c)))
+        return "Path contains invalid characters";
+
+    // Validate offset and limit parameters
+    if (offset.HasValue && offset.Value < 0)
+        return "Offset must be a non-negative number";
+
+    if (limit.HasValue && limit.Value <= 0)
+        return "Limit must be a positive number";
+
+    if (offset.HasValue && !limit.HasValue)
+        return "When offset is specified, limit must also be specified";
+
+    return null;
+}
+
+// Working directory security enforcement
+private bool IsPathInWorkingDirectory(string absolutePath, string workingDirectory)
+{
+    try
+    {
+        var normalizedAbsolutePath = Path.GetFullPath(absolutePath);
+        var normalizedWorkingDirectory = Path.GetFullPath(workingDirectory);
+
+        // Check if the path is exactly the working directory
+        if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory, 
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        // Ensure working directory ends with directory separator for subdirectory comparison
+        if (!normalizedWorkingDirectory.EndsWith(Path.DirectorySeparatorChar.ToString()) &&
+            !normalizedWorkingDirectory.EndsWith(Path.AltDirectorySeparatorChar.ToString()))
+        {
+            normalizedWorkingDirectory += Path.DirectorySeparatorChar;
+        }
+
+        return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory, 
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    }
+    catch
+    {
+        return false;
+    }
+}
+
+// File permission validation
+private bool HasReadPermission(FileInfo fileInfo)
+{
+    try
+    {
+        // Try to open the file for reading to check permissions
+        using var stream = fileInfo.OpenRead();
+        return true;
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return false;
+    }
+    catch
+    {
+        return false;
+    }
+}
+
+// Tool approval checking with configuration integration
+if (requiresApproval && _config.ToolApprovals.Equals("readonly", StringComparison.OrdinalIgnoreCase))
+{
+    var msg = "Execution of this command requires approval. Please run with --tool-approvals all or use the /tool-approval slash command to grant permission.";
+    if (_config.Debug)
+    {
+        _llmResponseDetailsCallback?.Invoke(msg, ConsoleColor.DarkGray);
+    }
+    return msg;
+}
+```
+
+**Security Design Principles:**
+- **Path Validation**: All file operations validate paths are within working directory
+- **Parameter Validation**: Comprehensive input validation prevents injection attacks
+- **Permission Checking**: File access permissions validated before operations
+- **Error Message Security**: Generic error messages prevent information disclosure
+- **Approval System**: Two-tier approval system (readonly/all) for operation control
+- **Debug Mode**: Conditional detailed error information for development
+- **Cross-Platform Security**: Platform-specific case sensitivity handling
 
 **Tool Response Format:**
 ```xml

@@ -8,11 +8,11 @@ namespace MaxBot.Services.Diff;
 internal class FuzzyPatchApplicator
 {
     private readonly PatchApplicator _basicApplicator = new();
-    private readonly List<IFuzzyMatchingStrategy> _strategies = new()
-    {
+    private readonly List<IFuzzyMatchingStrategy> _strategies =
+    [
         new WhitespaceNormalizationStrategy(),
         new LineOffsetStrategy(),
-    };
+    ];
 
     public PatchResult TryApplyWithFuzzyMatching(string content, UnifiedDiff patch)
     {

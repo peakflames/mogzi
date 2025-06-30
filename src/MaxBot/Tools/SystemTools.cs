@@ -2,21 +2,13 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
-using MaxBot.Domain;
-using Microsoft.Extensions.AI;
 
 namespace MaxBot.Tools;
 
-public class SystemTools
+public class SystemTools(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
 {
-    private readonly MaxbotConfiguration _config;
-    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = null;
-
-    public SystemTools(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
-    {
-        _config = config;
-        _llmResponseDetailsCallback = llmResponseDetailsCallback;
-    }
+    private readonly MaxbotConfiguration _config = config;
+    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = llmResponseDetailsCallback;
 
     public List<AIFunction> GetTools()
     {
@@ -54,7 +46,7 @@ public class SystemTools
         }
 
         _llmResponseDetailsCallback?.Invoke($"Executing command: {command}", ConsoleColor.DarkGray);
-        
+
 
         string fileName;
         string arguments;
@@ -88,7 +80,7 @@ public class SystemTools
             }
         };
 
-        process.Start();
+        _ = process.Start();
         var output = await process.StandardOutput.ReadToEndAsync();
         var error = await process.StandardError.ReadToEndAsync();
         await process.WaitForExitAsync();
@@ -102,7 +94,7 @@ public class SystemTools
         {
             result += $"Error:\n{error}";
         }
-        
+
         var finalResult = string.IsNullOrEmpty(result) ? "Command executed successfully with no output." : result;
         if (_config.Debug)
         {
@@ -117,10 +109,10 @@ public class SystemTools
         _llmResponseDetailsCallback?.Invoke($"\n\n🎉 TASK COMPLETED 🎉\n\n{result}\n\n", ConsoleColor.Green);
 
         var response = new StringBuilder();
-        response.AppendLine("<tool_response tool_name=\"attempt_completion\" >");
-        response.AppendLine($"    <result status=\"SUCCESS\"  />");
-        response.AppendLine($"    <notes>Your message is now displayed to the User. DO NOT REPEAT as the User will see duplication of text</notes>");
-        response.AppendLine("</tool_response>");
+        _ = response.AppendLine("<tool_response tool_name=\"attempt_completion\" >");
+        _ = response.AppendLine($"    <result status=\"SUCCESS\"  />");
+        _ = response.AppendLine($"    <notes>Your message is now displayed to the User. DO NOT REPEAT as the User will see duplication of text</notes>");
+        _ = response.AppendLine("</tool_response>");
         return response.ToString();
     }
 }

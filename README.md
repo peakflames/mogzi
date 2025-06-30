@@ -1,39 +1,39 @@
-# Multi-purpose Autonomous eXpert (Max) 😻
+# MAX
 
-An Autonomous AI agent right in your terminal or CI/CD pipeline and open to multiple API providers.
+[![MAX CI](https://github.com/peakflames/maxbot/actions/workflows/build.yml/badge.svg)](https://github.com/peakflames/maxbot/actions/workflows/build.yml)
+
+![MAX Screenshot](./docs/assets/max_screenshot.png)
+
+A Multi-model Autonomous eXpert (Max) right in your terminal or CI/CD pipeline and open to multiple API providers and AI models
 
 Perform engineering research, full coding tasks, and multiple workflow with either natural language or shell scripts 👈
 
 ## Features ✨
 
-- Support both `oneshot` and `Interactive Chat` interface with streaming AI responses
-- Currently supports OpenAI-compatible APIs like Requesty.ai, Openrouter.ai, Supernova, Cerebras, Deepseek, more providers coming soon.
-   - Excellent LLM results with Google Gemini, OpenAI GPT, and Anthropic models.
-
+- Supports both `interactive chat` and `non-tnteractive` interface with streaming AI responses
+- Currently supports the OpenAI-compatible APIs enabling numerous provides like Requesty.ai, Openrouter.ai, Supernova, Cerebras, Deepseek, and more.
+   - For now, the `best` results are with models having excellect tool and instruction following like those form Anthropic, Google, and OpenAI models.
 - Profile-based configuration for easy switching between providers and models
 - Cross-platform support (Windows, MacOS, Linux)
 - Control file system access via tool appproval (`readonly` or `all`)
-- Chat history persistence to continue conversations across sessions
-- Session management to list and load previous chat sessions
-- MCP-Support coming soon
+- Chat history persistence to continue conversations across sessions (coming soon)
+- Session management to list and load previous chat sessions (coming soon)
+- MCP-Support (coming soon)
 
 ### Examples 💡
 
 ```bash
-# oneshot request
-max "Which is the tallest pokemon?"
+# Start a rich interactive chat
+max
 
-# start full chat using your 'Sonnet' profile
-max --chat -p Sonnet
+# Switch to using your profile named 'sonnet'
+max --profile sonnet
 
-# translate a README.md to portugese
-cat README.md | max "Translate to portugese"
+# Translate a README.md to portugese in one shot
+cat README.md | max run -p "Translate to portugese"
 
-# list all saved chat sessions
-max --list-sessions
-
-# load a previous chat session
-max --chat -l 20250621_230940
+# (coming soon) Run a no non-interactive nworkflow prompt
+max run -p workflows/generate-release-notes.md
 ```
 
 ## Prerequisites ✅
@@ -122,51 +122,7 @@ Before running the application, ensure you have:
    }
    ```
 
-## Usage 📄
-
-```bash
-max [prompt] [options]
-```
-
-To start a chat session, use the `--chat` option:
-
-```bash
-max --chat [options]
-```
-
-### Chat Interface 💬
-
-- Start typing your messages after the prompt
-- AI responses will stream in real-time with green text
-- Exit the chat by typing `exit`, `quit`, or pressing Enter with no message
-- Chat history is automatically saved to disk for future sessions
-- Access previous chat sessions using the `--list-sessions` and `--chat -l <session_id>` commands
-
-#### Slash Commands
-
-While in chat mode, you can use the following slash commands for quick actions:
-
-- `/status` - Display current configuration (similar to `--status` flag)
-- `/tool-approval [readonly|all]` - Change tool approval setting on the fly
-- `/sessions` - List available chat sessions (similar to `--list-sessions` flag)
-- `/load-session [ID]` - Load a specific chat session without exiting chat mode
-- `/help` - Display available slash commands
-
-Example:
-```
-% /tool-approval all
-Tool approval setting updated to 'all'
-
-% /help
-Available Slash Commands:
-  /status                 - Display current configuration
-  /tool-approval [mode]   - Set tool approval mode (readonly|all)
-  /sessions               - List available chat sessions
-  /load-session [ID]      - Load a specific chat session
-  /help                   - Display this help message
-```
-
-### Configuration ⚙️
+### Configuration Schema ⚙️
 
 The application uses a JSON configuration file with the following structure:
 
@@ -193,7 +149,7 @@ To set the default tool approval mode, add the `tool_approvals` property to your
 ```json
 {
     "maxbotConfig": {
-        "tool_approvals": "readonly",
+        "tool_approvals": "all",
         "apiProviders": [ ... ],
         "profiles": [ ... ]
     }
@@ -213,77 +169,52 @@ max "Create a new file" -ta all
 *   `readonly`: (Default) MaxBot will ask for your permission before performing any write operations (e.g., creating or modifying files).
 *   `all`: MaxBot is pre-approved to perform any file system operation without asking for confirmation.
 
-### Session Management 💾
 
-MaxBot automatically saves your chat history to disk, allowing you to continue conversations across multiple sessions. Each chat session is stored in a timestamped directory in your user profile.
-
-**Listing Sessions:**
-
-To view all your saved chat sessions:
-
-```bash
-max --list-sessions
-```
-
-This command displays a card-like view of each session, including:
-- Session ID (timestamp)
-- Creation date
-- Last updated date
-- Number of messages
-- First user prompt (to help identify the conversation)
-
-Example output:
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Session: 20250621_230940                                    │
-├─────────────────────────────────────────────────────────────┤
-│ Created:      2025-06-21 23:09:40                           │
-│ Last Updated: 2025-06-21 23:15:22                           │
-│ Messages:     8 entries                                     │
-├─────────────────────────────────────────────────────────────┤
-│ First Prompt: "How can I implement a binary search tree     │
-│               in C#?"                                       │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Loading a Session:**
-
-To continue a previous conversation, use the `--chat` option with the `-l` or `--load` flag followed by the session ID:
-
-```bash
-max --chat -l 20250621_230940
-```
-
-This will:
-1. Load the entire conversation history
-2. Display the previous messages so you can see the context
-3. Allow you to continue the conversation from where you left off
-
-All chat sessions are stored in the `.maxbot/chats` directory in your user profile. Each session is a separate directory containing a `chatHistory.json` file with the conversation data.
-
-**Session Storage Location:**
-
-- Windows: `C:\Users\<username>\.maxbot\chats\`
-- macOS: `/Users/<username>/.maxbot/chats/`
-- Linux: `/home/<username>/.maxbot/chats/`
 
 ## Available Assistant Tools 🛠️
 
-MaxBot is equipped with a powerful set of tools to interact with your local system. Here is a summary of the currently implemented and upcoming tools:
+MaxBot is equipped with a powerful set of tools to interact with your local system. Here is a summary of the currently implemented tools:
 
 | Tool Name           | Status | Notes                                                              | Safety/Security Features                                                                                                                            |
 | ------------------- | ------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `list_files`        | ✅ | Lists files and directories, supports recursive listing.           | Read-only operation. Constrained to the working directory.                                                                                          |
-| `read_file`         | ✅ | Reads the content of a specified file. Supports PDF and DOCX.      | Read-only operation. Constrained to the working directory.                                                                                          |
-| `write_file`        | ✅ | Creates a new file or overwrites an existing one.                  | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic writes with backups and checksums.<br>- Respects read-only file attributes. |
+| `list_directory`    | ✅ | Lists files and directories in a specified path. Supports glob patterns and .gitignore filtering. | Read-only operation. Constrained to the working directory. Respects .gitignore patterns by default.                                                |
+| `read_text_file`    | ✅ | Reads the content of text files with optional line range support for large files. | Read-only operation. Constrained to the working directory. Supports pagination for large files.                                                    |
+| `read_image_file`   | ✅ | Reads and analyzes image files (PNG, JPEG, GIF, BMP, WebP).       | Read-only operation. Constrained to the working directory. Returns base64-encoded image data for AI analysis.                                      |
+| `read_pdf_file`     | ✅ | Extracts text content from PDF files.                             | Read-only operation. Constrained to the working directory. Extracts readable text from PDF documents.                                              |
+| `write_file`        | ✅ | Creates a new file or overwrites an existing one with content.     | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic writes with verification.<br>- Respects read-only file attributes. |
+| `replace`           | ✅ | Replaces specific text within files with precise context matching. | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic operations with backups.<br>- Requires exact text matching for safety. |
 | `apply_code_patch`  | ✅ | Applies Git-style unified diff patches for precise code changes.   | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses fuzzy matching for robust patch application.                |
 | `generate_code_patch` | ✅ | Creates unified diff patches showing changes between content.       | Read-only operation. Generates patches without modifying files.                                                                                     |
 | `preview_patch_application` | ✅ | Previews what changes a patch would make without applying them.     | Read-only operation. Safe preview of potential changes.                                                                                             |
-| `execute_command`   | ✅ | Executes shell commands.                                           | - Requires `--tool-approvals all` by default.<br>- Cross-platform aware (uses `cmd`, `zsh`, `bash` appropriately).                                     |
-| `search_files`      | ✅ | Regex-based search across files for enhanced code analysis.        | Read-only operation. Constrained to the working directory. Supports pattern matching across file contents.                                          |
+| `execute_command`   | ✅ | Executes shell commands with cross-platform support.              | - Requires `--tool-approvals all` by default.<br>- Cross-platform aware (uses `cmd`, `zsh`, `bash` appropriately).<br>- Non-interactive commands only. |
+| `search_file_content` | ✅ | Regex-based search across file contents with glob filtering.       | Read-only operation. Constrained to the working directory. Supports pattern matching and file filtering.                                           |
 | `attempt_completion` | ✅ | Signals task completion and presents results to the user.          | Read-only operation. Provides structured completion feedback and optional demonstration commands.                                                    |
-| `list_code_definition_names` | Planned | Lists code definitions (classes, functions, methods) in source files. | Read-only operation. Constrained to the working directory. Provides code structure analysis.                                                        |
-| `mcp_tools`         | Planned | Model Context Protocol support for external integrations.          | Configurable approval requirements. Enables integration with external services and APIs.                                                            |
+
+### Tool Categories
+
+**File System Operations (Read-Only)**
+- `list_directory` - Browse directory contents
+- `read_text_file` - Read text files with pagination support
+- `read_image_file` - Read and analyze image files
+- `read_pdf_file` - Extract text from PDF documents
+
+**File System Operations (Write - Requires `--tool-approvals all`)**
+- `write_file` - Create or overwrite files
+- `replace` - Make targeted text replacements in files
+- `apply_code_patch` - Apply unified diff patches
+
+**Code Analysis & Search**
+- `search_file_content` - Search file contents with regex patterns
+- `generate_code_patch` - Create diff patches
+- `preview_patch_application` - Preview patch changes
+
+**System Operations**
+- `execute_command` - Run shell commands (requires approval)
+- `attempt_completion` - Signal task completion
+
+### Upcoming Tools
+- `list_code_definition_names` - Extract code structure and definitions
+- `mcp_tools` - Model Context Protocol support for external integrations
 
 ## Contributing 🤝
 
@@ -297,6 +228,9 @@ This work is licensed under the Creative Commons Attribution-NonCommercial 4.0 I
 To view a copy of this license, visit http://creativecommons.org/licenses/by-nc/4.0/ or send a letter
 to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
 
-## Who is Max?
+## Acknowledgements
 
-He's the best damn orange cat on the planet. 🐈
+- [Cline](https://github.com/cline/cline)
+- [Gemini CLI](https://github.com/google-gemini/gemini-cli)
+- [Microsoft.Extensions.AI](https://learn.microsoft.com/en-us/dotnet/ai/microsoft-extensions-ai)
+- [Spectre.Console](https://github.com/spectreconsole/spectre.console)

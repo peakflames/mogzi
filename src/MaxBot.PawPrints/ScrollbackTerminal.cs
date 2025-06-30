@@ -1,17 +1,12 @@
 namespace MaxBot.PawPrints;
 
-public class ScrollbackTerminal : IScrollbackTerminal
+public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal
 {
-    private readonly IAnsiConsole _console;
-    private readonly object _lock = new();
+    private readonly IAnsiConsole _console = console;
+    private readonly Lock _lock = new();
     private int _dynamicContentLineCount = 0;
     private int _updatableContentLineCount = 0;
     private bool _isShutdown = false;
-
-    public ScrollbackTerminal(IAnsiConsole console)
-    {
-        _console = console;
-    }
 
     public void Initialize()
     {
@@ -22,7 +17,10 @@ public class ScrollbackTerminal : IScrollbackTerminal
 
     public void WriteStatic(IRenderable content, bool isUpdatable = false)
     {
-        if (_isShutdown) return;
+        if (_isShutdown)
+        {
+            return;
+        }
 
         lock (_lock)
         {
@@ -33,7 +31,7 @@ public class ScrollbackTerminal : IScrollbackTerminal
             var measuringConsole = AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(writer), ColorSystem = ColorSystemSupport.NoColors });
             measuringConsole.Write(content);
             var output = writer.ToString();
-            var lineCount = output.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None).Length;
+            var lineCount = output.Split(["\r\n", "\r", "\n"], StringSplitOptions.None).Length;
 
             if (isUpdatable)
             {
@@ -49,7 +47,10 @@ public class ScrollbackTerminal : IScrollbackTerminal
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            if (_isShutdown) break;
+            if (_isShutdown)
+            {
+                break;
+            }
 
             var dynamicContent = dynamicContentProvider();
             UpdateDynamic(dynamicContent);
@@ -67,7 +68,11 @@ public class ScrollbackTerminal : IScrollbackTerminal
 
     public void Shutdown()
     {
-        if (_isShutdown) return;
+        if (_isShutdown)
+        {
+            return;
+        }
+
         _isShutdown = true;
 
         lock (_lock)
@@ -79,7 +84,10 @@ public class ScrollbackTerminal : IScrollbackTerminal
 
     private void UpdateDynamic(IRenderable content)
     {
-        if (_isShutdown) return;
+        if (_isShutdown)
+        {
+            return;
+        }
 
         lock (_lock)
         {
@@ -89,7 +97,7 @@ public class ScrollbackTerminal : IScrollbackTerminal
             var measuringConsole = AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(writer), ColorSystem = ColorSystemSupport.NoColors });
             measuringConsole.Write(content);
             var output = writer.ToString();
-            _dynamicContentLineCount = output.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None).Length;
+            _dynamicContentLineCount = output.Split(["\r\n", "\r", "\n"], StringSplitOptions.None).Length;
 
             _console.Write(content);
         }
@@ -106,7 +114,10 @@ public class ScrollbackTerminal : IScrollbackTerminal
             }
             catch (Exception)
             {
-                if (!_isShutdown) throw;
+                if (!_isShutdown)
+                {
+                    throw;
+                }
             }
         }
         _dynamicContentLineCount = 0;
@@ -123,7 +134,10 @@ public class ScrollbackTerminal : IScrollbackTerminal
             }
             catch (Exception)
             {
-                if (!_isShutdown) throw;
+                if (!_isShutdown)
+                {
+                    throw;
+                }
             }
         }
         _updatableContentLineCount = 0;
