@@ -261,8 +261,10 @@ public sealed class FlexColumnTuiApp : IDisposable
             content = $"{prompt}{beforeCursor}{cursor}{afterCursor}";
         }
 
-        return new Panel(new Markup(content))
-            .NoBorder()
+        return new Panel(content)
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Grey23)
+            .Padding(1, 0, 1, 0)
             .Expand();
     }
 
