@@ -1,4 +1,8 @@
-# MAX 😻
+# MAX
+
+[![MAX CI](https://github.com/peakflames/maxbot/actions/workflows/build.yml/badge.svg)](https://github.com/peakflames/maxbot/actions/workflows/build.yml)
+
+![MAX Screenshot](./docs/assets/max_screenshot.png)
 
 A Multi-model Autonomous eXpert (Max) right in your terminal or CI/CD pipeline and open to multiple API providers and AI models
 
@@ -169,21 +173,48 @@ max "Create a new file" -ta all
 
 ## Available Assistant Tools 🛠️
 
-MaxBot is equipped with a powerful set of tools to interact with your local system. Here is a summary of the currently implemented and upcoming tools:
+MaxBot is equipped with a powerful set of tools to interact with your local system. Here is a summary of the currently implemented tools:
 
 | Tool Name           | Status | Notes                                                              | Safety/Security Features                                                                                                                            |
 | ------------------- | ------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `list_files`        | ✅ | Lists files and directories, supports recursive listing.           | Read-only operation. Constrained to the working directory.                                                                                          |
-| `read_file`         | ✅ | Reads the content of a specified file. Supports PDF and DOCX.      | Read-only operation. Constrained to the working directory.                                                                                          |
-| `write_file`        | ✅ | Creates a new file or overwrites an existing one.                  | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic writes with backups and checksums.<br>- Respects read-only file attributes. |
+| `list_directory`    | ✅ | Lists files and directories in a specified path. Supports glob patterns and .gitignore filtering. | Read-only operation. Constrained to the working directory. Respects .gitignore patterns by default.                                                |
+| `read_text_file`    | ✅ | Reads the content of text files with optional line range support for large files. | Read-only operation. Constrained to the working directory. Supports pagination for large files.                                                    |
+| `read_image_file`   | ✅ | Reads and analyzes image files (PNG, JPEG, GIF, BMP, WebP).       | Read-only operation. Constrained to the working directory. Returns base64-encoded image data for AI analysis.                                      |
+| `read_pdf_file`     | ✅ | Extracts text content from PDF files.                             | Read-only operation. Constrained to the working directory. Extracts readable text from PDF documents.                                              |
+| `write_file`        | ✅ | Creates a new file or overwrites an existing one with content.     | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic writes with verification.<br>- Respects read-only file attributes. |
+| `replace`           | ✅ | Replaces specific text within files with precise context matching. | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic operations with backups.<br>- Requires exact text matching for safety. |
 | `apply_code_patch`  | ✅ | Applies Git-style unified diff patches for precise code changes.   | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses fuzzy matching for robust patch application.                |
 | `generate_code_patch` | ✅ | Creates unified diff patches showing changes between content.       | Read-only operation. Generates patches without modifying files.                                                                                     |
 | `preview_patch_application` | ✅ | Previews what changes a patch would make without applying them.     | Read-only operation. Safe preview of potential changes.                                                                                             |
-| `execute_command`   | ✅ | Executes shell commands.                                           | - Requires `--tool-approvals all` by default.<br>- Cross-platform aware (uses `cmd`, `zsh`, `bash` appropriately).                                     |
-| `search_files`      | ✅ | Regex-based search across files for enhanced code analysis.        | Read-only operation. Constrained to the working directory. Supports pattern matching across file contents.                                          |
+| `execute_command`   | ✅ | Executes shell commands with cross-platform support.              | - Requires `--tool-approvals all` by default.<br>- Cross-platform aware (uses `cmd`, `zsh`, `bash` appropriately).<br>- Non-interactive commands only. |
+| `search_file_content` | ✅ | Regex-based search across file contents with glob filtering.       | Read-only operation. Constrained to the working directory. Supports pattern matching and file filtering.                                           |
 | `attempt_completion` | ✅ | Signals task completion and presents results to the user.          | Read-only operation. Provides structured completion feedback and optional demonstration commands.                                                    |
-| `list_code_definition_names` | Planned | Lists code definitions (classes, functions, methods) in source files. | Read-only operation. Constrained to the working directory. Provides code structure analysis.                                                        |
-| `mcp_tools`         | Planned | Model Context Protocol support for external integrations.          | Configurable approval requirements. Enables integration with external services and APIs.                                                            |
+
+### Tool Categories
+
+**File System Operations (Read-Only)**
+- `list_directory` - Browse directory contents
+- `read_text_file` - Read text files with pagination support
+- `read_image_file` - Read and analyze image files
+- `read_pdf_file` - Extract text from PDF documents
+
+**File System Operations (Write - Requires `--tool-approvals all`)**
+- `write_file` - Create or overwrite files
+- `replace` - Make targeted text replacements in files
+- `apply_code_patch` - Apply unified diff patches
+
+**Code Analysis & Search**
+- `search_file_content` - Search file contents with regex patterns
+- `generate_code_patch` - Create diff patches
+- `preview_patch_application` - Preview patch changes
+
+**System Operations**
+- `execute_command` - Run shell commands (requires approval)
+- `attempt_completion` - Signal task completion
+
+### Upcoming Tools
+- `list_code_definition_names` - Extract code structure and definitions
+- `mcp_tools` - Model Context Protocol support for external integrations
 
 ## Contributing 🤝
 
