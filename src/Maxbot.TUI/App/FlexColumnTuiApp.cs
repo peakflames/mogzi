@@ -613,6 +613,7 @@ public sealed class FlexColumnTuiApp : IDisposable
 
             var assistantMessage = new ChatMessage(ChatRole.Assistant, "");
             _historyManager.AddAssistantMessage(assistantMessage);
+            _scrollbackTerminal.WriteStatic(new Markup(""));
             _scrollbackTerminal.WriteStatic(RenderMessage(assistantMessage), isUpdatable: true);
 
             await foreach (var responseUpdate in responseStream)
@@ -640,7 +641,7 @@ public sealed class FlexColumnTuiApp : IDisposable
                     else if (!string.IsNullOrWhiteSpace(_currentToolName))
                     {
                         _toolProgress = $"Executing {_currentToolName}...";
-                        _scrollbackTerminal.WriteStatic(new Markup($":green_circle: [dim] {_toolProgress}[/]"));
+                        _scrollbackTerminal.WriteStatic(new Markup($"[green]•[/] [dim]{_toolProgress}[/]"));
                     }
                 }
             }
@@ -684,31 +685,88 @@ public sealed class FlexColumnTuiApp : IDisposable
         {
             var toolName = functionCall.Name ?? "Unknown Tool";
 
-            // Include function call arguments if available
+            // Create concise tool display with arrow format: toolName → keyValue
             if (functionCall.Arguments != null && functionCall.Arguments.Count > 0)
             {
-                var argsList = new List<string>();
-                foreach (var arg in functionCall.Arguments)
+                var keyValue = GetKeyArgumentValue(toolName, functionCall.Arguments);
+                if (!string.IsNullOrEmpty(keyValue))
                 {
-                    var valueStr = arg.Value?.ToString() ?? "null";
-                    // Truncate long values to keep the display manageable
-                    if (valueStr.Length > 50)
-                    {
-                        valueStr = valueStr.Substring(0, 47) + "...";
-                    }
-                    argsList.Add($"{arg.Key}={valueStr}");
+                    _currentToolName = $"{toolName} → {keyValue}";
                 }
-                _currentToolName = $"{toolName}({string.Join(", ", argsList)})";
+                else
+                {
+                    _currentToolName = toolName;
+                }
             }
             else
             {
-                _currentToolName = $"{toolName}()";
+                _currentToolName = toolName;
             }
         }
         else
         {
             _currentToolName = string.Empty;
         }
+    }
+
+    private string GetKeyArgumentValue(string toolName, IDictionary<string, object?> arguments)
+    {
+        // Define key arguments for common tools to show the most relevant info
+        var keyArguments = toolName.ToLowerInvariant() switch
+        {
+            "execute_command" or "shell" => new[] { "command", "cmd" },
+            "write_file" or "writefile" or "write_to_file" => new[] { "file_path", "path", "filename" },
+            "read_file" or "readfile" or "read_file_tool" => new[] { "file_path", "path", "filename" },
+            "edit_file" or "editfile" => new[] { "file_path", "path", "filename" },
+            "grep" or "search" => new[] { "pattern", "query", "search_term" },
+            "ls" or "list" or "list_files" => new[] { "path", "directory" },
+            _ => new[] { "path", "file", "command", "query", "name" } // fallback common keys
+        };
+
+        foreach (var key in keyArguments)
+        {
+            if (arguments.TryGetValue(key, out var value) && value != null)
+            {
+                var valueStr = value.ToString() ?? "";
+                
+                // For file paths, show just the filename if it's a full path
+                if (key.Contains("path") || key.Contains("file"))
+                {
+                    valueStr = Path.GetFileName(valueStr);
+                    if (string.IsNullOrEmpty(valueStr))
+                    {
+                        // If GetFileName returns empty, use the original but truncate
+                        valueStr = value.ToString() ?? "";
+                    }
+                }
+                
+                // For commands, show first part (command name) and truncate if needed
+                if (key.Contains("command") || key.Contains("cmd"))
+                {
+                    var parts = valueStr.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length > 0)
+                    {
+                        valueStr = parts[0];
+                        if (parts.Length > 1)
+                        {
+                            // Add indication there are more arguments
+                            valueStr += "...";
+                        }
+                    }
+                }
+                
+                // Final truncation to ensure single line (max 25 chars for the value part)
+                if (valueStr.Length > 25)
+                {
+                    valueStr = valueStr.Substring(0, 22) + "...";
+                }
+                
+                return valueStr;
+            }
+        }
+
+        // If no key argument found, return empty to show just tool name
+        return string.Empty;
     }
 
     private void InsertCharacter(char character)
