@@ -1,7 +1,6 @@
-
-
-using MaxBot.PawPrints;
-using MaxBot.TUI.Infrastructure;
+using Spectre.Console.Cli;
+using MaxBot.TUI.Commands;
+using System.Reflection;
 
 namespace MaxBot.TUI;
 
@@ -17,160 +16,62 @@ public static class Program
     /// <returns>Exit code.</returns>
     public static async Task<int> Main(string[] args)
     {
-        // Check if terminal is ready for TUI operations
-        /*if (!ConsoleExtensions.IsTerminalReady())
+        // If no arguments provided, default to chat mode
+        if (args.Length == 0)
         {
-            Console.WriteLine("Error: Terminal is not suitable for TUI operations.");
-            Console.WriteLine("Please run this application in a proper terminal environment.");
-            return 1;
-        }*/
-
-        // Setup dependency injection
-        var services = new ServiceCollection();
-        ConfigureServices(services, args);
+            args = new[] { "chat" };
+        }
         
-        var serviceProvider = services.BuildServiceProvider();
+        // We don't need to setup DI here since each command handles its own
+        
+        // Create the command app without complex DI integration
+        var app = new CommandApp();
+        
+        app.Configure(config =>
+        {
+            config.SetApplicationName("MaxBot");
+            config.SetApplicationVersion(GetApplicationVersion());
+            
+            // Add commands
+            config.AddCommand<ChatCommand>("chat")
+                .WithDescription("Start interactive chat mode (default)")
+                .WithExample(new[] { "chat" })
+                .WithExample(new[] { "chat", "--verbosity", "normal" })
+                .WithExample(new[] { "chat", "--profile", "development" });
+                
+            config.AddCommand<NonInteractiveCommand>("run")
+                .WithDescription("Run a single prompt non-interactively")
+                .WithExample(new[] { "run", "--prompt", "What is the capital of Michigan?" })
+                .WithExample(new[] { "run", "--prompt", "./prompts/analyze-code.md" })
+                .WithExample(new[] { "run", "--prompt", "\"Explain the code in this directory\"", "--no-history" });
+        });
 
         try
         {
-            // Create and run the FlexColumn TUI application
-            var app = serviceProvider.GetRequiredService<FlexColumnTuiApp>();
-
-            // Run the application
-            await app.RunAsync(args);
-            return 0;
-        }
-        catch (OperationCanceledException)
-        {
-            Console.WriteLine("Application cancelled by user.");
-            return 0;
+            return await app.RunAsync(args);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Fatal error: {ex.Message}");
+            AnsiConsole.WriteException(ex);
             return 1;
         }
-        finally
-        {
-            serviceProvider.Dispose();
-        }
     }
 
     /// <summary>
-    /// Configures the dependency injection container.
+    /// Gets the application version from the assembly.
     /// </summary>
-    private static void ConfigureServices(IServiceCollection services, string[] args)
+    /// <returns>The application version string.</returns>
+    private static string GetApplicationVersion()
     {
-        // Parse verbosity level from command line arguments
-        var logLevel = ParseVerbosityLevel(args);
-        
-        // Add logging - always log to file, verbosity controls level
-        services.AddLogging(builder =>
+        try
         {
-            // Always add file logging to ~/.max/logs
-            builder.AddProvider(new FileLoggerProvider(logLevel));
-            builder.SetMinimumLevel(logLevel);
-            
-            // No console logging - keep UI clean
-        });
-
-        // Add Spectre.Console
-        services.AddSingleton<IAnsiConsole>(AnsiConsole.Console);
-
-        // Add core services
-        services.AddSingleton<IWorkingDirectoryProvider, DefaultWorkingDirectoryProvider>();
-        
-        var chatClientResult = ChatClient.Create(
-            "maxbot.config.json",
-            null, // Use default profile
-            null,
-            "chat",
-            (details, color) => {},
-            false
-        );
-
-        if (chatClientResult.IsSuccess)
-        {
-            services.AddSingleton(chatClientResult.Value);
+            var assembly = Assembly.GetExecutingAssembly();
+            var version = assembly.GetName().Version;
+            return version?.ToString() ?? "UNKNOWN";
         }
-        else
+        catch
         {
-            throw new InvalidOperationException($"Failed to create ChatClient: {string.Join(", ", chatClientResult.Errors.Select(e => e.Message))}");
+            return "UNKNOWN";
         }
-
-        services.AddSingleton<IAppService, AppService>();
-        services.AddSingleton<HistoryManager>();
-        services.AddSingleton<StateManager>();
-
-        // Add TUI infrastructure components
-        services.AddSingleton<FlexColumnTuiApp>();
-        services.AddSingleton<IScrollbackTerminal, ScrollbackTerminal>();
-    }
-
-    /// <summary>
-    /// Parses the verbosity level from command line arguments.
-    /// Supports MSBuild-style verbosity levels: quiet, minimal, normal, detailed, diagnostic.
-    /// </summary>
-    /// <param name="args">Command line arguments.</param>
-    /// <returns>The corresponding LogLevel, or LogLevel.None for quiet/no logging.</returns>
-    private static LogLevel ParseVerbosityLevel(string[] args)
-    {
-        // Default to no logging (quiet operation)
-        var defaultLevel = LogLevel.None;
-
-        for (int i = 0; i < args.Length; i++)
-        {
-            var arg = args[i];
-            
-            // Check for --verbosity flag
-            if (arg.Equals("--verbosity", StringComparison.OrdinalIgnoreCase) || 
-                arg.Equals("-v", StringComparison.OrdinalIgnoreCase))
-            {
-                // Get the next argument as the verbosity level
-                if (i + 1 < args.Length)
-                {
-                    var level = args[i + 1].ToLowerInvariant();
-                    return level switch
-                    {
-                        "q" or "quiet" => LogLevel.None,
-                        "m" or "minimal" => LogLevel.Error,
-                        "n" or "normal" => LogLevel.Information,
-                        "d" or "detailed" => LogLevel.Debug,
-                        "diag" or "diagnostic" => LogLevel.Trace,
-                        _ => defaultLevel
-                    };
-                }
-            }
-            // Check for combined format like --verbosity=normal
-            else if (arg.StartsWith("--verbosity=", StringComparison.OrdinalIgnoreCase))
-            {
-                var level = arg.Substring("--verbosity=".Length).ToLowerInvariant();
-                return level switch
-                {
-                    "q" or "quiet" => LogLevel.None,
-                    "m" or "minimal" => LogLevel.Error,
-                    "n" or "normal" => LogLevel.Information,
-                    "d" or "detailed" => LogLevel.Debug,
-                    "diag" or "diagnostic" => LogLevel.Trace,
-                    _ => defaultLevel
-                };
-            }
-            // Check for short combined format like -v=normal
-            else if (arg.StartsWith("-v=", StringComparison.OrdinalIgnoreCase))
-            {
-                var level = arg.Substring("-v=".Length).ToLowerInvariant();
-                return level switch
-                {
-                    "q" or "quiet" => LogLevel.None,
-                    "m" or "minimal" => LogLevel.Error,
-                    "n" or "normal" => LogLevel.Information,
-                    "d" or "detailed" => LogLevel.Debug,
-                    "diag" or "diagnostic" => LogLevel.Trace,
-                    _ => defaultLevel
-                };
-            }
-        }
-
-        return defaultLevel;
     }
 }
