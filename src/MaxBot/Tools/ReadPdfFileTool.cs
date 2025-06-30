@@ -1,27 +1,17 @@
-using Microsoft.Extensions.AI;
-using MaxBot.Domain;
 using System.ComponentModel;
 using System.Security;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 using UglyToad.PdfPig;
-using UglyToad.PdfPig.Content;
 using System.Text;
 
 namespace MaxBot.Tools;
 
-public class ReadPdfFileTool
+public class ReadPdfFileTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
 {
-    private readonly MaxbotConfiguration _config;
-    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = null;
-    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
-
-    public ReadPdfFileTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
-    {
-        _config = config;
-        _llmResponseDetailsCallback = llmResponseDetailsCallback;
-        _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
-    }
+    private readonly MaxbotConfiguration _config = config;
+    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = llmResponseDetailsCallback;
+    private readonly IWorkingDirectoryProvider _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
 
     public AIFunction GetTool()
     {
@@ -95,22 +85,22 @@ public class ReadPdfFileTool
             {
                 using var document = PdfDocument.Open(pdfBytes);
                 pageCount = document.NumberOfPages;
-                
+
                 var textBuilder = new StringBuilder();
-                
-                for (int i = 1; i <= document.NumberOfPages; i++)
+
+                for (var i = 1; i <= document.NumberOfPages; i++)
                 {
                     var page = document.GetPage(i);
                     var pageText = page.Text;
-                    
+
                     if (!string.IsNullOrWhiteSpace(pageText))
                     {
-                        textBuilder.AppendLine($"--- Page {i} ---");
-                        textBuilder.AppendLine(pageText.Trim());
-                        textBuilder.AppendLine();
+                        _ = textBuilder.AppendLine($"--- Page {i} ---");
+                        _ = textBuilder.AppendLine(pageText.Trim());
+                        _ = textBuilder.AppendLine();
                     }
                 }
-                
+
                 extractedText = textBuilder.ToString().Trim();
             }
             catch (Exception ex)
@@ -180,7 +170,7 @@ public class ReadPdfFileTool
             var normalizedWorkingDirectory = Path.GetFullPath(workingDirectory);
 
             // Check if the path is exactly the working directory
-            if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory, 
+            if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory,
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
             {
                 return true;
@@ -193,7 +183,7 @@ public class ReadPdfFileTool
                 normalizedWorkingDirectory += Path.DirectorySeparatorChar;
             }
 
-            return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory, 
+            return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory,
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
         }
         catch
@@ -224,7 +214,9 @@ public class ReadPdfFileTool
     {
         // Check for PDF header: %PDF-
         if (fileBytes.Length < 5)
+        {
             return false;
+        }
 
         return fileBytes[0] == 0x25 && // %
                fileBytes[1] == 0x50 && // P
@@ -236,9 +228,9 @@ public class ReadPdfFileTool
     private string CreateSuccessResponse(string relativePath, string absolutePath, string fileName, int fileSize, string checksum, string extractedText, int pageCount)
     {
         var escapedText = SecurityElement.Escape(extractedText);
-        var textPreview = extractedText.Length > 200 ? extractedText.Substring(0, 200) + "..." : extractedText;
+        var textPreview = extractedText.Length > 200 ? extractedText[..200] + "..." : extractedText;
         var escapedPreview = SecurityElement.Escape(textPreview);
-        
+
         return $@"<tool_response tool_name=""read_pdf_file"">
     <notes>Successfully read PDF file {relativePath}
 File name: {fileName}

@@ -26,8 +26,8 @@ public static class ConsoleExtensions
         try
         {
             // Check if we're in a terminal that supports ANSI
-            return !Console.IsOutputRedirected && 
-                   Environment.GetEnvironmentVariable("TERM") != null ||
+            return (!Console.IsOutputRedirected &&
+                   Environment.GetEnvironmentVariable("TERM") != null) ||
                    Environment.GetEnvironmentVariable("COLORTERM") != null ||
                    Environment.OSVersion.Platform == PlatformID.Win32NT;
         }
@@ -82,7 +82,7 @@ public static class ConsoleExtensions
         {
             var (left, top) = GetCursorPosition();
             var (width, _) = GetTerminalSize();
-            
+
             Console.SetCursorPosition(0, top);
             Console.Write(new string(' ', width));
             Console.SetCursorPosition(left, top);
@@ -98,12 +98,12 @@ public static class ConsoleExtensions
     /// </summary>
     public static void WriteAt(int left, int top, string text)
     {
-        var originalPosition = GetCursorPosition();
-        
+        var (cur_left, cur_top) = GetCursorPosition();
+
         if (TrySetCursorPosition(left, top))
         {
             Console.Write(text);
-            TrySetCursorPosition(originalPosition.Left, originalPosition.Top);
+            _ = TrySetCursorPosition(cur_left, cur_top);
         }
     }
 

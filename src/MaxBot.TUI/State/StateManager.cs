@@ -5,9 +5,9 @@ namespace MaxBot.TUI.State;
 /// </summary>
 public sealed class StateManager : IDisposable
 {
-    private readonly HashSet<string> _pendingChanges = new();
-    private readonly Dictionary<string, DateTime> _lastChangeTime = new();
-    private readonly object _lock = new();
+    private readonly HashSet<string> _pendingChanges = [];
+    private readonly Dictionary<string, DateTime> _lastChangeTime = [];
+    private readonly Lock _lock = new();
     private readonly Timer _debounceTimer;
     private readonly ILogger<StateManager>? _logger;
     private bool _isDisposed = false;
@@ -49,12 +49,11 @@ public sealed class StateManager : IDisposable
     /// Initializes a new instance of StateManager.
     /// </summary>
     /// <param name="logger">Optional logger for debugging state changes.</param>
-    /// <param name="debounceMs">Debounce time in milliseconds to batch state changes.</param>
-    public StateManager(ILogger<StateManager>? logger = null, int debounceMs = 16)
+    public StateManager(ILogger<StateManager>? logger = null)
     {
         _logger = logger;
         _debounceTimer = new Timer(OnDebounceTimerElapsed, null, Timeout.Infinite, Timeout.Infinite);
-        
+
         // Subscribe to component state changes
         // Core.StateChangeNotifier.AddListener(NotifyStateChanged);
     }
@@ -65,18 +64,21 @@ public sealed class StateManager : IDisposable
     /// <param name="componentId">The ID of the component that changed.</param>
     public void NotifyStateChanged(string componentId)
     {
-        if (_isDisposed) return;
+        if (_isDisposed)
+        {
+            return;
+        }
 
         lock (_lock)
         {
-            _pendingChanges.Add(componentId);
+            _ = _pendingChanges.Add(componentId);
             _lastChangeTime[componentId] = DateTime.UtcNow;
-            
+
             _logger?.LogTrace("State changed for component {ComponentId}", componentId);
         }
 
         // Debounce the state change notifications to batch updates
-        _debounceTimer.Change(16, Timeout.Infinite);
+        _ = _debounceTimer.Change(16, Timeout.Infinite);
     }
 
     /// <summary>
@@ -84,7 +86,10 @@ public sealed class StateManager : IDisposable
     /// </summary>
     public void FlushPendingChanges()
     {
-        if (_isDisposed) return;
+        if (_isDisposed)
+        {
+            return;
+        }
 
         lock (_lock)
         {
@@ -101,13 +106,16 @@ public sealed class StateManager : IDisposable
     /// </summary>
     public void ClearPendingChanges()
     {
-        if (_isDisposed) return;
+        if (_isDisposed)
+        {
+            return;
+        }
 
         lock (_lock)
         {
             var clearedCount = _pendingChanges.Count;
             _pendingChanges.Clear();
-            
+
             if (clearedCount > 0)
             {
                 _logger?.LogTrace("Cleared {Count} processed state changes", clearedCount);
@@ -158,7 +166,10 @@ public sealed class StateManager : IDisposable
     /// </summary>
     public void Reset()
     {
-        if (_isDisposed) return;
+        if (_isDisposed)
+        {
+            return;
+        }
 
         lock (_lock)
         {
@@ -190,7 +201,10 @@ public sealed class StateManager : IDisposable
     /// </summary>
     private void OnDebounceTimerElapsed(object? state)
     {
-        if (_isDisposed) return;
+        if (_isDisposed)
+        {
+            return;
+        }
 
         try
         {
@@ -207,7 +221,10 @@ public sealed class StateManager : IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (_isDisposed) return;
+        if (_isDisposed)
+        {
+            return;
+        }
 
         _isDisposed = true;
 
@@ -228,7 +245,7 @@ public sealed class StateManager : IDisposable
         StateChangesReady = null;
 
         _logger?.LogDebug("State manager disposed");
-        
+
         GC.SuppressFinalize(this);
     }
 }

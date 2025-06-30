@@ -34,13 +34,19 @@ internal static class UnifiedDiffGenerator
         };
     }
 
-    private static string[] SplitIntoLines(string content) => content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+    private static string[] SplitIntoLines(string content)
+    {
+        return content.Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
+    }
 
     private static List<DiffHunk> GenerateHunks(string[] original, string[] modified, LcsResult lcsResult)
     {
         var hunks = new List<DiffHunk>();
         var changes = IdentifyChanges(original, modified, lcsResult);
-        if (changes.Count == 0) return hunks;
+        if (changes.Count == 0)
+        {
+            return hunks;
+        }
 
         const int context = 3;
         var changeIndex = 0;
@@ -55,7 +61,11 @@ internal static class UnifiedDiffGenerator
                 var next = changes[hunkEndIndex + 1];
                 var lastLine = last.OriginalLineNumber ?? last.ModifiedLineNumber ?? 0;
                 var nextLine = next.OriginalLineNumber ?? next.ModifiedLineNumber ?? 0;
-                if (nextLine - lastLine > context * 2) break;
+                if (nextLine - lastLine > context * 2)
+                {
+                    break;
+                }
+
                 hunkEndIndex++;
             }
 
@@ -138,7 +148,7 @@ internal static class UnifiedDiffGenerator
         {
             if (commonLines.Count > 0 && commonLines.Peek().OriginalIndex == originalIndex && commonLines.Peek().ModifiedIndex == modifiedIndex)
             {
-                commonLines.Dequeue();
+                _ = commonLines.Dequeue();
                 originalIndex++;
                 modifiedIndex++;
             }

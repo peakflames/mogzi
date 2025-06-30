@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.AI;
 
 namespace MaxBot.Domain;
 
@@ -16,25 +12,25 @@ public class SerializableChatMessage
     /// </summary>
     [JsonPropertyName("role")]
     public string Role { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// The content of the message
     /// </summary>
     [JsonPropertyName("content")]
     public string Content { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// The name of the author (optional)
     /// </summary>
     [JsonPropertyName("authorName")]
     public string? AuthorName { get; set; }
-    
+
     /// <summary>
     /// The message ID (optional)
     /// </summary>
     [JsonPropertyName("messageId")]
     public string? MessageId { get; set; }
-    
+
     /// <summary>
     /// Creates a SerializableChatMessage from a ChatMessage
     /// </summary>
@@ -46,14 +42,14 @@ public class SerializableChatMessage
             Content = message.Text
         };
     }
-    
+
     /// <summary>
     /// Converts this SerializableChatMessage to a ChatMessage
     /// </summary>
     public ChatMessage ToChatMessage()
     {
-        ChatRole role = ChatRole.User;
-        
+        var role = ChatRole.User;
+
         if (Role.Equals("system", StringComparison.OrdinalIgnoreCase))
         {
             role = ChatRole.System;
@@ -66,7 +62,7 @@ public class SerializableChatMessage
         {
             role = ChatRole.User;
         }
-        
+
         return new ChatMessage(role, Content);
     }
 }
@@ -80,14 +76,14 @@ public class ChatHistoryRoot
     /// The list of chat messages
     /// </summary>
     [JsonPropertyName("messages")]
-    public List<SerializableChatMessage> Messages { get; set; } = new();
-    
+    public List<SerializableChatMessage> Messages { get; set; } = [];
+
     /// <summary>
     /// The timestamp when the chat history was created
     /// </summary>
     [JsonPropertyName("createdAt")]
     public string CreatedAt { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// The timestamp when the chat history was last updated
     /// </summary>

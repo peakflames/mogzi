@@ -7,7 +7,7 @@ namespace MaxBot.TUI.Infrastructure;
 public sealed class AdvancedKeyboardHandler : IDisposable
 {
     private readonly ILogger<AdvancedKeyboardHandler>? _logger;
-    private readonly Dictionary<KeyBinding, Action<KeyPressEventArgs>> _keyBindings = new();
+    private readonly Dictionary<KeyBinding, Action<KeyPressEventArgs>> _keyBindings = [];
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private Task? _inputTask;
     private bool _isDisposed = false;
@@ -52,11 +52,12 @@ public sealed class AdvancedKeyboardHandler : IDisposable
     /// </summary>
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        if (_isDisposed)
-            throw new ObjectDisposedException(nameof(AdvancedKeyboardHandler));
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
 
         if (IsRunning)
+        {
             throw new InvalidOperationException("Keyboard handler is already running");
+        }
 
         _logger?.LogDebug("Starting advanced keyboard input handling");
 
@@ -82,7 +83,10 @@ public sealed class AdvancedKeyboardHandler : IDisposable
     /// </summary>
     public async Task StopAsync()
     {
-        if (!IsRunning) return;
+        if (!IsRunning)
+        {
+            return;
+        }
 
         _logger?.LogDebug("Stopping advanced keyboard input handling");
         _cancellationTokenSource.Cancel();
@@ -105,8 +109,12 @@ public sealed class AdvancedKeyboardHandler : IDisposable
     /// </summary>
     public void RegisterKeyBinding(ConsoleKey key, ConsoleModifiers modifiers, Action<KeyPressEventArgs> handler)
     {
-        if (_isDisposed) return;
-        if (handler == null) throw new ArgumentNullException(nameof(handler));
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        ArgumentNullException.ThrowIfNull(handler);
 
         var binding = new KeyBinding(key, modifiers);
         _keyBindings[binding] = handler;
@@ -127,7 +135,10 @@ public sealed class AdvancedKeyboardHandler : IDisposable
     /// </summary>
     public void UnregisterKeyBinding(ConsoleKey key, ConsoleModifiers modifiers = ConsoleModifiers.None)
     {
-        if (_isDisposed) return;
+        if (_isDisposed)
+        {
+            return;
+        }
 
         var binding = new KeyBinding(key, modifiers);
         if (_keyBindings.Remove(binding))
@@ -152,10 +163,10 @@ public sealed class AdvancedKeyboardHandler : IDisposable
                 {
                     var keyInfo = Console.ReadKey(true); // true = don't display the key
                     await ProcessKeyInputAsync(keyInfo);
-                    
+
                     // Update statistics
-                    Statistics = Statistics with 
-                    { 
+                    Statistics = Statistics with
+                    {
                         TotalKeysProcessed = Statistics.TotalKeysProcessed + 1,
                         LastKeyPressTime = DateTime.UtcNow
                     };
@@ -195,7 +206,9 @@ public sealed class AdvancedKeyboardHandler : IDisposable
             {
                 handler(keyPressArgs);
                 if (keyPressArgs.Handled)
+                {
                     return;
+                }
             }
 
             // Raise key combination event for complex key combinations
@@ -204,7 +217,9 @@ public sealed class AdvancedKeyboardHandler : IDisposable
                 var combinationArgs = new KeyCombinationEventArgs(keyInfo.Key, keyInfo.Modifiers, keyInfo.KeyChar);
                 KeyCombinationPressed?.Invoke(this, combinationArgs);
                 if (combinationArgs.Handled)
+                {
                     return;
+                }
             }
 
             // Raise character typed event for printable characters
@@ -213,7 +228,9 @@ public sealed class AdvancedKeyboardHandler : IDisposable
                 var charArgs = new CharacterTypedEventArgs(keyInfo.KeyChar);
                 CharacterTyped?.Invoke(this, charArgs);
                 if (charArgs.Handled)
+                {
                     return;
+                }
             }
 
             // Raise general key pressed event
@@ -234,7 +251,7 @@ public sealed class AdvancedKeyboardHandler : IDisposable
     {
         // Global shortcuts - these will be handled by TuiApp
         // Ctrl+C is handled separately as it's a termination signal
-        
+
         // Clear screen shortcut (Ctrl+L)
         RegisterKeyBinding(ConsoleKey.L, ConsoleModifiers.Control, args =>
         {
@@ -262,7 +279,10 @@ public sealed class AdvancedKeyboardHandler : IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (_isDisposed) return;
+        if (_isDisposed)
+        {
+            return;
+        }
 
         _isDisposed = true;
 
@@ -274,7 +294,7 @@ public sealed class AdvancedKeyboardHandler : IDisposable
         {
             try
             {
-                _inputTask.Wait(TimeSpan.FromSeconds(1));
+                _ = _inputTask.Wait(TimeSpan.FromSeconds(1));
             }
             catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
             {
@@ -304,12 +324,15 @@ public readonly record struct KeyBinding(ConsoleKey Key, ConsoleModifiers Modifi
 /// <summary>
 /// Event arguments for key press events.
 /// </summary>
-public sealed class KeyPressEventArgs : EventArgs
+/// <remarks>
+/// Initializes a new instance of KeyPressEventArgs.
+/// </remarks>
+public sealed class KeyPressEventArgs(ConsoleKeyInfo keyInfo) : EventArgs
 {
     /// <summary>
     /// Gets the console key information.
     /// </summary>
-    public ConsoleKeyInfo KeyInfo { get; }
+    public ConsoleKeyInfo KeyInfo { get; } = keyInfo;
 
     /// <summary>
     /// Gets or sets whether the key press has been handled.
@@ -330,74 +353,54 @@ public sealed class KeyPressEventArgs : EventArgs
     /// Gets the character representation of the key.
     /// </summary>
     public char KeyChar => KeyInfo.KeyChar;
-
-    /// <summary>
-    /// Initializes a new instance of KeyPressEventArgs.
-    /// </summary>
-    public KeyPressEventArgs(ConsoleKeyInfo keyInfo)
-    {
-        KeyInfo = keyInfo;
-    }
 }
 
 /// <summary>
 /// Event arguments for key combination events.
 /// </summary>
-public sealed class KeyCombinationEventArgs : EventArgs
+/// <remarks>
+/// Initializes a new instance of KeyCombinationEventArgs.
+/// </remarks>
+public sealed class KeyCombinationEventArgs(ConsoleKey key, ConsoleModifiers modifiers, char keyChar) : EventArgs
 {
     /// <summary>
     /// Gets the key that was pressed.
     /// </summary>
-    public ConsoleKey Key { get; }
+    public ConsoleKey Key { get; } = key;
 
     /// <summary>
     /// Gets the modifiers that were pressed.
     /// </summary>
-    public ConsoleModifiers Modifiers { get; }
+    public ConsoleModifiers Modifiers { get; } = modifiers;
 
     /// <summary>
     /// Gets the character representation of the key.
     /// </summary>
-    public char KeyChar { get; }
+    public char KeyChar { get; } = keyChar;
 
     /// <summary>
     /// Gets or sets whether the key combination has been handled.
     /// </summary>
     public bool Handled { get; set; }
-
-    /// <summary>
-    /// Initializes a new instance of KeyCombinationEventArgs.
-    /// </summary>
-    public KeyCombinationEventArgs(ConsoleKey key, ConsoleModifiers modifiers, char keyChar)
-    {
-        Key = key;
-        Modifiers = modifiers;
-        KeyChar = keyChar;
-    }
 }
 
 /// <summary>
 /// Event arguments for character typed events.
 /// </summary>
-public sealed class CharacterTypedEventArgs : EventArgs
+/// <remarks>
+/// Initializes a new instance of CharacterTypedEventArgs.
+/// </remarks>
+public sealed class CharacterTypedEventArgs(char character) : EventArgs
 {
     /// <summary>
     /// Gets the character that was typed.
     /// </summary>
-    public char Character { get; }
+    public char Character { get; } = character;
 
     /// <summary>
     /// Gets or sets whether the character has been handled.
     /// </summary>
     public bool Handled { get; set; }
-
-    /// <summary>
-    /// Initializes a new instance of CharacterTypedEventArgs.
-    /// </summary>
-    public CharacterTypedEventArgs(char character)
-    {
-        Character = character;
-    }
 }
 
 /// <summary>
@@ -417,11 +420,15 @@ public sealed record KeyboardStatistics(
         get
         {
             if (LastKeyPressTime == null || TotalKeysProcessed == 0)
+            {
                 return 0.0;
+            }
 
             var elapsed = DateTime.UtcNow - LastKeyPressTime.Value;
             if (elapsed.TotalSeconds < 1.0)
+            {
                 return TotalKeysProcessed; // Recent activity
+            }
 
             return TotalKeysProcessed / elapsed.TotalSeconds;
         }
@@ -430,6 +437,6 @@ public sealed record KeyboardStatistics(
     /// <summary>
     /// Gets whether the keyboard handler is responsive.
     /// </summary>
-    public bool IsResponsive => IsRunning && (LastKeyPressTime == null || 
+    public bool IsResponsive => IsRunning && (LastKeyPressTime == null ||
         DateTime.UtcNow - LastKeyPressTime.Value < TimeSpan.FromSeconds(5));
 }

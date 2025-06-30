@@ -1,13 +1,8 @@
 using FluentResults;
-using Microsoft.Extensions.Configuration;
-using System;
-using System.IO;
-using System.Linq;
 using System.Text.Json;
-using MaxBot.Domain;
 using System.ClientModel.Primitives;
-using MaxBot.Tools;
-using Microsoft.Extensions.AI;
+
+namespace MaxBot;
 
 public partial class ChatClient
 {
@@ -15,7 +10,7 @@ public partial class ChatClient
     public MaxbotConfiguration Config { get; init; }
     public Profile ActiveProfile { get; init; }
     public ApiProvider ActiveApiProvider { get; init; }
-    
+
     // System prompt is now a computed property that regenerates each time it's accessed
     public string SystemPrompt => Promptinator.GetSystemPrompt(
         DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
@@ -25,13 +20,13 @@ public partial class ChatClient
         Hostname,
         Directory.GetCurrentDirectory(),
         Config,
-        _mode);
+        Mode);
 
     public PlatformID OperatingSystem { get; init; }
     public string DefaultShell { get; init; }
     public string Username { get; init; }
     public string Hostname { get; init; }
-    private string _mode { get; init; }
+    private string Mode { get; init; }
 
     public ChatOptions ChatOptions { get; init; }
     private SystemTools SystemTools { get; init; }
@@ -51,7 +46,7 @@ public partial class ChatClient
         Config = config;
         ActiveProfile = activeProfile;
         ActiveApiProvider = activeApiProvider;
-        _mode = mode;
+        Mode = mode;
 
         // Detect the current operating system, we need to handle Windows, MacOS, and Linux differently
         OperatingSystem = Environment.OSVersion.Platform;
@@ -99,7 +94,7 @@ public partial class ChatClient
         };
     }
 
-    
+
     public static Result<ChatClient> Create(string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string, ConsoleColor>? llmResponseDetailsCallback = null, bool debug = false)
     {
         var result = Create(null, configFilePath, profileName, toolApprovals, mode, llmResponseDetailsCallback, debug);
@@ -122,8 +117,8 @@ public partial class ChatClient
         MaxbotConfigurationRoot? configRoot;
         try
         {
-            configRoot = JsonSerializer.Deserialize<MaxbotConfigurationRoot>(
-                jsonContent, 
+            configRoot = JsonSerializer.Deserialize(
+                jsonContent,
                 MaxbotConfigurationContext.Default.MaxbotConfigurationRoot);
         }
         catch (Exception ex)
@@ -141,7 +136,7 @@ public partial class ChatClient
         {
             maxbotConfig.ToolApprovals = toolApprovals;
         }
-        
+
         // Set debug flag if specified
         maxbotConfig.Debug = debug;
 
@@ -172,9 +167,9 @@ public partial class ChatClient
             return Result.Fail($"API provider '{profile.ApiProvider}' specified in profile '{profile.Name}' not found.");
         }
 
-        string apiKey = apiProvider.ApiKey;
-        string baseUrl = apiProvider.BaseUrl;
-        string modelId = profile.ModelId;
+        var apiKey = apiProvider.ApiKey;
+        var baseUrl = apiProvider.BaseUrl;
+        var modelId = profile.ModelId;
 
         if (chatClient == null)
         {
@@ -197,7 +192,7 @@ public partial class ChatClient
                 .UseFunctionInvocation()
                 .Build();
         }
-        
+
 
         return new ChatClient(chatClient, maxbotConfig, profile, apiProvider, mode ?? "oneshot", llmResponseDetailsCallback);
     }

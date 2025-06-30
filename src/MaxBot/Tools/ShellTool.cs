@@ -1,27 +1,17 @@
-using Microsoft.Extensions.AI;
-using MaxBot.Domain;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
-using System.Security.Cryptography;
 
 namespace MaxBot.Tools;
 
-public class ShellTool
+public class ShellTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
 {
-    private readonly MaxbotConfiguration _config;
-    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = null;
-    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
-    private readonly HashSet<string> _whitelist = new();
-
-    public ShellTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
-    {
-        _config = config;
-        _llmResponseDetailsCallback = llmResponseDetailsCallback;
-        _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
-    }
+    private readonly MaxbotConfiguration _config = config;
+    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = llmResponseDetailsCallback;
+    private readonly IWorkingDirectoryProvider _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
+    private readonly HashSet<string> _whitelist = [];
 
     public AIFunction GetTool()
     {
@@ -64,12 +54,12 @@ public class ShellTool
                 else
                 {
                     // Auto-approve for non-readonly mode
-                    _whitelist.Add(rootCommand);
+                    _ = _whitelist.Add(rootCommand);
                 }
             }
 
             var workingDirectory = _workingDirectoryProvider.GetCurrentDirectory();
-            var executionDirectory = directory != null 
+            var executionDirectory = directory != null
                 ? Path.Combine(workingDirectory, directory)
                 : workingDirectory;
 
@@ -118,7 +108,7 @@ public class ShellTool
 
             var workingDirectory = _workingDirectoryProvider.GetCurrentDirectory();
             var fullDirectory = Path.Combine(workingDirectory, directory);
-            
+
             if (!Directory.Exists(fullDirectory))
             {
                 return "Directory must exist.";
@@ -139,8 +129,8 @@ public class ShellTool
         return command
             .Trim() // remove leading and trailing whitespace
             .Replace("(", "").Replace(")", "").Replace("{", "").Replace("}", "") // remove all grouping operators
-            .Split(new char[] { ' ', ';', '&', '|' }, StringSplitOptions.RemoveEmptyEntries)[0] // split on any whitespace or separator or chaining operators and take first part
-            ?.Split(new char[] { '/', '\\' }) // split on any path separators
+            .Split([' ', ';', '&', '|'], StringSplitOptions.RemoveEmptyEntries)[0] // split on any whitespace or separator or chaining operators and take first part
+            ?.Split(['/', '\\']) // split on any path separators
             .LastOrDefault(); // take last part and return command root
     }
 
@@ -152,7 +142,7 @@ public class ShellTool
             var normalizedWorkingDirectory = Path.GetFullPath(workingDirectory);
 
             // Check if the path is exactly the working directory
-            if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory, 
+            if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory,
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
             {
                 return true;
@@ -165,7 +155,7 @@ public class ShellTool
                 normalizedWorkingDirectory += Path.DirectorySeparatorChar;
             }
 
-            return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory, 
+            return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory,
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
         }
         catch
@@ -218,8 +208,8 @@ public class ShellTool
             if (e.Data != null)
             {
                 var data = StripAnsiCodes(e.Data);
-                stdout.AppendLine(data);
-                output.AppendLine(data);
+                _ = stdout.AppendLine(data);
+                _ = output.AppendLine(data);
             }
         };
 
@@ -228,12 +218,12 @@ public class ShellTool
             if (e.Data != null)
             {
                 var data = StripAnsiCodes(e.Data);
-                stderr.AppendLine(data);
-                output.AppendLine(data);
+                _ = stderr.AppendLine(data);
+                _ = output.AppendLine(data);
             }
         };
 
-        process.Start();
+        _ = process.Start();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
@@ -263,23 +253,23 @@ public class ShellTool
     private string CreateSuccessResponse(string command, string? directory, ShellExecutionResult result)
     {
         var notes = new StringBuilder();
-        notes.AppendLine($"Successfully executed command: {command}");
+        _ = notes.AppendLine($"Successfully executed command: {command}");
         if (directory != null)
         {
-            notes.AppendLine($"Directory: {directory}");
+            _ = notes.AppendLine($"Directory: {directory}");
         }
-        notes.AppendLine($"Exit code: {result.ExitCode}");
+        _ = notes.AppendLine($"Exit code: {result.ExitCode}");
 
         var llmContent = new StringBuilder();
-        llmContent.AppendLine($"Command: {result.Command}");
-        llmContent.AppendLine($"Directory: {directory ?? "(root)"}");
-        llmContent.AppendLine($"Stdout: {(string.IsNullOrEmpty(result.Stdout) ? "(empty)" : result.Stdout)}");
-        llmContent.AppendLine($"Stderr: {(string.IsNullOrEmpty(result.Stderr) ? "(empty)" : result.Stderr)}");
-        llmContent.AppendLine($"Exit Code: {result.ExitCode}");
-        llmContent.AppendLine($"Process Group PGID: {result.ProcessId}");
+        _ = llmContent.AppendLine($"Command: {result.Command}");
+        _ = llmContent.AppendLine($"Directory: {directory ?? "(root)"}");
+        _ = llmContent.AppendLine($"Stdout: {(string.IsNullOrEmpty(result.Stdout) ? "(empty)" : result.Stdout)}");
+        _ = llmContent.AppendLine($"Stderr: {(string.IsNullOrEmpty(result.Stderr) ? "(empty)" : result.Stderr)}");
+        _ = llmContent.AppendLine($"Exit Code: {result.ExitCode}");
+        _ = llmContent.AppendLine($"Process Group PGID: {result.ProcessId}");
 
-        var displayOutput = string.IsNullOrEmpty(result.Output) ? 
-            (result.ExitCode != 0 ? $"Command exited with code: {result.ExitCode}" : "") : 
+        var displayOutput = string.IsNullOrEmpty(result.Output) ?
+            (result.ExitCode != 0 ? $"Command exited with code: {result.ExitCode}" : "") :
             result.Output;
 
         return $@"<tool_response tool_name=""run_shell_command"">

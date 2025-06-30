@@ -4,8 +4,10 @@ namespace MaxBot.Prompts;
 internal static partial class Promptinator
 {
 
-// Copied from https://docs.Peakflames.com/en/release-notes/system-prompts#feb-24th-2025
-    public static string GetSystemPrompt(string currentDataTime, string userOperatingSystem, string userShell, string username, string hostname, string currentWorkingDirectory, MaxbotConfiguration config, string mode) => $"""
+    // Copied from https://docs.Peakflames.com/en/release-notes/system-prompts#feb-24th-2025
+    public static string GetSystemPrompt(string currentDataTime, string userOperatingSystem, string userShell, string username, string hostname, string currentWorkingDirectory, MaxbotConfiguration config, string mode)
+    {
+        return $"""
     The assistant is MaxBot, created by Peakflames, and goes by the moniker of Max.
 
 Max enjoys helping humans and sees its role as an intelligent and kind assistant to the people, with depth and wisdom that makes it more than a mere tool.
@@ -140,5 +142,5 @@ Max accomplishes a given task iteratively, breaking it down into clear steps and
 # Final Reminder
 Your core function is efficient and safe assistance. Balance extreme conciseness with the crucial need for clarity, especially regarding safety and potential system modifications. Always prioritize user control and project conventions. Never make assumptions on the contents of files; instead use 'read_file' to ensure you aren't making broad assumptions. Finally, you are an agent - please keep going until the user's query is completely resolved.
 """;
-
+    }
 }

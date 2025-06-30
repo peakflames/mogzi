@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
 
 namespace MaxBot.TUI.Infrastructure;
 
@@ -16,43 +14,44 @@ public sealed class FileLoggerProvider : ILoggerProvider
     public FileLoggerProvider(LogLevel minLogLevel)
     {
         _minLogLevel = minLogLevel;
-        
+
         // Create log directory at ~/.max/logs
         var homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         _logDirectory = Path.Combine(homeDirectory, ".max", "logs");
-        
+
         try
         {
-            Directory.CreateDirectory(_logDirectory);
+            _ = Directory.CreateDirectory(_logDirectory);
         }
         catch (Exception ex)
         {
             // Fallback to temp directory if we can't create ~/.max/logs
             _logDirectory = Path.Combine(Path.GetTempPath(), "maxbot-logs");
-            Directory.CreateDirectory(_logDirectory);
+            _ = Directory.CreateDirectory(_logDirectory);
             Console.WriteLine($"Warning: Could not create ~/.max/logs, using {_logDirectory}. Error: {ex.Message}");
         }
     }
 
     public ILogger CreateLogger(string categoryName)
     {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(FileLoggerProvider));
-
+        ObjectDisposedException.ThrowIf(_disposed, this);
         return _loggers.GetOrAdd(categoryName, name => new FileLogger(name, _logDirectory, _minLogLevel));
     }
 
     public void Dispose()
     {
-        if (_disposed) return;
-        
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
-        
+
         foreach (var logger in _loggers.Values)
         {
             logger.Dispose();
         }
-        
+
         _loggers.Clear();
     }
 }
@@ -60,24 +59,16 @@ public sealed class FileLoggerProvider : ILoggerProvider
 /// <summary>
 /// AOT-compatible file logger that writes to rolling log files.
 /// </summary>
-public sealed class FileLogger : ILogger, IDisposable
+public sealed class FileLogger(string categoryName, string logDirectory, LogLevel minLogLevel) : ILogger, IDisposable
 {
-    private readonly string _categoryName;
-    private readonly string _logDirectory;
-    private readonly LogLevel _minLogLevel;
-    private readonly object _lock = new();
+    private readonly string _categoryName = categoryName;
+    private readonly string _logDirectory = logDirectory;
+    private readonly LogLevel _minLogLevel = minLogLevel;
+    private readonly Lock _lock = new();
     private StreamWriter? _currentWriter;
     private string? _currentLogFile;
-    private DateTime _currentLogDate;
+    private DateTime _currentLogDate = DateTime.Today;
     private bool _disposed = false;
-
-    public FileLogger(string categoryName, string logDirectory, LogLevel minLogLevel)
-    {
-        _categoryName = categoryName;
-        _logDirectory = logDirectory;
-        _minLogLevel = minLogLevel;
-        _currentLogDate = DateTime.Today;
-    }
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
@@ -92,27 +83,31 @@ public sealed class FileLogger : ILogger, IDisposable
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
         if (!IsEnabled(logLevel) || _disposed)
+        {
             return;
+        }
 
         var message = formatter(state, exception);
         if (string.IsNullOrEmpty(message) && exception == null)
+        {
             return;
+        }
 
         lock (_lock)
         {
             try
             {
                 EnsureLogFile();
-                
+
                 var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
                 var logLevelString = GetLogLevelString(logLevel);
                 var logEntry = $"[{timestamp}] [{logLevelString}] {_categoryName}: {message}";
-                
+
                 if (exception != null)
                 {
                     logEntry += Environment.NewLine + exception.ToString();
                 }
-                
+
                 _currentWriter?.WriteLine(logEntry);
                 _currentWriter?.Flush();
             }
@@ -126,21 +121,21 @@ public sealed class FileLogger : ILogger, IDisposable
     private void EnsureLogFile()
     {
         var today = DateTime.Today;
-        
+
         // Check if we need to roll to a new log file
         if (_currentWriter == null || _currentLogDate != today)
         {
             _currentWriter?.Dispose();
-            
+
             _currentLogDate = today;
             var logFileName = $"maxbot-{today:yyyy-MM-dd}.log";
             _currentLogFile = Path.Combine(_logDirectory, logFileName);
-            
+
             _currentWriter = new StreamWriter(_currentLogFile, append: true)
             {
                 AutoFlush = true
             };
-            
+
             // Clean up old log files (keep last 30 days)
             CleanupOldLogFiles();
         }
@@ -152,13 +147,13 @@ public sealed class FileLogger : ILogger, IDisposable
         {
             var cutoffDate = DateTime.Today.AddDays(-30);
             var logFiles = Directory.GetFiles(_logDirectory, "maxbot-*.log");
-            
+
             foreach (var logFile in logFiles)
             {
                 var fileName = Path.GetFileNameWithoutExtension(logFile);
                 if (fileName.StartsWith("maxbot-") && fileName.Length >= 17) // "maxbot-yyyy-MM-dd"
                 {
-                    var dateString = fileName.Substring(7); // Remove "maxbot-" prefix
+                    var dateString = fileName[7..]; // Remove "maxbot-" prefix
                     if (DateTime.TryParseExact(dateString, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var fileDate))
                     {
                         if (fileDate < cutoffDate)
@@ -191,10 +186,13 @@ public sealed class FileLogger : ILogger, IDisposable
 
     public void Dispose()
     {
-        if (_disposed) return;
-        
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
-        
+
         lock (_lock)
         {
             _currentWriter?.Dispose();

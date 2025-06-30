@@ -65,32 +65,13 @@ Thank you for your interest in contributing to MaxBot! This document provides gu
 ## Recommended AI Development Workflow
 
 1. Leverage the Cline Extension for Visual Studio Code
-2. Ensure the workflow `.clinerules/workflows/start-new-task.md` is enabled. [Lean more here](https://docs.cline.bot/features/slash-commands/workflows)
-2. Boostrap your Cline task session with context by running the `/start-new-task.md`. Once loaded, Cline will ask for the task objective.
+2. Ensure the `.clinerules/developer_guideline.md` Rule file is enabled
+3. Ensure the workflow `.clinerules/workflows/start-new-task.md` is enabled. [Lean more here](https://docs.cline.bot/features/slash-commands/workflows)
+4. Boostrap your Cline task session with context by running the `/start-new-task.md`. Once loaded, Cline will ask for the task objective.
 
 ## Coding Standards
 
-### Component Development
-
-1. File Organization:
-   - One component per file
-   - Place in appropriate feature folder under Components/
-   - Use partial classes for complex components
-
-1. Naming Conventions:
-   - PascalCase for public members and types
-   - _camelCase for private fields
-   - Parameters must be public properties
-
-1. Documentation:
-   - XML comments for public APIs
-   - Include parameter descriptions
-   - Document event callbacks
-
-1. Code Style:
-   - Use 4 spaces for indentation
-   - Prefer C# code in .cs file over .razor file
-   - Prefer functions over lambda expressions for event handlers
+The project uses `.clinerules/developer_guideline.md` to define and enforce the project conding standards and conventions.
 
 ## Getting Help
 

@@ -1,5 +1,3 @@
-using Microsoft.Extensions.AI;
-using MaxBot.Domain;
 using System.ComponentModel;
 using System.Security;
 using System.Security.Cryptography;
@@ -10,18 +8,11 @@ using System.Text.RegularExpressions;
 
 namespace MaxBot.Tools;
 
-public class GrepTool
+public class GrepTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
 {
-    private readonly MaxbotConfiguration _config;
-    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = null;
-    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
-
-    public GrepTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
-    {
-        _config = config;
-        _llmResponseDetailsCallback = llmResponseDetailsCallback;
-        _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
-    }
+    private readonly MaxbotConfiguration _config = config;
+    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = llmResponseDetailsCallback;
+    private readonly IWorkingDirectoryProvider _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
 
     public AIFunction GetTool()
     {
@@ -83,8 +74,8 @@ public class GrepTool
 
             var searchDirDisplayName = path ?? ".";
             var resultContent = new StringBuilder();
-            resultContent.AppendLine($"Found {matches.Count} match(es) for pattern \"{pattern}\" in path \"{searchDirDisplayName}\"{(include != null ? $" (filter: \"{include}\")" : "")}:");
-            resultContent.AppendLine("---");
+            _ = resultContent.AppendLine($"Found {matches.Count} match(es) for pattern \"{pattern}\" in path \"{searchDirDisplayName}\"{(include != null ? $" (filter: \"{include}\")" : "")}:");
+            _ = resultContent.AppendLine("---");
 
             foreach (var fileGroup in matchesByFile)
             {
@@ -93,14 +84,14 @@ public class GrepTool
                 {
                     relativeFilePath = Path.GetFileName(fileGroup.Key);
                 }
-                
-                resultContent.AppendLine($"File: {relativeFilePath}");
+
+                _ = resultContent.AppendLine($"File: {relativeFilePath}");
                 foreach (var match in fileGroup.Value)
                 {
                     var trimmedLine = match.Line.Trim();
-                    resultContent.AppendLine($"L{match.LineNumber}: {trimmedLine}");
+                    _ = resultContent.AppendLine($"L{match.LineNumber}: {trimmedLine}");
                 }
-                resultContent.AppendLine("---");
+                _ = resultContent.AppendLine("---");
             }
 
             return CreateSuccessResponse("search_file_content", searchDirectory, resultContent.ToString().Trim(), matches);
@@ -177,7 +168,7 @@ public class GrepTool
             var normalizedWorkingDirectory = Path.GetFullPath(workingDirectory);
 
             // Check if the path is exactly the working directory
-            if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory, 
+            if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory,
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
             {
                 return true;
@@ -190,7 +181,7 @@ public class GrepTool
                 normalizedWorkingDirectory += Path.DirectorySeparatorChar;
             }
 
-            return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory, 
+            return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory,
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
         }
         catch
@@ -231,7 +222,7 @@ public class GrepTool
             var gitArgs = new List<string> { "grep", "--untracked", "-n", "-E", "--ignore-case", pattern };
             if (include != null)
             {
-                gitArgs.AddRange(new[] { "--", include });
+                gitArgs.AddRange(["--", include]);
             }
 
             var output = await RunCommand("git", gitArgs, searchDirectory);
@@ -336,14 +327,14 @@ public class GrepTool
     private IEnumerable<string> GetFilesRecursively(string directory, string? include)
     {
         var excludeDirs = new HashSet<string> { ".git", "node_modules", "bower_components", ".svn", ".hg" };
-        
+
         return GetFilesRecursivelyInternal(directory, include, excludeDirs);
     }
 
     private IEnumerable<string> GetFilesRecursivelyInternal(string directory, string? include, HashSet<string> excludeDirs)
     {
         var dirInfo = new DirectoryInfo(directory);
-        
+
         // Skip excluded directories
         if (excludeDirs.Contains(dirInfo.Name))
         {
@@ -403,7 +394,7 @@ public class GrepTool
         var regexPattern = "^" + Regex.Escape(pattern)
             .Replace("\\*", ".*")
             .Replace("\\?", ".") + "$";
-        
+
         return Regex.IsMatch(fileName, regexPattern, RegexOptions.IgnoreCase);
     }
 
@@ -426,7 +417,7 @@ public class GrepTool
         try
         {
             var checkCommand = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "where" : "command";
-            var checkArgs = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? new[] { command } : new[] { "-v", command };
+            var checkArgs = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? new[] { command } : ["-v", command];
 
             var process = new Process
             {
@@ -441,7 +432,7 @@ public class GrepTool
                 }
             };
 
-            process.Start();
+            _ = process.Start();
             await process.WaitForExitAsync();
             return process.ExitCode == 0;
         }
@@ -469,7 +460,7 @@ public class GrepTool
                 }
             };
 
-            process.Start();
+            _ = process.Start();
             var output = await process.StandardOutput.ReadToEndAsync();
             var error = await process.StandardError.ReadToEndAsync();
             await process.WaitForExitAsync();
@@ -496,31 +487,41 @@ public class GrepTool
     private void ParseGrepOutput(string output, string basePath, List<GrepMatch> matches)
     {
         if (string.IsNullOrEmpty(output))
+        {
             return;
+        }
 
-        var lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        var lines = output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
 
         foreach (var line in lines)
         {
             if (string.IsNullOrWhiteSpace(line))
+            {
                 continue;
+            }
 
             // Find the first colon
             var firstColonIndex = line.IndexOf(':');
-            if (firstColonIndex == -1) continue;
+            if (firstColonIndex == -1)
+            {
+                continue;
+            }
 
             // Find the second colon
             var secondColonIndex = line.IndexOf(':', firstColonIndex + 1);
-            if (secondColonIndex == -1) continue;
+            if (secondColonIndex == -1)
+            {
+                continue;
+            }
 
-            var filePathRaw = line.Substring(0, firstColonIndex);
+            var filePathRaw = line[..firstColonIndex];
             var lineNumberStr = line.Substring(firstColonIndex + 1, secondColonIndex - firstColonIndex - 1);
-            var lineContent = line.Substring(secondColonIndex + 1);
+            var lineContent = line[(secondColonIndex + 1)..];
 
             if (int.TryParse(lineNumberStr, out var lineNumber))
             {
-                var absoluteFilePath = Path.IsPathRooted(filePathRaw) 
-                    ? filePathRaw 
+                var absoluteFilePath = Path.IsPathRooted(filePathRaw)
+                    ? filePathRaw
                     : Path.Combine(basePath, filePathRaw);
 
                 matches.Add(new GrepMatch
@@ -536,9 +537,9 @@ public class GrepTool
     private string CreateSuccessResponse(string toolName, string searchDirectory, string content, List<GrepMatch> matches)
     {
         var notes = new StringBuilder();
-        notes.AppendLine($"Successfully searched for pattern in {searchDirectory}");
-        notes.AppendLine($"Total matches found: {matches.Count}");
-        notes.AppendLine($"Files searched: {matches.Select(m => m.FilePath).Distinct().Count()}");
+        _ = notes.AppendLine($"Successfully searched for pattern in {searchDirectory}");
+        _ = notes.AppendLine($"Total matches found: {matches.Count}");
+        _ = notes.AppendLine($"Files searched: {matches.Select(m => m.FilePath).Distinct().Count()}");
 
         var checksum = ComputeSha256(content);
 

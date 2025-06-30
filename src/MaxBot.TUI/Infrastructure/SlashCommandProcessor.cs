@@ -6,7 +6,7 @@ namespace MaxBot.TUI.Infrastructure;
 /// </summary>
 public sealed class SlashCommandProcessor
 {
-    private readonly Dictionary<string, SlashCommand> _commands = new();
+    private readonly Dictionary<string, SlashCommand> _commands = [];
     private readonly ILogger<SlashCommandProcessor>? _logger;
     private readonly IAnsiConsole _console;
     private readonly ChatClient? _chatClient;
@@ -42,9 +42,11 @@ public sealed class SlashCommandProcessor
     public bool TryProcessCommand(string input, out string? output)
     {
         output = null;
-        
+
         if (string.IsNullOrWhiteSpace(input) || !input.StartsWith("/"))
+        {
             return false;
+        }
 
         var parts = input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
         var command = parts[0].ToLower();
@@ -69,13 +71,14 @@ public sealed class SlashCommandProcessor
     public List<string> GetCommandSuggestions(string input)
     {
         if (string.IsNullOrWhiteSpace(input) || !input.StartsWith("/"))
-            return new List<string>();
+        {
+            return [];
+        }
 
         var partial = input.ToLower();
-        return _commands.Keys
+        return [.. _commands.Keys
             .Where(cmd => cmd.StartsWith(partial))
-            .OrderBy(cmd => cmd)
-            .ToList();
+            .OrderBy(cmd => cmd)];
     }
 
     /// <summary>
@@ -105,15 +108,15 @@ public sealed class SlashCommandProcessor
     private void ShowHelp(string args)
     {
         var table = new Table();
-        table.AddColumn(new TableColumn("Command").Centered());
-        table.AddColumn("Description");
+        _ = table.AddColumn(new TableColumn("Command").Centered());
+        _ = table.AddColumn("Description");
         table.Border = TableBorder.Rounded;
-        table.BorderColor(Color.Blue);
+        _ = table.BorderColor(Color.Blue);
 
         foreach (var cmd in _commands.Values.OrderBy(c => c.Name))
         {
-            table.AddRow(
-                new Markup($"[blue]{cmd.Name}[/]"), 
+            _ = table.AddRow(
+                new Markup($"[blue]{cmd.Name}[/]"),
                 new Markup(cmd.Description)
             );
         }
@@ -149,7 +152,7 @@ public sealed class SlashCommandProcessor
     private void ClearHistory(string args)
     {
         ClearHistoryRequested?.Invoke();
-        
+
         var panel = new Panel(new Markup("[green]✓[/] Chat history cleared"))
             .Border(BoxBorder.Rounded)
             .BorderColor(Color.Green)
@@ -181,26 +184,26 @@ public sealed class SlashCommandProcessor
     private void ShowStatus(string args)
     {
         var statusTable = new Table();
-        statusTable.AddColumn("Property");
-        statusTable.AddColumn("Value");
+        _ = statusTable.AddColumn("Property");
+        _ = statusTable.AddColumn("Value");
         statusTable.Border = TableBorder.Rounded;
-        statusTable.BorderColor(Color.Cyan1);
+        _ = statusTable.BorderColor(Color.Cyan1);
 
-        statusTable.AddRow("Application", "[green]MaxBot TUI[/]");
-        statusTable.AddRow("Version", $"[blue]{GetApplicationVersion()}[/]");
-        statusTable.AddRow("Status", "[green]Running[/]");
-        statusTable.AddRow("Working Directory", $"[dim]{Environment.CurrentDirectory}[/]");
-        statusTable.AddRow("Platform", $"[dim]{Environment.OSVersion.Platform}[/]");
-        statusTable.AddRow("Runtime", $"[dim].NET {Environment.Version}[/]");
+        _ = statusTable.AddRow("Application", "[green]MaxBot TUI[/]");
+        _ = statusTable.AddRow("Version", $"[blue]{GetApplicationVersion()}[/]");
+        _ = statusTable.AddRow("Status", "[green]Running[/]");
+        _ = statusTable.AddRow("Working Directory", $"[dim]{Environment.CurrentDirectory}[/]");
+        _ = statusTable.AddRow("Platform", $"[dim]{Environment.OSVersion.Platform}[/]");
+        _ = statusTable.AddRow("Runtime", $"[dim].NET {Environment.Version}[/]");
 
         if (_chatClient != null)
         {
-            statusTable.AddRow("", ""); // Empty row for spacing
-            statusTable.AddRow("[bold]Configuration[/]", "");
-            statusTable.AddRow("Active Profile", $"[yellow]{_chatClient.ActiveProfile.Name}[/]");
-            statusTable.AddRow("Model", $"[cyan]{_chatClient.ActiveProfile.ModelId}[/]");
-            statusTable.AddRow("API Provider", $"[magenta]{_chatClient.ActiveApiProvider.Name}[/]");
-            statusTable.AddRow("Tool Approvals", $"[orange3]{_chatClient.Config.ToolApprovals}[/]");
+            _ = statusTable.AddRow("", ""); // Empty row for spacing
+            _ = statusTable.AddRow("[bold]Configuration[/]", "");
+            _ = statusTable.AddRow("Active Profile", $"[yellow]{_chatClient.ActiveProfile.Name}[/]");
+            _ = statusTable.AddRow("Model", $"[cyan]{_chatClient.ActiveProfile.ModelId}[/]");
+            _ = statusTable.AddRow("API Provider", $"[magenta]{_chatClient.ActiveApiProvider.Name}[/]");
+            _ = statusTable.AddRow("Tool Approvals", $"[orange3]{_chatClient.Config.ToolApprovals}[/]");
         }
 
         var panel = new Panel(statusTable)
@@ -248,21 +251,21 @@ public sealed class SlashCommandProcessor
     {
         var commands = _commands.Values.OrderBy(c => c.Name).ToList();
         var output = new StringBuilder();
-        
-        output.AppendLine("Available Commands:");
-        output.AppendLine();
-        
+
+        _ = output.AppendLine("Available Commands:");
+        _ = output.AppendLine();
+
         foreach (var cmd in commands)
         {
-            output.AppendLine($"{cmd.Name} - {cmd.Description}");
+            _ = output.AppendLine($"{cmd.Name} - {cmd.Description}");
         }
-        
-        output.AppendLine();
-        output.AppendLine("Tips:");
-        output.AppendLine("• Type / and press Tab for command suggestions");
-        output.AppendLine("• Use Ctrl+C to exit at any time");
-        output.AppendLine("• Use Ctrl+L to clear the screen");
-        
+
+        _ = output.AppendLine();
+        _ = output.AppendLine("Tips:");
+        _ = output.AppendLine("• Type / and press Tab for command suggestions");
+        _ = output.AppendLine("• Use Ctrl+C to exit at any time");
+        _ = output.AppendLine("• Use Ctrl+L to clear the screen");
+
         return output.ToString();
     }
 
@@ -290,24 +293,24 @@ public sealed class SlashCommandProcessor
     private string GetStatusOutput(string args)
     {
         var output = new StringBuilder();
-        output.AppendLine("[bold]System Status:[/]");
-        output.AppendLine($"[dim]Application:[/] [green]MaxBot TUI[/]");
-        output.AppendLine($"[dim]Version:[/] [green]{GetApplicationVersion()}[/]");
-        output.AppendLine($"[dim]Status:[/] [green]Running[/]");
-        output.AppendLine($"[dim]Working Directory:[/] [green]{Environment.CurrentDirectory}[/]");
-        output.AppendLine($"[dim]Platform:[/] [green]{Environment.OSVersion.Platform}[/]");
-        output.AppendLine($"[dim]Runtime:[/] [green].NET {Environment.Version}[/]");
-        
+        _ = output.AppendLine("[bold]System Status:[/]");
+        _ = output.AppendLine($"[dim]Application:[/] [green]MaxBot TUI[/]");
+        _ = output.AppendLine($"[dim]Version:[/] [green]{GetApplicationVersion()}[/]");
+        _ = output.AppendLine($"[dim]Status:[/] [green]Running[/]");
+        _ = output.AppendLine($"[dim]Working Directory:[/] [green]{Environment.CurrentDirectory}[/]");
+        _ = output.AppendLine($"[dim]Platform:[/] [green]{Environment.OSVersion.Platform}[/]");
+        _ = output.AppendLine($"[dim]Runtime:[/] [green].NET {Environment.Version}[/]");
+
         if (_chatClient != null)
         {
-            output.AppendLine();
-            output.AppendLine("[bold]Configuration:[/]");
-            output.AppendLine($"[dim]Active Profile:[/] [cyan]{_chatClient.ActiveProfile.Name}[/]");
-            output.AppendLine($"[dim]Model:[/] [cyan]{_chatClient.ActiveProfile.ModelId}[/]");
-            output.AppendLine($"[dim]API Provider:[/] [cyan]{_chatClient.ActiveApiProvider.Name}[/]");
-            output.AppendLine($"[dim]Tool Approvals:[/] [cyan]{_chatClient.Config.ToolApprovals}[/]");
+            _ = output.AppendLine();
+            _ = output.AppendLine("[bold]Configuration:[/]");
+            _ = output.AppendLine($"[dim]Active Profile:[/] [cyan]{_chatClient.ActiveProfile.Name}[/]");
+            _ = output.AppendLine($"[dim]Model:[/] [cyan]{_chatClient.ActiveProfile.ModelId}[/]");
+            _ = output.AppendLine($"[dim]API Provider:[/] [cyan]{_chatClient.ActiveApiProvider.Name}[/]");
+            _ = output.AppendLine($"[dim]Tool Approvals:[/] [cyan]{_chatClient.Config.ToolApprovals}[/]");
         }
-        
+
         return output.ToString();
     }
 

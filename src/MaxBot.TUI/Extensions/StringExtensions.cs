@@ -8,12 +8,16 @@ public static class StringExtensions
     public static string Truncate(this string value, int maxLength, string ellipsis = "...")
     {
         if (string.IsNullOrEmpty(value) || value.Length <= maxLength)
+        {
             return value;
+        }
 
         if (maxLength <= ellipsis.Length)
-            return ellipsis.Substring(0, maxLength);
+        {
+            return ellipsis[..maxLength];
+        }
 
-        return value.Substring(0, maxLength - ellipsis.Length) + ellipsis;
+        return value[..(maxLength - ellipsis.Length)] + ellipsis;
     }
 
     /// <summary>
@@ -22,10 +26,14 @@ public static class StringExtensions
     public static string PadAndTruncate(this string value, int width, char paddingChar = ' ')
     {
         if (string.IsNullOrEmpty(value))
+        {
             return new string(paddingChar, width);
+        }
 
         if (value.Length > width)
+        {
             return value.Truncate(width);
+        }
 
         return value.PadRight(width, paddingChar);
     }
@@ -36,7 +44,9 @@ public static class StringExtensions
     public static string Center(this string value, int width, char paddingChar = ' ')
     {
         if (string.IsNullOrEmpty(value) || value.Length >= width)
+        {
             return value.PadAndTruncate(width, paddingChar);
+        }
 
         var totalPadding = width - value.Length;
         var leftPadding = totalPadding / 2;
@@ -51,7 +61,9 @@ public static class StringExtensions
     public static string RemoveAnsiCodes(this string value)
     {
         if (string.IsNullOrEmpty(value))
+        {
             return value;
+        }
 
         // Simple regex to remove ANSI escape sequences
         return System.Text.RegularExpressions.Regex.Replace(value, @"\x1B\[[0-?]*[ -/]*[@-~]", "");
@@ -63,7 +75,9 @@ public static class StringExtensions
     public static int GetDisplayWidth(this string value)
     {
         if (string.IsNullOrEmpty(value))
+        {
             return 0;
+        }
 
         return value.RemoveAnsiCodes().Length;
     }
@@ -86,16 +100,16 @@ public static class StringExtensions
         {
             if (currentLine.Length == 0)
             {
-                currentLine.Append(word);
+                _ = currentLine.Append(word);
             }
             else if (currentLine.Length + 1 + word.Length <= width)
             {
-                currentLine.Append(' ').Append(word);
+                _ = currentLine.Append(' ').Append(word);
             }
             else
             {
                 yield return currentLine.ToString();
-                currentLine.Clear().Append(word);
+                _ = currentLine.Clear().Append(word);
             }
         }
 
@@ -111,7 +125,9 @@ public static class StringExtensions
     public static string EscapeForDisplay(this string value)
     {
         if (string.IsNullOrEmpty(value))
+        {
             return value;
+        }
 
         return value
             .Replace("\t", "\\t")
@@ -126,7 +142,9 @@ public static class StringExtensions
     public static bool IsWhitespaceOrControl(this string value)
     {
         if (string.IsNullOrEmpty(value))
+        {
             return true;
+        }
 
         return value.All(c => char.IsWhiteSpace(c) || char.IsControl(c));
     }
@@ -137,10 +155,14 @@ public static class StringExtensions
     public static string SafeSubstring(this string value, int startIndex, int length = -1)
     {
         if (string.IsNullOrEmpty(value) || startIndex < 0 || startIndex >= value.Length)
+        {
             return string.Empty;
+        }
 
         if (length < 0)
-            return value.Substring(startIndex);
+        {
+            return value[startIndex..];
+        }
 
         var maxLength = Math.Min(length, value.Length - startIndex);
         return value.Substring(startIndex, maxLength);
@@ -152,15 +174,19 @@ public static class StringExtensions
     public static string Repeat(this string value, int count)
     {
         if (string.IsNullOrEmpty(value) || count <= 0)
+        {
             return string.Empty;
+        }
 
         if (count == 1)
+        {
             return value;
+        }
 
         var result = new StringBuilder(value.Length * count);
-        for (int i = 0; i < count; i++)
+        for (var i = 0; i < count; i++)
         {
-            result.Append(value);
+            _ = result.Append(value);
         }
         return result.ToString();
     }
@@ -171,17 +197,16 @@ public static class StringExtensions
     public static string ToSafeFileName(this string value)
     {
         if (string.IsNullOrEmpty(value))
+        {
             return "unnamed";
+        }
 
         var invalidChars = Path.GetInvalidFileNameChars();
         var result = new StringBuilder();
 
         foreach (var c in value)
         {
-            if (invalidChars.Contains(c))
-                result.Append('_');
-            else
-                result.Append(c);
+            _ = invalidChars.Contains(c) ? result.Append('_') : result.Append(c);
         }
 
         return result.ToString().Trim();

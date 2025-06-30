@@ -5,41 +5,32 @@ using System.ComponentModel;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
-using MaxBot.Domain;
+
 using MaxBot.Domain.Diff;
 using MaxBot.Services.Diff;
-using Microsoft.Extensions.AI;
 
 namespace MaxBot.Tools;
 
 /// <summary>
 /// Provides tools for applying and generating diff patches.
 /// </summary>
-public class DiffPatchTools
+/// <remarks>
+/// Initializes a new instance of the <see cref="DiffPatchTools"/> class.
+/// </remarks>
+/// <param name="config">The Maxbot configuration.</param>
+/// <param name="llmResponseDetailsCallback">The callback for debug output.</param>
+/// <param name="workingDirectoryProvider">The working directory provider.</param>
+public class DiffPatchTools(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
 {
-    private readonly MaxbotConfiguration _config;
-    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = null;
-    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
-    private readonly FuzzyPatchApplicator _patchApplicator;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DiffPatchTools"/> class.
-    /// </summary>
-    /// <param name="config">The Maxbot configuration.</param>
-    /// <param name="llmResponseDetailsCallback">The callback for debug output.</param>
-    /// <param name="workingDirectoryProvider">The working directory provider.</param>
-    public DiffPatchTools(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
-    {
-        _config = config;
-        _llmResponseDetailsCallback = llmResponseDetailsCallback;
-        _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
-        _patchApplicator = new FuzzyPatchApplicator();
-    }
+    private readonly MaxbotConfiguration _config = config;
+    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = llmResponseDetailsCallback;
+    private readonly IWorkingDirectoryProvider _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
+    private readonly FuzzyPatchApplicator _patchApplicator = new();
 
     public List<AIFunction> GetTools()
     {
-        return new List<AIFunction>
-        {
+        return
+        [
             AIFunctionFactory.Create(
                 ApplyCodePatch,
                 new AIFunctionFactoryOptions
@@ -61,7 +52,7 @@ public class DiffPatchTools
                     Name = "preview_patch_application",
                     Description = "Preview what changes a patch would make without actually applying them."
                 })
-        };
+        ];
     }
 
     /// <summary>
@@ -115,7 +106,7 @@ public class DiffPatchTools
 
             if (!result.Success)
             {
-                return CreatePatchFailureResponse(result, path, originalContent);
+                return CreatePatchFailureResponse(result, path);
             }
 
             File.WriteAllText(absolutePath, result.ModifiedContent);
@@ -161,7 +152,7 @@ public class DiffPatchTools
 
             var originalContent = File.ReadAllText(absolutePath);
             var diff = UnifiedDiffGenerator.GenerateDiff(originalContent, modifiedContent, $"a/{path}", $"b/{path}");
-            var patchText = FormatUnifiedDiff(diff, contextLines);
+            var patchText = FormatUnifiedDiff(diff);
 
             return $@"<tool_response tool_name=""generate_code_patch"">
     <notes>
@@ -212,23 +203,23 @@ public class DiffPatchTools
             var result = _patchApplicator.TryApplyWithFuzzyMatching(originalContent, parsedPatch);
 
             var notes = new StringBuilder();
-            notes.AppendLine($"Patch preview for {path}");
+            _ = notes.AppendLine($"Patch preview for {path}");
 
             if (result.Success)
             {
-                notes.AppendLine("✓ Patch can be applied successfully");
-                notes.AppendLine($"Lines to be added: {result.TotalLinesAdded}");
-                notes.AppendLine($"Lines to be removed: {result.TotalLinesRemoved}");
+                _ = notes.AppendLine("✓ Patch can be applied successfully");
+                _ = notes.AppendLine($"Lines to be added: {result.TotalLinesAdded}");
+                _ = notes.AppendLine($"Lines to be removed: {result.TotalLinesRemoved}");
 
                 if (result.AppliedWithFuzzyMatching)
                 {
-                    notes.AppendLine($"⚠ Requires fuzzy matching: {result.FuzzyMatchingStrategy}");
+                    _ = notes.AppendLine($"⚠ Requires fuzzy matching: {result.FuzzyMatchingStrategy}");
                 }
             }
             else
             {
-                notes.AppendLine("✗ Patch cannot be applied");
-                notes.AppendLine($"Error: {result.Error}");
+                _ = notes.AppendLine("✗ Patch cannot be applied");
+                _ = notes.AppendLine($"Error: {result.Error}");
             }
 
             return $@"<tool_response tool_name=""preview_patch_application"">
@@ -249,29 +240,24 @@ public class DiffPatchTools
         }
     }
 
-    private string FormatUnifiedDiff(UnifiedDiff diff, int contextLines)
+    private string FormatUnifiedDiff(UnifiedDiff diff)
     {
         var builder = new StringBuilder();
-        builder.AppendLine($"--- {diff.OriginalFile}");
-        builder.AppendLine($"+++ {diff.ModifiedFile}");
+        _ = builder.AppendLine($"--- {diff.OriginalFile}");
+        _ = builder.AppendLine($"+++ {diff.ModifiedFile}");
 
         foreach (var hunk in diff.Hunks)
         {
-            builder.AppendLine($"@@ -{hunk.OriginalStart},{hunk.OriginalLength} +{hunk.ModifiedStart},{hunk.ModifiedLength} @@");
+            _ = builder.AppendLine($"@@ -{hunk.OriginalStart},{hunk.OriginalLength} +{hunk.ModifiedStart},{hunk.ModifiedLength} @@");
             foreach (var line in hunk.Lines)
             {
-                switch (line.Type)
+                var prefix = line.Type switch
                 {
-                    case DiffLineType.Added:
-                        builder.AppendLine($"+{line.Content}");
-                        break;
-                    case DiffLineType.Removed:
-                        builder.AppendLine($"-{line.Content}");
-                        break;
-                    default:
-                        builder.AppendLine($" {line.Content}");
-                        break;
-                }
+                    DiffLineType.Added => "+",
+                    DiffLineType.Removed => "-",
+                    _ => " "
+                };
+                _ = builder.AppendLine($"{prefix}{line.Content}");
             }
         }
 
@@ -282,7 +268,7 @@ public class DiffPatchTools
     {
         try
         {
-            var lines = patch.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            var lines = patch.Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
             var hunks = new List<DiffHunk>();
             var currentHunkLines = new List<DiffLine>();
             string? originalFile = null;
@@ -296,12 +282,12 @@ public class DiffPatchTools
             {
                 if (line.StartsWith("--- "))
                 {
-                    originalFile = line.Substring(4).Split('\t')[0];
+                    originalFile = line[4..].Split('\t')[0];
                     continue;
                 }
                 if (line.StartsWith("+++ "))
                 {
-                    modifiedFile = line.Substring(4).Split('\t')[0];
+                    modifiedFile = line[4..].Split('\t')[0];
                     continue;
                 }
                 if (line.StartsWith("@@ "))
@@ -309,7 +295,7 @@ public class DiffPatchTools
                     if (currentHunkLines.Any())
                     {
                         hunks.Add(new DiffHunk { Lines = currentHunkLines, OriginalStart = originalStart, OriginalLength = originalLength, ModifiedStart = modifiedStart, ModifiedLength = modifiedLength });
-                        currentHunkLines = new List<DiffLine>();
+                        currentHunkLines = [];
                     }
 
                     var match = System.Text.RegularExpressions.Regex.Match(line, @"^@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@");
@@ -331,15 +317,15 @@ public class DiffPatchTools
 
                 if (line.StartsWith("+"))
                 {
-                    currentHunkLines.Add(new DiffLine { Type = DiffLineType.Added, Content = line.Substring(1) });
+                    currentHunkLines.Add(new DiffLine { Type = DiffLineType.Added, Content = line[1..] });
                 }
                 else if (line.StartsWith("-"))
                 {
-                    currentHunkLines.Add(new DiffLine { Type = DiffLineType.Removed, Content = line.Substring(1) });
+                    currentHunkLines.Add(new DiffLine { Type = DiffLineType.Removed, Content = line[1..] });
                 }
                 else if (line.StartsWith(" "))
                 {
-                    currentHunkLines.Add(new DiffLine { Type = DiffLineType.Context, Content = line.Substring(1) });
+                    currentHunkLines.Add(new DiffLine { Type = DiffLineType.Context, Content = line[1..] });
                 }
             }
 
@@ -372,14 +358,14 @@ public class DiffPatchTools
     private string CreateSuccessResponse(string relativePath, string absolutePath, PatchResult result, string originalChecksum, string newChecksum, string finalContent)
     {
         var notes = new StringBuilder();
-        notes.AppendLine($"Successfully applied patch to {relativePath}");
-        notes.AppendLine($"Lines added: {result.TotalLinesAdded}");
-        notes.AppendLine($"Lines removed: {result.TotalLinesRemoved}");
-        notes.AppendLine($"Hunks applied: {result.AppliedHunks!.Count}");
+        _ = notes.AppendLine($"Successfully applied patch to {relativePath}");
+        _ = notes.AppendLine($"Lines added: {result.TotalLinesAdded}");
+        _ = notes.AppendLine($"Lines removed: {result.TotalLinesRemoved}");
+        _ = notes.AppendLine($"Hunks applied: {result.AppliedHunks!.Count}");
 
         if (result.AppliedWithFuzzyMatching)
         {
-            notes.AppendLine($"Applied using fuzzy matching strategy: {result.FuzzyMatchingStrategy}");
+            _ = notes.AppendLine($"Applied using fuzzy matching strategy: {result.FuzzyMatchingStrategy}");
         }
 
         return $@"<tool_response tool_name=""apply_code_patch"">
@@ -391,16 +377,16 @@ public class DiffPatchTools
 </tool_response>";
     }
 
-    private string CreatePatchFailureResponse(PatchResult result, string path, string originalContent)
+    private string CreatePatchFailureResponse(PatchResult result, string path)
     {
         var notes = new StringBuilder();
-        notes.AppendLine($"Failed to apply patch to {path}");
-        notes.AppendLine($"Error: {result.Error}");
+        _ = notes.AppendLine($"Failed to apply patch to {path}");
+        _ = notes.AppendLine($"Error: {result.Error}");
 
         if (result.ConflictingHunk != null)
         {
-            notes.AppendLine("Conflicting hunk details:");
-            notes.AppendLine($"  Original lines: {result.ConflictingHunk.OriginalStart}-{result.ConflictingHunk.OriginalStart + result.ConflictingHunk.OriginalLength - 1}");
+            _ = notes.AppendLine("Conflicting hunk details:");
+            _ = notes.AppendLine($"  Original lines: {result.ConflictingHunk.OriginalStart}-{result.ConflictingHunk.OriginalStart + result.ConflictingHunk.OriginalLength - 1}");
         }
 
         return $@"<tool_response tool_name=""apply_code_patch"">

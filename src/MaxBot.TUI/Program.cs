@@ -1,7 +1,3 @@
-using MaxBot.TUI.Commands;
-using MaxBot.TUI.Infrastructure;
-using System.Reflection;
-
 namespace MaxBot.TUI;
 
 /// <summary>
@@ -9,11 +5,11 @@ namespace MaxBot.TUI;
 /// </summary>
 public static class Program
 {
-    private static readonly ICommand[] Commands = 
-    {
+    private static readonly ICommand[] Commands =
+    [
         new ChatCommand(),
         new NonInteractiveCommand()
-    };
+    ];
 
     /// <summary>
     /// Main entry point.
@@ -27,7 +23,7 @@ public static class Program
             // Parse arguments to get command name
             var parsedArgs = ArgumentParser.Parse(args);
             var commandName = ArgumentParser.GetString(parsedArgs, "_0");
-            
+
             // Handle global flags only when no command is specified
             if (string.IsNullOrEmpty(commandName))
             {
@@ -36,13 +32,13 @@ public static class Program
                     ShowGlobalHelp();
                     return 0;
                 }
-                
+
                 if (ArgumentParser.HasFlag(parsedArgs, "version") || ArgumentParser.HasFlag(parsedArgs, "v"))
                 {
                     AnsiConsole.WriteLine(GetApplicationVersion());
                     return 0;
                 }
-                
+
                 // Default to chat if no command specified
                 commandName = "chat";
             }
@@ -58,8 +54,8 @@ public static class Program
             }
 
             // Remove command name from args and pass the rest to the command
-            var commandArgs = args.Length > 0 && !string.IsNullOrEmpty(ArgumentParser.GetString(parsedArgs, "_0")) 
-                ? args.Skip(1).ToArray() 
+            var commandArgs = args.Length > 0 && !string.IsNullOrEmpty(ArgumentParser.GetString(parsedArgs, "_0"))
+                ? [.. args.Skip(1)]
                 : args;
             return await command.ExecuteAsync(commandArgs);
         }
@@ -77,24 +73,24 @@ public static class Program
     {
         AnsiConsole.MarkupLine($"[bold]max[/] [dim]v{GetApplicationVersion()}[/]");
         AnsiConsole.WriteLine();
-        
+
         AnsiConsole.MarkupLine("[bold]USAGE:[/]");
         AnsiConsole.MarkupLine("    max [[COMMAND]] [[OPTIONS]]");
         AnsiConsole.WriteLine();
-        
+
         AnsiConsole.MarkupLine("[bold]COMMANDS:[/]");
         foreach (var command in Commands)
         {
             AnsiConsole.MarkupLine($"    [cyan]{command.Name,-12}[/] {command.Description}");
         }
         AnsiConsole.WriteLine();
-        
+
         AnsiConsole.MarkupLine("[bold]GLOBAL OPTIONS:[/]");
         AnsiConsole.MarkupLine("    -h, --help                   Show this help message");
         AnsiConsole.MarkupLine("    -v, --version                Show version information");
         AnsiConsole.MarkupLine("    -ta, --tool-approvals <MODE> Override tool approval mode (readonly, all)");
         AnsiConsole.WriteLine();
-        
+
         AnsiConsole.MarkupLine("[bold]EXAMPLES:[/]");
         AnsiConsole.MarkupLine("    max                                          # Start interactive chat (default)");
         AnsiConsole.MarkupLine("    max chat --verbosity normal                 # Start chat with verbose logging");
@@ -103,7 +99,7 @@ public static class Program
         AnsiConsole.MarkupLine("    max run --prompt ./my-prompt.md             # Run prompt from file");
         AnsiConsole.MarkupLine("    max run -p \"Create a file\" -ta all          # Run with all tools enabled");
         AnsiConsole.WriteLine();
-        
+
         AnsiConsole.MarkupLine("Use '[cyan]max <command> --help[/]' for more information about a specific command.");
     }
 

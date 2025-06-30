@@ -4,5 +4,4 @@ global using OpenAI;
 
 global using MaxBot.Prompts;
 global using MaxBot.Domain;
-global using MaxBot.Utils;
 global using MaxBot.Tools;

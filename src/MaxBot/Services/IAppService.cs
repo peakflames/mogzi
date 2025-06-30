@@ -1,11 +1,3 @@
-using FluentResults;
-using Microsoft.Extensions.AI;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using MaxBot;
-
 namespace MaxBot.Services;
 
 /// <summary>
@@ -22,7 +14,7 @@ public interface IAppService
     /// Gets the chat options
     /// </summary>
     ChatOptions ChatOptions { get; }
-    
+
     /// <summary>
     /// Gets the chat client
     /// </summary>

@@ -1,5 +1,3 @@
-using Microsoft.Extensions.AI;
-using MaxBot.Domain;
 using System.ComponentModel;
 using System.Security;
 using System.Security.Cryptography;
@@ -8,18 +6,11 @@ using System.Runtime.InteropServices;
 
 namespace MaxBot.Tools;
 
-public class EditTool
+public class EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
 {
-    private readonly MaxbotConfiguration _config;
-    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = null;
-    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
-
-    public EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
-    {
-        _config = config;
-        _llmResponseDetailsCallback = llmResponseDetailsCallback;
-        _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
-    }
+    private readonly MaxbotConfiguration _config = config;
+    private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = llmResponseDetailsCallback;
+    private readonly IWorkingDirectoryProvider _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
 
     public AIFunction GetTool()
     {
@@ -43,7 +34,7 @@ public class EditTool
         int? expected_replacements = 1)
     {
         var expectedReplacements = expected_replacements ?? 1;
-        
+
         _llmResponseDetailsCallback?.Invoke($"Replacing text in file '{file_path}' (expecting {expectedReplacements} replacement{(expectedReplacements == 1 ? "" : "s")}).", ConsoleColor.DarkGray);
 
         try
@@ -91,7 +82,7 @@ public class EditTool
 
             // Read current content
             var currentContent = await File.ReadAllTextAsync(absolutePath);
-            
+
             // Normalize line endings to LF for consistent processing
             currentContent = currentContent.Replace("\r\n", "\n");
 
@@ -145,7 +136,7 @@ public class EditTool
                 File.Delete(backupPath);
 
                 var checksum = ComputeSha256(finalContent);
-                var lineCount = finalContent.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None).Length;
+                var lineCount = finalContent.Split(["\r\n", "\r", "\n"], StringSplitOptions.None).Length;
 
                 return CreateSuccessResponse(file_path, absolutePath, finalContent, checksum, lineCount, occurrences);
             }
@@ -207,7 +198,7 @@ public class EditTool
             var directoryPath = Path.GetDirectoryName(absolutePath);
             if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
             {
-                Directory.CreateDirectory(directoryPath);
+                _ = Directory.CreateDirectory(directoryPath);
             }
 
             // Write content to new file
@@ -221,7 +212,7 @@ public class EditTool
             }
 
             var checksum = ComputeSha256(writtenContent);
-            var lineCount = writtenContent.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None).Length;
+            var lineCount = writtenContent.Split(["\r\n", "\r", "\n"], StringSplitOptions.None).Length;
 
             return CreateFileCreationResponse(absolutePath, writtenContent, checksum, lineCount);
         }
@@ -294,7 +285,7 @@ public class EditTool
             var normalizedWorkingDirectory = Path.GetFullPath(workingDirectory);
 
             // Check if the path is exactly the working directory
-            if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory, 
+            if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory,
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
             {
                 return true;
@@ -307,7 +298,7 @@ public class EditTool
                 normalizedWorkingDirectory += Path.DirectorySeparatorChar;
             }
 
-            return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory, 
+            return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory,
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
         }
         catch
@@ -319,9 +310,9 @@ public class EditTool
     private string CreateSuccessResponse(string relativePath, string absolutePath, string content, string checksum, int lineCount, int replacements)
     {
         var notes = new StringBuilder();
-        notes.AppendLine($"Successfully modified file: {relativePath} ({replacements} replacement{(replacements == 1 ? "" : "s")})");
-        notes.AppendLine($"Total lines: {lineCount}");
-        notes.AppendLine($"Content size: {content.Length} characters");
+        _ = notes.AppendLine($"Successfully modified file: {relativePath} ({replacements} replacement{(replacements == 1 ? "" : "s")})");
+        _ = notes.AppendLine($"Total lines: {lineCount}");
+        _ = notes.AppendLine($"Content size: {content.Length} characters");
 
         return $@"<tool_response tool_name=""replace"">
     <notes>{SecurityElement.Escape(notes.ToString().Trim())}</notes>
@@ -333,9 +324,9 @@ public class EditTool
     private string CreateFileCreationResponse(string absolutePath, string content, string checksum, int lineCount)
     {
         var notes = new StringBuilder();
-        notes.AppendLine($"Created new file: {absolutePath} with provided content");
-        notes.AppendLine($"Total lines: {lineCount}");
-        notes.AppendLine($"Content size: {content.Length} characters");
+        _ = notes.AppendLine($"Created new file: {absolutePath} with provided content");
+        _ = notes.AppendLine($"Total lines: {lineCount}");
+        _ = notes.AppendLine($"Content size: {content.Length} characters");
 
         return $@"<tool_response tool_name=""replace"">
     <notes>{SecurityElement.Escape(notes.ToString().Trim())}</notes>

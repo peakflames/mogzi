@@ -16,13 +16,13 @@ public static class ApiMetricUtils
         {
             tokenCount += TokensPerMessage;
             tokenCount += TokensPerRole;
-            
+
             // Count tokens from message text (legacy support)
             if (!string.IsNullOrEmpty(message.Text))
             {
                 tokenCount += encoding.Encode(message.Text, disallowedSpecial).Count;
             }
-            
+
             // Count tokens from all content types in the message
             if (message.Contents != null)
             {
@@ -41,24 +41,24 @@ public static class ApiMetricUtils
         return content switch
         {
             // Function call content - count function name and arguments
-            FunctionCallContent functionCall => 
+            FunctionCallContent functionCall =>
                 encoding.Encode(functionCall.CallId ?? string.Empty, disallowedSpecial).Count +
                 encoding.Encode(functionCall.Name ?? string.Empty, disallowedSpecial).Count +
                 CountFunctionArguments(functionCall.Arguments, encoding, disallowedSpecial) +
                 10, // Additional overhead for function call structure
-            
+
             // Function result content - count call ID and result
             FunctionResultContent functionResult =>
                 encoding.Encode(functionResult.CallId ?? string.Empty, disallowedSpecial).Count +
                 encoding.Encode(functionResult.Result?.ToString() ?? string.Empty, disallowedSpecial).Count +
                 5, // Additional overhead for function result structure
-            
+
             // Handle other known content types by type name (Native AOT compatible)
             _ when content.GetType().Name == "TextContent" => CountTextContentByToString(content, encoding, disallowedSpecial),
             _ when content.GetType().Name == "DataContent" => EstimateDataContentTokens(content),
             _ when content.GetType().Name == "ImageContent" => 150, // Standard image token estimate
             _ when content.GetType().Name == "UsageContent" => 5, // Minimal tokens for metadata
-            
+
             // Default case for unknown content types
             _ => EstimateUnknownContentTokens(content, encoding, disallowedSpecial)
         };
@@ -67,7 +67,9 @@ public static class ApiMetricUtils
     private static int CountFunctionArguments(IDictionary<string, object?>? arguments, SharpToken.GptEncoding encoding, HashSet<string> disallowedSpecial)
     {
         if (arguments == null)
+        {
             return 0;
+        }
 
         // Estimate based on key-value pairs without dynamic serialization
         var estimatedTokens = 0;
@@ -84,14 +86,14 @@ public static class ApiMetricUtils
     {
         // For TextContent, ToString() typically returns the text content
         var contentString = content.ToString() ?? string.Empty;
-        
+
         // If ToString() returns type name, it's likely not the actual text content
         if (contentString.Contains("TextContent") || contentString.Length < 10)
         {
             // Fallback: estimate based on typical text content size
             return 20;
         }
-        
+
         return encoding.Encode(contentString, disallowedSpecial).Count;
     }
 
@@ -101,8 +103,8 @@ public static class ApiMetricUtils
         // Images in vision models typically consume 85-170 tokens per 512x512 tile
         // We'll use a moderate estimate since we can't inspect the actual content
         var contentString = content.ToString() ?? string.Empty;
-        
-        if (contentString.Contains("image") || contentString.Contains("png") || 
+
+        if (contentString.Contains("image") || contentString.Contains("png") ||
             contentString.Contains("jpg") || contentString.Contains("jpeg"))
         {
             return 150; // Standard image token estimate
@@ -111,7 +113,7 @@ public static class ApiMetricUtils
         {
             return 50; // Text-based file estimate
         }
-        
+
         return 25; // Default data content estimate
     }
 
@@ -119,13 +121,13 @@ public static class ApiMetricUtils
     {
         // For unknown content types, use ToString() and add a small overhead
         var contentString = content.ToString() ?? string.Empty;
-        
+
         // If ToString() just returns the type name, use a conservative estimate
         if (contentString.Length < 20 && contentString.Contains("Content"))
         {
             return 10; // Conservative estimate for unknown content types
         }
-        
+
         return encoding.Encode(contentString, disallowedSpecial).Count + 5; // Small overhead for structure
     }
 }

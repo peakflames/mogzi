@@ -1,7 +1,3 @@
-using MaxBot.PawPrints;
-using MaxBot.TUI.Models;
-using MaxBot.Domain;
-
 namespace MaxBot.TUI.App;
 
 public sealed class FlexColumnTuiApp : IDisposable
@@ -15,9 +11,6 @@ public sealed class FlexColumnTuiApp : IDisposable
     private readonly SlashCommandProcessor _slashCommandProcessor;
     private readonly IScrollbackTerminal _scrollbackTerminal;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
-
-    // Application state
-    private bool _isRunning = false;
     private bool _isDisposed = false;
 
     // Chat state
@@ -26,14 +19,14 @@ public sealed class FlexColumnTuiApp : IDisposable
     private string _toolProgress = string.Empty;
     private string _currentToolName = string.Empty;
     private int _cursorPosition = 0;
-    private readonly List<string> _commandHistory = new();
+    private readonly List<string> _commandHistory = [];
     private int _commandHistoryIndex = -1;
 
     // AI operation management
     private CancellationTokenSource? _aiOperationCts;
     private DateTime _aiOperationStartTime;
 
-    public bool IsRunning => _isRunning;
+    public bool IsRunning { get; private set; } = false;
 
     public event Action? Started;
     public event Action? Stopped;
@@ -72,11 +65,12 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken = default)
     {
-        if (_isDisposed)
-            throw new ObjectDisposedException(nameof(FlexColumnTuiApp));
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
 
-        if (_isRunning)
+        if (IsRunning)
+        {
             throw new InvalidOperationException("Application is already running");
+        }
 
         try
         {
@@ -86,7 +80,7 @@ public sealed class FlexColumnTuiApp : IDisposable
 
             Initialize(args);
 
-            _isRunning = true;
+            IsRunning = true;
             Started?.Invoke();
 
             var exitCode = await RunMainLoopAsync(combinedCts.Token);
@@ -107,13 +101,15 @@ public sealed class FlexColumnTuiApp : IDisposable
         }
         finally
         {
-            _isRunning = false;
+            IsRunning = false;
             Stopped?.Invoke();
             await ShutdownAsync();
         }
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     private void Initialize(string[] args)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         _logger.LogDebug("Initializing FlexColumn TUI application");
         _scrollbackTerminal.Initialize();
@@ -227,10 +223,10 @@ public sealed class FlexColumnTuiApp : IDisposable
         return new Rows(contentItems);
     }
 
-    
+
 
     private IRenderable RenderMessage(ChatMessage message)
-    {       
+    {
         if (string.IsNullOrEmpty(message.Text))
         {
             return new Text(string.Empty);
@@ -273,7 +269,7 @@ public sealed class FlexColumnTuiApp : IDisposable
     {
         var prompt = "[blue]>[/] ";
         var cursor = "[blink]▋[/]";
-        
+
         string content;
         if (string.IsNullOrEmpty(currentInput))
         {
@@ -282,8 +278,8 @@ public sealed class FlexColumnTuiApp : IDisposable
         else
         {
             // Insert cursor at the correct position
-            var beforeCursor = currentInput.Substring(0, _cursorPosition);
-            var afterCursor = currentInput.Substring(_cursorPosition);
+            var beforeCursor = currentInput[.._cursorPosition];
+            var afterCursor = currentInput[_cursorPosition..];
             content = $"{prompt}{beforeCursor}{cursor}{afterCursor}";
         }
 
@@ -327,9 +323,9 @@ public sealed class FlexColumnTuiApp : IDisposable
         };
 
         // Provide meaningful progress text
-        var progressText = string.IsNullOrWhiteSpace(progress) 
-            ? (!string.IsNullOrWhiteSpace(_currentToolName) 
-                ? $"Executing {_currentToolName}..." 
+        var progressText = string.IsNullOrWhiteSpace(progress)
+            ? (!string.IsNullOrWhiteSpace(_currentToolName)
+                ? $"Executing {_currentToolName}..."
                 : "Executing tool...")
             : progress;
 
@@ -353,12 +349,12 @@ public sealed class FlexColumnTuiApp : IDisposable
         {
             var chatHistory = _historyManager.GetCurrentChatHistory();
             var tokenCount = _appService.CalculateTokenMetrics(chatHistory);
-            
+
             // Estimate context window size based on model (this could be made configurable)
             var contextWindowSize = EstimateContextWindowSize();
-            var percentageUsed = Math.Min(100, (tokenCount * 100) / contextWindowSize);
+            var percentageUsed = Math.Min(100, tokenCount * 100 / contextWindowSize);
             var percentageLeft = 100 - percentageUsed;
-            
+
             return $"{tokenCount:N0} tokens, {percentageLeft}% context left";
         }
         catch (Exception ex)
@@ -373,7 +369,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         try
         {
             var modelId = _appService.ChatClient.ActiveProfile.ModelId.ToLowerInvariant();
-            
+
             // Common model context window sizes
             return modelId switch
             {
@@ -402,7 +398,7 @@ public sealed class FlexColumnTuiApp : IDisposable
             var chatClient = _appService.ChatClient;
             var provider = chatClient.ActiveApiProvider.Name;
             var model = chatClient.ActiveProfile.ModelId;
-            
+
             // Format like "provider/model" or just "model" if provider is empty
             if (!string.IsNullOrEmpty(provider))
             {
@@ -424,7 +420,7 @@ public sealed class FlexColumnTuiApp : IDisposable
             var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             if (fullPath.StartsWith(homeDir))
             {
-                return "~" + fullPath.Substring(homeDir.Length).Replace('\\', '/');
+                return "~" + fullPath[homeDir.Length..].Replace('\\', '/');
             }
             return fullPath.Replace('\\', '/');
         }
@@ -476,10 +472,14 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private async void OnKeyPressed(object? sender, KeyPressEventArgs e)
     {
-        if (e.Handled) return;
+        if (e.Handled)
+        {
+            return;
+        }
 
         try
         {
+#pragma warning disable IDE0010 // Add missing cases
             switch (e.Key)
             {
                 case ConsoleKey.Enter:
@@ -531,7 +531,10 @@ public sealed class FlexColumnTuiApp : IDisposable
                     HandleEscapeKey();
                     e.Handled = true;
                     break;
+                default:
+                    break;
             }
+#pragma warning restore IDE0010 // Add missing cases
         }
         catch (Exception ex)
         {
@@ -541,7 +544,10 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private async void OnKeyCombinationPressed(object? sender, KeyCombinationEventArgs e)
     {
-        if (e.Handled) return;
+        if (e.Handled)
+        {
+            return;
+        }
 
         try
         {
@@ -557,7 +563,10 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private async void OnCharacterTyped(object? sender, CharacterTypedEventArgs e)
     {
-        if (e.Handled) return;
+        if (e.Handled)
+        {
+            return;
+        }
 
         try
         {
@@ -591,7 +600,10 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     public void Dispose()
     {
-        if (_isDisposed) return;
+        if (_isDisposed)
+        {
+            return;
+        }
 
         _isDisposed = true;
 
@@ -633,7 +645,10 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private void NavigateCommandHistory(bool up)
     {
-        if (_commandHistory.Count == 0) return;
+        if (_commandHistory.Count == 0)
+        {
+            return;
+        }
 
         if (up)
         {
@@ -667,7 +682,10 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private async Task SubmitCurrentInput()
     {
-        if (string.IsNullOrWhiteSpace(_currentInput) || _currentState != ChatState.Input) return;
+        if (string.IsNullOrWhiteSpace(_currentInput) || _currentState != ChatState.Input)
+        {
+            return;
+        }
 
         var inputToSubmit = _currentInput;
         AddToCommandHistory(inputToSubmit);
@@ -678,7 +696,10 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private void AddToCommandHistory(string command)
     {
-        if (string.IsNullOrWhiteSpace(command)) return;
+        if (string.IsNullOrWhiteSpace(command))
+        {
+            return;
+        }
 
         if (_commandHistory.Contains(command))
         {
@@ -701,11 +722,11 @@ public sealed class FlexColumnTuiApp : IDisposable
         {
             // Add spacing before user message
             _scrollbackTerminal.WriteStatic(new Markup(""));
-            
+
             var userMessage = new ChatMessage(ChatRole.User, input);
             _historyManager.AddUserMessage(userMessage);
             _scrollbackTerminal.WriteStatic(RenderMessage(userMessage));
-            
+
             if (_slashCommandProcessor.TryProcessCommand(input, out var commandOutput))
             {
                 if (!string.IsNullOrEmpty(commandOutput))
@@ -721,7 +742,7 @@ public sealed class FlexColumnTuiApp : IDisposable
             _aiOperationCts?.Dispose();
             _aiOperationCts = new CancellationTokenSource();
             _aiOperationStartTime = DateTime.Now;
-            
+
             _currentState = ChatState.Thinking;
 
             var chatHistory = _historyManager.GetCurrentChatHistory();
@@ -786,15 +807,21 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private bool IsToolExecutionUpdate(ChatResponseUpdate responseUpdate)
     {
-        if (responseUpdate.Contents == null) return false;
+        if (responseUpdate.Contents == null)
+        {
+            return false;
+        }
 
         return responseUpdate.Contents.Any(content =>
-            content is FunctionCallContent || content is FunctionResultContent);
+            content is FunctionCallContent or FunctionResultContent);
     }
 
     private void ExtractToolNameFromUpdate(ChatResponseUpdate responseUpdate)
     {
-        if (responseUpdate.Contents == null) return;
+        if (responseUpdate.Contents == null)
+        {
+            return;
+        }
 
         var functionCall = responseUpdate.Contents.OfType<FunctionCallContent>().FirstOrDefault();
         if (functionCall != null)
@@ -805,14 +832,7 @@ public sealed class FlexColumnTuiApp : IDisposable
             if (functionCall.Arguments != null && functionCall.Arguments.Count > 0)
             {
                 var keyValue = GetKeyArgumentValue(toolName, functionCall.Arguments);
-                if (!string.IsNullOrEmpty(keyValue))
-                {
-                    _currentToolName = $"{toolName} → {keyValue}";
-                }
-                else
-                {
-                    _currentToolName = toolName;
-                }
+                _currentToolName = !string.IsNullOrEmpty(keyValue) ? $"{toolName} → {keyValue}" : toolName;
             }
             else
             {
@@ -831,12 +851,12 @@ public sealed class FlexColumnTuiApp : IDisposable
         var keyArguments = toolName.ToLowerInvariant() switch
         {
             "execute_command" or "shell" => new[] { "command", "cmd" },
-            "write_file" or "writefile" or "write_to_file" => new[] { "file_path", "path", "filename" },
-            "read_file" or "readfile" or "read_file_tool" => new[] { "file_path", "path", "filename" },
-            "edit_file" or "editfile" => new[] { "file_path", "path", "filename" },
-            "grep" or "search" => new[] { "pattern", "query", "search_term" },
-            "ls" or "list" or "list_files" => new[] { "path", "directory" },
-            _ => new[] { "path", "file", "command", "query", "name" } // fallback common keys
+            "write_file" or "writefile" or "write_to_file" => ["file_path", "path", "filename"],
+            "read_file" or "readfile" or "read_file_tool" => ["file_path", "path", "filename"],
+            "edit_file" or "editfile" => ["file_path", "path", "filename"],
+            "grep" or "search" => ["pattern", "query", "search_term"],
+            "ls" or "list" or "list_files" => ["path", "directory"],
+            _ => ["path", "file", "command", "query", "name"] // fallback common keys
         };
 
         foreach (var key in keyArguments)
@@ -844,7 +864,7 @@ public sealed class FlexColumnTuiApp : IDisposable
             if (arguments.TryGetValue(key, out var value) && value != null)
             {
                 var valueStr = value.ToString() ?? "";
-                
+
                 // For file paths, show just the filename if it's a full path
                 if (key.Contains("path") || key.Contains("file"))
                 {
@@ -855,7 +875,7 @@ public sealed class FlexColumnTuiApp : IDisposable
                         valueStr = value.ToString() ?? "";
                     }
                 }
-                
+
                 // For commands, show first part (command name) and truncate if needed
                 if (key.Contains("command") || key.Contains("cmd"))
                 {
@@ -870,13 +890,13 @@ public sealed class FlexColumnTuiApp : IDisposable
                         }
                     }
                 }
-                
+
                 // Final truncation to ensure single line (max 25 chars for the value part)
                 if (valueStr.Length > 25)
                 {
-                    valueStr = valueStr.Substring(0, 22) + "...";
+                    valueStr = valueStr[..22] + "...";
                 }
-                
+
                 return valueStr;
             }
         }
@@ -887,7 +907,10 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private void InsertCharacter(char character)
     {
-        if (_currentState != ChatState.Input) return;
+        if (_currentState != ChatState.Input)
+        {
+            return;
+        }
 
         _cursorPosition = Math.Max(0, Math.Min(_cursorPosition, _currentInput.Length));
         _currentInput = _currentInput.Insert(_cursorPosition, character.ToString());
@@ -897,7 +920,10 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private void DeleteCharacterBefore()
     {
-        if (_currentState != ChatState.Input || _currentInput.Length == 0) return;
+        if (_currentState != ChatState.Input || _currentInput.Length == 0)
+        {
+            return;
+        }
 
         _cursorPosition = Math.Max(0, Math.Min(_cursorPosition, _currentInput.Length));
 
@@ -912,7 +938,10 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private void DeleteCharacterAfter()
     {
-        if (_currentState != ChatState.Input || _currentInput.Length == 0) return;
+        if (_currentState != ChatState.Input || _currentInput.Length == 0)
+        {
+            return;
+        }
 
         _cursorPosition = Math.Max(0, Math.Min(_cursorPosition, _currentInput.Length));
 
@@ -959,19 +988,21 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private void HandleEscapeKey()
     {
+#pragma warning disable IDE0010 // Add missing cases
         switch (_currentState)
         {
             case ChatState.Input:
                 // Clear current input when in input state
                 ClearCurrentInput();
                 break;
-                
+
             case ChatState.Thinking:
             case ChatState.ToolExecution:
                 // Interrupt AI operation and return to input
                 InterruptAiOperation();
                 break;
         }
+#pragma warning restore IDE0010 // Add missing cases
     }
 
     private void InterruptAiOperation()
@@ -980,22 +1011,22 @@ public sealed class FlexColumnTuiApp : IDisposable
         {
             // Cancel the AI operation
             _aiOperationCts?.Cancel();
-            
+
             // Set state back to input
             _currentState = ChatState.Input;
-            
+
             // Clear any progress indicators
             _toolProgress = string.Empty;
             _currentToolName = string.Empty;
-            
+
             // Display interruption message without assistant prefix
             _scrollbackTerminal.WriteStatic(new Markup("⚠ Request cancelled."));
             _scrollbackTerminal.WriteStatic(new Markup(""));
-            
+
             // Add to history as assistant message for context
             var interruptMessage = new ChatMessage(ChatRole.Assistant, "⚠ Request cancelled.");
             _historyManager.AddAssistantMessage(interruptMessage);
-            
+
             _logger?.LogInformation("AI operation interrupted by user (Escape key)");
         }
         catch (Exception ex)

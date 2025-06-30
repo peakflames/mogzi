@@ -1,6 +1,3 @@
-
-using System.Data;
-
 namespace MaxBot.Domain;
 
 public class ApiMetrics

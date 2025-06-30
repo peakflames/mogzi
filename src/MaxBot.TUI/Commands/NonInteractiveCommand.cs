@@ -1,6 +1,3 @@
-using MaxBot.Domain;
-using MaxBot.TUI.Infrastructure;
-
 namespace MaxBot.TUI.Commands;
 
 /// <summary>
@@ -16,17 +13,17 @@ public sealed class NonInteractiveCommand : ICommand
         try
         {
             var parsedArgs = ArgumentParser.Parse(args);
-            
+
             // Check for help
             if (ArgumentParser.HasFlag(parsedArgs, "help") || ArgumentParser.HasFlag(parsedArgs, "h"))
             {
                 ShowHelp();
                 return 0;
             }
-            
+
             // Get prompt from arguments
             var prompt = ArgumentParser.GetString(parsedArgs, ["prompt", "p"], null);
-            
+
             // Check for STDIN input and handle it like the CLI version
             if (Console.IsInputRedirected)
             {
@@ -45,31 +42,31 @@ public sealed class NonInteractiveCommand : ICommand
                     }
                 }
             }
-            
+
             if (string.IsNullOrWhiteSpace(prompt))
             {
                 AnsiConsole.MarkupLine("[red]Error: Prompt is required for non-interactive mode. Use --prompt or -p to specify the message, path to a .md file, or pipe input via STDIN.[/]");
                 return 1;
             }
-            
+
             // Extract configuration parameters
             var configPath = ArgumentParser.GetString(parsedArgs, ["config"], null);
             var profileName = ArgumentParser.GetString(parsedArgs, ["profile"], null);
             var toolApprovals = ArgumentParser.GetString(parsedArgs, ["tool-approvals", "ta"], null);
-            
+
             // Validate tool-approvals value if provided
-            if (!string.IsNullOrEmpty(toolApprovals) && 
+            if (!string.IsNullOrEmpty(toolApprovals) &&
                 toolApprovals != "readonly" && toolApprovals != "all")
             {
                 AnsiConsole.MarkupLine("[red]Error: --tool-approvals must be either 'readonly' or 'all'[/]");
                 return 1;
             }
-            
+
             // Setup dependency injection
             var services = new ServiceCollection();
             ServiceConfiguration.ConfigureServices(services, configPath, profileName, toolApprovals);
             var serviceProvider = services.BuildServiceProvider();
-            
+
             var appService = serviceProvider.GetRequiredService<IAppService>();
             var historyManager = serviceProvider.GetRequiredService<HistoryManager>();
             var console = serviceProvider.GetRequiredService<IAnsiConsole>();
@@ -86,7 +83,7 @@ public sealed class NonInteractiveCommand : ICommand
 
             // Create chat history
             var chatHistory = new List<ChatMessage>();
-            
+
             if (!noHistory)
             {
                 // Load existing history
@@ -125,7 +122,7 @@ public sealed class NonInteractiveCommand : ICommand
             {
                 if (!string.IsNullOrEmpty(responseUpdate.Text))
                 {
-                    responseText.Append(responseUpdate.Text);
+                    _ = responseText.Append(responseUpdate.Text);
                     console.Write(responseUpdate.Text);
                 }
             }
@@ -163,11 +160,11 @@ public sealed class NonInteractiveCommand : ICommand
         AnsiConsole.MarkupLine("[bold]DESCRIPTION:[/]");
         AnsiConsole.MarkupLine($"    {Description}");
         AnsiConsole.WriteLine();
-        
+
         AnsiConsole.MarkupLine("[bold]USAGE:[/]");
         AnsiConsole.MarkupLine("    max run [[OPTIONS]]");
         AnsiConsole.WriteLine();
-        
+
         AnsiConsole.MarkupLine("[bold]OPTIONS:[/]");
         AnsiConsole.MarkupLine("    -p, --prompt <PROMPT>        The prompt/message to send to the AI, or path to a .md file containing the prompt");
         AnsiConsole.MarkupLine("    -v, --verbosity <LEVEL>      Set the verbosity level (quiet, minimal, normal, detailed, diagnostic)");
@@ -177,7 +174,7 @@ public sealed class NonInteractiveCommand : ICommand
         AnsiConsole.MarkupLine("        --no-history             Don't use or save chat history");
         AnsiConsole.MarkupLine("    -h, --help                   Show this help message");
         AnsiConsole.WriteLine();
-        
+
         AnsiConsole.MarkupLine("[bold]EXAMPLES:[/]");
         AnsiConsole.MarkupLine("    max run -p \"What is the capital of Michigan?\"");
         AnsiConsole.MarkupLine("    max run -p ./prompts/analyze-code.md");
@@ -194,23 +191,23 @@ public sealed class NonInteractiveCommand : ICommand
         try
         {
             // Check if the input looks like a file path and ends with .md
-            if (promptInput.EndsWith(".md", StringComparison.OrdinalIgnoreCase) && 
+            if (promptInput.EndsWith(".md", StringComparison.OrdinalIgnoreCase) &&
                 (promptInput.Contains('/') || promptInput.Contains('\\') || promptInput.Contains('.')))
             {
                 // Treat as potential file path
                 var filePath = Path.GetFullPath(promptInput);
-                
+
                 if (File.Exists(filePath))
                 {
                     console.MarkupLine($"[dim]Reading prompt from: {filePath}[/]");
                     var content = await File.ReadAllTextAsync(filePath);
-                    
+
                     if (string.IsNullOrWhiteSpace(content))
                     {
                         console.MarkupLine($"[red]Error: The file '{filePath}' is empty.[/]");
                         return null;
                     }
-                    
+
                     return content.Trim();
                 }
                 else
@@ -219,7 +216,7 @@ public sealed class NonInteractiveCommand : ICommand
                     return null;
                 }
             }
-            
+
             // Treat as direct prompt text
             return promptInput;
         }

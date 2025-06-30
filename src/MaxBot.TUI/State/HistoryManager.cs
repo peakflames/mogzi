@@ -1,20 +1,15 @@
 namespace MaxBot.TUI.State;
 
-public class HistoryManager
+public class HistoryManager(StateManager stateManager)
 {
-    private readonly List<ChatMessage> _completedMessages = new();
-    private readonly List<ChatMessage> _pendingMessages = new();
-    private readonly StateManager _stateManager;
+    private readonly List<ChatMessage> _completedMessages = [];
+    private readonly List<ChatMessage> _pendingMessages = [];
+    private readonly StateManager _stateManager = stateManager;
 
     /// <summary>
     /// Unique identifier for this HistoryManager instance for state change notifications.
     /// </summary>
     public string ComponentId { get; } = "HistoryManager";
-
-    public HistoryManager(StateManager stateManager)
-    {
-        _stateManager = stateManager;
-    }
 
     public void AddUserMessage(ChatMessage message)
     {
@@ -55,19 +50,19 @@ public class HistoryManager
 
     public List<ChatMessage> GetCompletedMessages()
     {
-        return _completedMessages.ToList();
+        return [.. _completedMessages];
     }
 
     public List<ChatMessage> GetPendingMessages()
     {
-        return _pendingMessages.ToList();
+        return [.. _pendingMessages];
     }
 
     public List<ChatMessage> GetCurrentChatHistory()
     {
         // In a real implementation, this would be more complex,
         // including pending messages, system prompts, etc.
-        return _completedMessages.ToList();
+        return [.. _completedMessages];
     }
 
     public void ClearHistory()

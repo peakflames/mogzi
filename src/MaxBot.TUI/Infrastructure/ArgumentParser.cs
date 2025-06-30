@@ -15,40 +15,29 @@ public static class ArgumentParser
         var result = new Dictionary<string, string?>();
         var positionalArgs = new List<string>();
 
-        for (int i = 0; i < args.Length; i++)
+        for (var i = 0; i < args.Length; i++)
         {
             var arg = args[i];
 
             if (arg.StartsWith("--"))
             {
                 // Long option
-                var key = arg.Substring(2);
+                var key = arg[2..];
                 if (key.Contains('='))
                 {
                     var parts = key.Split('=', 2);
                     result[parts[0]] = parts[1];
                 }
-                else if (i + 1 < args.Length && !args[i + 1].StartsWith("-"))
-                {
-                    result[key] = args[++i];
-                }
                 else
                 {
-                    result[key] = "true";
+                    result[key] = i + 1 < args.Length && !args[i + 1].StartsWith("-") ? args[++i] : "true";
                 }
             }
             else if (arg.StartsWith("-") && arg.Length > 1)
             {
                 // Short option
-                var key = arg.Substring(1);
-                if (i + 1 < args.Length && !args[i + 1].StartsWith("-"))
-                {
-                    result[key] = args[++i];
-                }
-                else
-                {
-                    result[key] = "true";
-                }
+                var key = arg[1..];
+                result[key] = i + 1 < args.Length && !args[i + 1].StartsWith("-") ? args[++i] : "true";
             }
             else
             {
@@ -58,7 +47,7 @@ public static class ArgumentParser
         }
 
         // Add positional arguments with numeric keys
-        for (int i = 0; i < positionalArgs.Count; i++)
+        for (var i = 0; i < positionalArgs.Count; i++)
         {
             result[$"_{i}"] = positionalArgs[i];
         }
@@ -82,7 +71,9 @@ public static class ArgumentParser
         foreach (var key in keys)
         {
             if (args.TryGetValue(key, out var value))
+            {
                 return value;
+            }
         }
         return defaultValue;
     }
@@ -93,7 +84,9 @@ public static class ArgumentParser
     public static bool GetBool(Dictionary<string, string?> args, string key, bool defaultValue = false)
     {
         if (!args.TryGetValue(key, out var value))
+        {
             return defaultValue;
+        }
 
         return value?.ToLowerInvariant() switch
         {

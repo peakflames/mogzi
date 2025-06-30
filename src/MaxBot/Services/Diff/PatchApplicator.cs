@@ -9,7 +9,7 @@ internal class PatchApplicator
 {
     public PatchResult ApplyPatch(string content, UnifiedDiff patch)
     {
-        var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None).ToList();
+        var lines = content.Split(["\r\n", "\r", "\n"], StringSplitOptions.None).ToList();
         var appliedHunks = new List<AppliedHunk>();
 
         foreach (var hunk in patch.Hunks.OrderByDescending(h => h.OriginalStart))
@@ -101,7 +101,7 @@ internal class PatchApplicator
     {
         // Try to find the hunk by matching the pattern of context and removed lines
         var originalLines = hunk.Lines.Where(l => l.Type == DiffLineType.Context || l.Type == DiffLineType.Removed).ToList();
-        
+
         if (originalLines.Count == 0)
         {
             // If there are no context or removed lines, we can only apply at the exact line number.
