@@ -22,6 +22,8 @@ Prepare an AI model to work effectively on the MaxBot project by ensuring compre
 
 ## 2. Codebase Familiarization
 
+**IMPORTANT NOTE**: The `src/Cli/` project is obsolete and should not be examined. Focus only on the current MaxBot.TUI implementation.
+
 1. Use the `read_file` tool to examine the solution structure by reading `src/MaxBot.sln`.
 
 2. Use the `read_file` tool to review the main project dependencies in `src/MaxBot/MaxBot.csproj`.
@@ -34,15 +36,7 @@ Prepare an AI model to work effectively on the MaxBot project by ensuring compre
 
 6. Use the `list_files` tool to examine the tool implementations in `src/MaxBot/Tools/`.
 
-## 3. Current Implementation Status
-
-1. Use the `read_file` tool to check `docs/project_plan.md` for current implementation status and priorities.
-
-2. Analyze which features are complete, in progress, or planned based on the project plan.
-
-3. Note any specific areas of focus or recent changes mentioned in the documentation.
-
-## 4. Key Information Retention
+## 5. Key Information Retention
 
 1. Retain understanding of architecture patterns:
     - Dependency Injection with Microsoft.Extensions.DI throughout
@@ -77,7 +71,7 @@ Prepare an AI model to work effectively on the MaxBot project by ensuring compre
     - Security-first approach with approval mechanisms
     - Cross-platform compatibility (Windows, macOS, Linux)
 
-## 5. Task Objective Gathering
+## 6. Task Objective Gathering
 
 1. Use the `ask_followup_question` tool to ask the user: "I have reviewed the MaxBot project documentation and codebase. I understand the architecture, design patterns, and development practices. What is your objective for today's task?"
 
@@ -85,9 +79,11 @@ Prepare an AI model to work effectively on the MaxBot project by ensuring compre
 
 3. Confirm understanding of the task objective and any specific requirements or constraints.
 
-## 6. Carry out the request task
+## 7. Carry out the requested task
 
 1. Carry out servicing the user's task per your system instructions.
+
+2. if their request is to gather more information then do not consider this the user ultimate objective the task and will likely be revealed in follow up requests.
 
 </detailed_sequence_steps>
 
