@@ -680,10 +680,13 @@ public sealed class FlexColumnTuiApp : IDisposable
     {
         try
         {
+            // Add spacing before user message
+            _scrollbackTerminal.WriteStatic(new Markup(""));
+            
             var userMessage = new ChatMessage(ChatRole.User, input);
             _historyManager.AddUserMessage(userMessage);
             _scrollbackTerminal.WriteStatic(RenderMessage(userMessage));
-            _scrollbackTerminal.WriteStatic(new Markup(""));
+            
             if (_slashCommandProcessor.TryProcessCommand(input, out var commandOutput))
             {
                 if (!string.IsNullOrEmpty(commandOutput))
@@ -981,6 +984,4 @@ public sealed class FlexColumnTuiApp : IDisposable
             _logger?.LogError(ex, "Error interrupting AI operation");
         }
     }
-
-
 }
