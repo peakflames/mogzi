@@ -194,21 +194,33 @@ public sealed class FlexColumnTuiApp : IDisposable
         return new Rows(new Text(""), bottomComponent, new Text(""), CreateFlexFooterComponent());
     }
 
+
     private IRenderable CreateWelcomeMessage()
     {
         var contentItems = new List<IRenderable>
         {
-            new Markup("[bold blue]Max[/]"),
+            // Shadow effect style with multi-color letters - "Max" with each letter different color
+            new Markup("[bold blue]███╗   ███╗[/] [bold cyan] █████╗ [/] [bold magenta]██╗  ██╗[/]"),
+            new Markup("[bold blue]████╗ ████║[/] [bold cyan]██╔══██╗[/] [bold magenta]╚██╗██╔╝[/]"),
+            new Markup("[bold blue]██╔████╔██║[/] [bold cyan]███████║[/] [bold magenta] ╚███╔╝ [/]"),
+            new Markup("[bold blue]██║╚██╔╝██║[/] [bold cyan]██╔══██║[/] [bold magenta] ██╔██╗ [/]"),
+            new Markup("[bold blue]██║ ╚═╝ ██║[/] [bold cyan]██║  ██║[/] [bold magenta]██╔╝ ██╗[/]"),
+            new Markup("[bold blue]╚═╝     ╚═╝[/] [bold cyan]╚═╝  ╚═╝[/] [bold magenta]╚═╝  ╚═╝[/]"),
+            new Text(""),
+            new Markup("[bold cyan]◢◤◢◤◢◤ Now connected to your Multi-model Autonomous eXpert ◢◤◢◤◢◤[/]"),
+            new Text(""),
+            new Markup("[dim]Your AI-powered development assistant[/]"),
             new Text(""),
             new Markup("[grey69]Tips for getting started:[/]"),
-            new Markup("[grey69]1. Ask questions, edit files, or run commands.[/]"),
-            new Markup("[grey69]2. Be specific for the best results.[/]"),
-            // new Markup("[grey69]3. Create an .max/AGENT.md files to customize your interactions with Max.[/]"),
-            new Markup("[grey69]4. /help for more information.[/]"),
+            new Markup("[grey69]1. Ask questions, edit files, or run commands[/]"),
+            new Markup("[grey69]2. Be specific for the best results[/]"),
+            new Markup("[grey69]3. Use [/][magenta]/help[/][dim] for more information[/]"),
             new Text("")
         };
         return new Rows(contentItems);
     }
+
+    
 
     private IRenderable RenderMessage(ChatMessage message)
     {       
