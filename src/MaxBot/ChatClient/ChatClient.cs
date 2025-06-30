@@ -41,6 +41,7 @@ public partial class ChatClient
     private EditTool EditTool { get; init; }
     private LSTool LSTool { get; init; }
     private GrepTool GrepTool { get; init; }
+    private ShellTool ShellTool { get; init; }
 
     private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
     {
@@ -74,6 +75,7 @@ public partial class ChatClient
         EditTool = new EditTool(config, llmResponseDetailsCallback);
         LSTool = new LSTool(config, llmResponseDetailsCallback);
         GrepTool = new GrepTool(config, llmResponseDetailsCallback);
+        ShellTool = new ShellTool(config, llmResponseDetailsCallback);
 
         var allTools = new List<AITool>();
         allTools.AddRange(SystemTools.GetTools().Cast<AITool>());
@@ -83,6 +85,7 @@ public partial class ChatClient
         allTools.Add(EditTool.GetTool());
         allTools.Add(LSTool.GetTool());
         allTools.Add(GrepTool.GetTool());
+        allTools.Add(ShellTool.GetTool());
 
         ChatOptions = new ChatOptions
         {
