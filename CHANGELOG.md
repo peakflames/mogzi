@@ -5,151 +5,194 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.4] - TBD
+## [0.13.0] - 2025-06-30
 
-- **TUI Phase 2: Command execution and status feedback**
-  - CommandCard for command visualization with real-time status
-  - ApiStatusIndicator for API call progress tracking
-  - RichContentCard for rich text content rendering (renamed from MarkdownCard)
-  - Enhanced event system with command and API status events
-  - Comprehensive test coverage with 18 passing tests
+### 🎉 Initial Release
 
-## [1.3.3] - 2025-06-23
+MaxBot is a powerful AI-powered CLI assistant that provides intelligent file operations, code editing, and system interaction capabilities through a rich terminal user interface.
 
-- **`search_files` tool (TOR-1.1 Enhancement):** Implemented a new tool for performing regex-based searches across files in the workspace, with support for file globbing and parallel execution.
-- **Attempt Completion Tool (TOR-5.2):** Implemented the `attempt_completion` tool to allow the AI to signal task completion and present a final summary to the user. This completes the core "analyze -> execute -> complete" workflow.
+### ✨ Core Features
 
+**AI-Powered Chat Interface**
+- Interactive chat mode with real-time streaming responses
+- Oneshot mode for single command execution
+- Dynamic system prompt generation with environment context
+- Token counting and usage metrics with SharpToken integration
+- Chat session persistence and history management
 
-## [1.3.2] - 2025-06-23
+**Rich Terminal User Interface**
+- Built with Spectre.Console for beautiful terminal rendering
+- Flexible column-based layout with dynamic content updates
+- Advanced keyboard handling with custom key bindings
+- Scrollback terminal with efficient content management
+- Real-time status updates during AI processing and tool execution
 
-- **Completed Phase 1 Implementation**
-- **Graceful Error Handling (TOR-8.2):** Implemented comprehensive `try-catch` blocks in the main application loop and tool execution to prevent crashes and provide user-friendly error messages for API failures and tool errors.
-- **`execute_command` tool (TOR-4.2 & TOR-7.1):** Added a new tool to execute shell commands.
-  - The tool is cross-platform, automatically using `cmd.exe` on Windows, `zsh` on macOS, and `bash` on Linux.
-  - It respects the `tool_approvals` configuration, providing a security layer for potentially destructive operations.
-- **File Permission Checks (TOR-3.3):** Enhanced `write_file` and `replace_in_file` to respect read-only file attributes, preventing errors when trying to modify locked files.
-- **New Git-Style Diff Patch Tools:** Replaced `replace_in_file` with more robust Git-style unified diff patch tools:
-  - **`apply_code_patch`:** Apply unified diff patches to files with fuzzy matching support for handling whitespace and formatting variations
-  - **`generate_code_patch`:** Generate Git-compatible unified diff patches showing changes between original and modified content
-  - **`preview_patch_application`:** Preview patch changes without applying them for safe validation
-  - Enhanced file modification capabilities with atomic operations, SHA256 checksum validation, and comprehensive error reporting
-  - Supports multiple hunks, context lines configuration, and detailed change statistics
-- **Documentation Updates:** Comprehensive update of all tool specifications and system documentation:
-  - Created detailed specification files for all three new diff patch tools with usage examples and best practices
-  - Updated all existing tool specifications to reference new diff patch tools instead of `replace_in_file`
-  - Updated requirements traceability matrix and project plan to reflect new tool implementation
-  - Updated system prompt with diff patch tools best practices and workflow recommendations
-- **Updated Developer Guidelines:**
-  - Mandated a "Requirements-Driven Workflow" that requires creating skeleton tests before implementation.
-  - Reinforced the need to assume cross-platform compatibility for all OS-level interactions.
-  - Added a requirement to verify Native AOT compatibility for all new dependencies.
-  - Added a guideline to test against the application's secure-by-default settings.
-- Refactored the `Cli` project to use the Command Pattern, improving modularity and maintainability.
-- Refactor system prompt to improve tool usage guidelines and verification
+**Comprehensive Tool Suite**
+- **File Operations**: Read, write, and edit text files with security validation
+- **Directory Operations**: List directories with filtering and recursive options
+- **Search Capabilities**: Grep-style text search across files with regex support
+- **Code Editing**: In-place file editing with search/replace operations
+- **Image Processing**: Read and process image files with base64 encoding
+- **System Integration**: Execute shell commands with cross-platform support
+- **Diff/Patch System**: Generate and apply unified diffs with fuzzy matching
 
-## [1.3.1] - 2025-06-22
+### 🔧 Technical Architecture
 
-- Add active profile name to the CLI interface prompt and update the emoji styling. 
-- Display tool approvals setting in startup information to improve visibility of the current configuration.
-- Added slash commands in chat mode:
-  - `/status` - Display current configuration (similar to `--status` flag)
-  - `/tool-approval [readonly|all]` - Change tool approval setting
-  - `/sessions` - List available sessions (similar to `--list-sessions` flag)
-  - `/load-session [ID]` - Load a specific chat session
-  - `/help` - Display available slash commands
-- Fixed bug where changing tool approval setting with `/tool-approval` command wasn't reflected in the system prompt
-- Added `--debug` flag to enable detailed tool logging in the console
-- Improved session listing to order sessions by last update date, with most recently used sessions appearing last
-- Enhanced GitHub Actions workflow to support develop branch builds:
-  - Added automatic build artifacts for all pushes to the develop branch
-  - Added manual trigger for creating pre-releases from the develop branch
-  - Pre-releases include version number with date and commit hash
-  - Pre-releases are clearly marked as development builds
+**Modern .NET Implementation**
+- Built on .NET 9 with C# for high performance
+- Native AOT compilation support for fast startup and small binaries
+- Source-generated JSON serialization for AOT compatibility
+- FluentResults pattern for functional error handling
 
-## [1.3.0] - 2025-06-21
+**AI Integration**
+- Microsoft.Extensions.AI for standardized AI service integration
+- OpenAI SDK with configurable endpoints and retry policies
+- Function calling support with comprehensive tool registration
+- Streaming response processing with IAsyncEnumerable patterns
 
-- Enhanced session listing with card-like display showing session details, message count, and first user prompt
-- Improved session loading to display previous chat history when loading a session
-- Added ability to cancel API requests with Ctrl+C during chat interactions
-- Refactored application architecture to move core logic from App.cs to AppService in the MaxBot project
-- Implemented TOR-7.2: Added working directory constraints to all file system tools to enhance security.
-- Create detailed tool specifications for all 12 core MaxBot tools
-- Add requirements traceability matrix for verification tracking
-- Establish 3-phase project implementation plan with priority-based approach
-- Update developer guidelines with requirements-driven development standards
-- Add workflow for generating AI assistant repository instructions
-- Create comprehensive workflow for implementing next priority tasks with TOR verification
-- Enhance workflow with iterative development, frequent validation, and comprehensive documentation
-- Complete TOR-3.2 Implementation: Enhanced FileSystemTools.WriteFile with atomic operations, backup creation, checksum validation, and rollback capabilities
-- Implemented TOR-3.1: Safe file system interaction, including `ReadFile`, `WriteFile`, and `ReplaceInFile` tools.
-- Added comprehensive unit tests for file system tools to ensure safe and reliable operations.
-- Updated project plan and trace matrix to reflect the completion of TOR-3.1.
-- Corrected the test execution command in the developer guidelines.
-- Updated `FileSystemTools` to use `AIFunctionFactoryOptions` to provide snake_case names for tools to the LLM, aligning with tool specifications.
-- Added an architecture section with Mermaid diagrams to the developer guidelines.
-- Implemented TOR-5.3: Chat history persistence to disk with session management
-- Added ability to list and load previous chat sessions
-- Added filtering of system messages when saving chat history
-- Added injection of current system prompt when loading chat history
-- Added comprehensive tests for chat history service
-- Fixed list_files tool to properly list both files and directories as per specification
+**Security & Safety**
+- Working directory enforcement for all file operations
+- Comprehensive parameter validation and input sanitization
+- Two-tier tool approval system (readonly/all modes)
+- Cross-platform path validation with proper case sensitivity
+- File permission checking before operations
 
-## [1.2.0] - 2025-06-21
+### 🛠️ Advanced Capabilities
 
-__Added__:
+**Configuration Management**
+- JSON-based configuration with profile support
+- Multiple AI provider and model configurations
+- Environment-specific settings and debug modes
+- Automatic configuration discovery (current directory or home directory)
 
-- Command-line argument `--tool-approvals` (alias `-ta`) to override the tool approval setting from the configuration file.
+**Diff/Patch System**
+- Unified diff generation and parsing
+- Intelligent patch application with exact and fuzzy matching
+- Multiple fuzzy matching strategies (line offset, whitespace normalization)
+- Longest Common Subsequence algorithm for optimal matching
+- Comprehensive patch result reporting with confidence scores
 
-__Changed__:
+**Cross-Platform Support**
+- Windows (PowerShell), macOS (Zsh), Linux (Bash) shell detection
+- Platform-specific command execution and path handling
+- Consistent security boundaries across all platforms
+- Native performance on all supported operating systems
 
-- The `FileSystemTools` now respect the `ToolApprovals` setting from the configuration.
-- The system prompt now includes the active mode.
+### 🔒 Security Features
 
-## [1.1.1] - 2025-06-20
+**File System Security**
+- All file operations restricted to working directory
+- Absolute path requirement with validation
+- Permission checking before file access
+- Secure error messages to prevent information disclosure
 
-__Changed__:
+**Tool Approval System**
+- Configurable tool execution permissions
+- Readonly mode blocks potentially destructive operations
+- Runtime approval checking for each tool execution
+- Debug mode for detailed operation logging
 
-- The `--status` command now displays a detailed table of all available providers and profiles, in addition to the active configuration.
+### 📋 Available Tools
 
-## [1.1.0] - 2025-06-20
+**System Tools**
+- `execute_command`: Cross-platform shell command execution
+- `attempt_completion`: Task completion with result presentation
 
-__Added__:
+**File Management Tools**
+- `read_text_file`: Secure file reading with range support (offset/limit)
+- `write_file`: File creation and modification with validation
+- `edit_file`: In-place file editing with search/replace operations
+- `list_directory`: Directory listing with filtering options
 
-- Ability to pipe standard input into the CLI as part of the prompt.
-- Acceptance test script (`test/local_exe_acceptance.ps1`) to automate testing of the published executable.
-- Cline workflow for generating releases (`.clinerules/workflows/generate_release.md`).
+**Search and Analysis Tools**
+- `search_file_content`: Regex-based text search across files
+- `read_image_file`: Image file processing with base64 encoding
 
-__Changed__:
+**Code Development Tools**
+- `generate_code_patch`: Create unified diffs for code changes
+- `apply_code_patch`: Apply patches with fuzzy matching support
+- `preview_patch_application`: Preview patch results before application
 
-- Updated developer guidelines and workflow rules.
+### 🚀 Performance Features
 
-## [0.3.0] - 2025-03-31
+**Efficient Processing**
+- Streaming AI responses for real-time interaction
+- Minimal memory footprint with efficient content management
+- Fast startup with AOT compilation
+- Optimized terminal rendering with selective updates
 
-__Changed__:
+**Smart Resource Management**
+- Automatic cleanup of processes and streams
+- Efficient chat history storage and retrieval
+- Token optimization with dynamic prompt generation
+- Memory-efficient handling of large files and responses
 
-- fix display of emojis and tweaked the system prompt
-- tweaked the chat shell prompt
+### 🔧 Configuration
 
-## [0.2.0] - 2025-03-30
+**Profile-Based Setup**
+- Multiple AI provider configurations (OpenAI, custom endpoints)
+- Model-specific settings and parameters
+- Default profile selection with override options
+- Environment-specific configuration support
 
-__Added__:
+**Flexible Deployment**
+- Configuration file discovery in current directory or home directory
+- Command-line parameter overrides
+- Debug mode for development and troubleshooting
+- Cross-platform configuration compatibility
 
-- Support for AIFunctions (Tools)
-  - ListFiles
-  - WriteFile
-  - ReadFile
+### 📦 Dependencies
 
-__Changed__:
+**Core Libraries**
+- Microsoft.Extensions.AI (9.6.0) - AI service abstraction
+- Microsoft.Extensions.AI.OpenAI (9.6.0-preview) - OpenAI integration
+- FluentResults (3.16.0) - Functional error handling
+- Spectre.Console - Rich terminal UI rendering
+- SharpToken (2.0.3) - Token counting and metrics
 
-- Improved console output
+**Development Tools**
+- .NET 9 SDK with AOT compilation support
+- Source generators for JSON serialization
+- Cross-platform development and deployment
 
-## [0.1.0] - 2025-03-30
+### 🎯 Use Cases
 
-__Added__:
+**Software Development**
+- Code review and analysis with AI assistance
+- Automated file editing and refactoring
+- Project exploration and documentation
+- Diff generation and patch application
 
-- Initial release
-- Support both Oneshot and Interactive Chat interface with streaming AI responses
-- Supports only OpenAI-compatible APIs
-- Profile-based configuration for easy switching between providers and models
-- Cross-platform support (Windows, MacOS, Linux)
-- Support locating the configuration file in the current directory or the user's home directory (in that order).
+**System Administration**
+- File system operations with safety constraints
+- Cross-platform script execution
+- System information gathering and analysis
+- Automated task execution with AI guidance
+
+**Content Management**
+- Text file processing and analysis
+- Bulk file operations with validation
+- Search and replace across multiple files
+- Image processing and analysis
+
+### 🔄 Architecture Highlights
+
+**Service-Oriented Design**
+- Dependency injection with Microsoft.Extensions.DI
+- Interface segregation for clean abstractions
+- Factory patterns for complex object creation
+- Centralized configuration and state management
+
+**Event-Driven Processing**
+- Asynchronous streaming with cancellation support
+- Real-time UI updates during processing
+- State management with proper synchronization
+- Event-driven keyboard and user interaction handling
+
+**Extensible Tool System**
+- Plugin-like tool architecture with AIFunction factory
+- Consistent tool interface and response formatting
+- Comprehensive error handling and validation
+- Security boundaries enforced at the tool level
+
+This initial release establishes MaxBot as a powerful, secure, and user-friendly AI assistant for developers and system administrators, providing a solid foundation for future enhancements and capabilities.
