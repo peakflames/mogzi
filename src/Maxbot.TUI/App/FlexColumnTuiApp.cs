@@ -258,7 +258,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         string content;
         if (string.IsNullOrEmpty(currentInput))
         {
-            content = $"{prompt}{cursor}[dim]Type your message or @path/to/file[/]";
+            content = $"{prompt}{cursor}[dim]Type your message[/]";
         }
         else
         {
@@ -981,4 +981,6 @@ public sealed class FlexColumnTuiApp : IDisposable
             _logger?.LogError(ex, "Error interrupting AI operation");
         }
     }
+
+
 }

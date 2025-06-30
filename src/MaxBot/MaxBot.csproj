@@ -15,6 +15,7 @@
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="9.6.0-preview.1.25310.2" />
     <PackageReference Include="SharpToken" Version="2.0.3" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.3" />
+    <PackageReference Include="UglyToad.PdfPig" Version="1.7.0-custom-5" />
   </ItemGroup>
 
 </Project>

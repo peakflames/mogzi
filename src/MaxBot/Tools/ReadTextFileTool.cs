@@ -8,13 +8,13 @@ using System.Runtime.InteropServices;
 
 namespace MaxBot.Tools;
 
-public class ReadFileTool
+public class ReadTextFileTool
 {
     private readonly MaxbotConfiguration _config;
     private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = null;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
 
-    public ReadFileTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
+    public ReadTextFileTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
     {
         _config = config;
         _llmResponseDetailsCallback = llmResponseDetailsCallback;
@@ -24,20 +24,20 @@ public class ReadFileTool
     public AIFunction GetTool()
     {
         return AIFunctionFactory.Create(
-            ReadFile,
+            ReadTextFile,
             new AIFunctionFactoryOptions
             {
-                Name = "read_file",
-                Description = "Reads and returns the content of a specified file from the local filesystem. Handles text, images (PNG, JPG, GIF, WEBP, SVG, BMP), and PDF files. For text files, it can read specific line ranges."
+                Name = "read_text_file",
+                Description = "Reads and returns the content of a text file from the local filesystem. Supports reading specific line ranges for large files. Use this for source code, configuration files, documentation, and other text-based files."
             });
     }
 
-    public async Task<string> ReadFile(
-        [Description("The absolute path to the file to read (e.g., '/home/user/project/file.txt'). Relative paths are not supported. You must provide an absolute path.")] string absolute_path,
-        [Description("Optional: For text files, the 0-based line number to start reading from. Requires 'limit' to be set. Use for paginating through large files.")] int? offset = null,
-        [Description("Optional: For text files, maximum number of lines to read. Use with 'offset' to paginate through large files. If omitted, reads the entire file (if feasible, up to a default limit).")] int? limit = null)
+    public async Task<string> ReadTextFile(
+        [Description("The absolute path to the text file to read (e.g., '/home/user/project/file.txt'). Relative paths are not supported. You must provide an absolute path.")] string absolute_path,
+        [Description("Optional: The 0-based line number to start reading from. Requires 'limit' to be set. Use for paginating through large files.")] int? offset = null,
+        [Description("Optional: Maximum number of lines to read. Use with 'offset' to paginate through large files. If omitted, reads the entire file (if feasible, up to a default limit).")] int? limit = null)
     {
-        _llmResponseDetailsCallback?.Invoke($"Reading file '{absolute_path}'{(offset.HasValue ? $" from line {offset}" : "")}{(limit.HasValue ? $" (limit: {limit} lines)" : "")}.", ConsoleColor.DarkGray);
+        _llmResponseDetailsCallback?.Invoke($"Reading text file '{absolute_path}'{(offset.HasValue ? $" from line {offset}" : "")}{(limit.HasValue ? $" (limit: {limit} lines)" : "")}.", ConsoleColor.DarkGray);
 
         try
         {
@@ -45,7 +45,7 @@ public class ReadFileTool
             var validationError = ValidateParameters(absolute_path, offset, limit);
             if (validationError != null)
             {
-                return CreateErrorResponse("read_file", validationError);
+                return CreateErrorResponse("read_text_file", validationError);
             }
 
             var workingDirectory = _workingDirectoryProvider.GetCurrentDirectory();
@@ -54,23 +54,23 @@ public class ReadFileTool
             // Security validation - ensure path is within working directory
             if (!IsPathInWorkingDirectory(absolutePath, workingDirectory))
             {
-                return CreateErrorResponse("read_file", $"File path must be within the root directory ({workingDirectory}): {absolute_path}");
+                return CreateErrorResponse("read_text_file", $"File path must be within the root directory ({workingDirectory}): {absolute_path}");
             }
 
             // Check if file exists
             if (!File.Exists(absolutePath))
             {
-                return CreateErrorResponse("read_file", $"File not found: {absolute_path}");
+                return CreateErrorResponse("read_text_file", $"File not found: {absolute_path}");
             }
 
             // Check if file is readable
             var fileInfo = new FileInfo(absolutePath);
             if (!HasReadPermission(fileInfo))
             {
-                return CreateErrorResponse("read_file", $"File is not readable: {absolute_path}");
+                return CreateErrorResponse("read_text_file", $"File is not readable: {absolute_path}");
             }
 
-            // Read file content
+            // Read text file content
             string content;
             if (offset.HasValue || limit.HasValue)
             {
@@ -88,27 +88,27 @@ public class ReadFileTool
         }
         catch (UnauthorizedAccessException)
         {
-            return CreateErrorResponse("read_file", $"Access denied reading file: {absolute_path}");
+            return CreateErrorResponse("read_text_file", $"Access denied reading file: {absolute_path}");
         }
         catch (DirectoryNotFoundException)
         {
-            return CreateErrorResponse("read_file", $"Directory not found for file: {absolute_path}");
+            return CreateErrorResponse("read_text_file", $"Directory not found for file: {absolute_path}");
         }
         catch (FileNotFoundException)
         {
-            return CreateErrorResponse("read_file", $"File not found: {absolute_path}");
+            return CreateErrorResponse("read_text_file", $"File not found: {absolute_path}");
         }
         catch (IOException ex)
         {
-            return CreateErrorResponse("read_file", $"I/O error reading file: {ex.Message}");
+            return CreateErrorResponse("read_text_file", $"I/O error reading file: {ex.Message}");
         }
         catch (Exception ex)
         {
             if (_config.Debug)
             {
-                _llmResponseDetailsCallback?.Invoke($"ERROR: Error reading file. {ex.Message}", ConsoleColor.Red);
+                _llmResponseDetailsCallback?.Invoke($"ERROR: Error reading text file. {ex.Message}", ConsoleColor.Red);
             }
-            return CreateErrorResponse("read_file", $"Unexpected error: {ex.Message}");
+            return CreateErrorResponse("read_text_file", $"Unexpected error: {ex.Message}");
         }
     }
 
@@ -119,7 +119,7 @@ public class ReadFileTool
             return "Path cannot be empty or whitespace";
         }
 
-        // Check if path is absolute (matching TypeScript implementation)
+        // Check if path is absolute
         if (!Path.IsPathRooted(path))
         {
             return $"File path must be absolute, but was relative: {path}. You must provide an absolute path.";
@@ -218,7 +218,7 @@ public class ReadFileTool
     private string CreateSuccessResponse(string relativePath, string absolutePath, string content, string checksum, int lineCount, int? offset, int? limit)
     {
         var notes = new StringBuilder();
-        notes.AppendLine($"Successfully read file {relativePath}");
+        notes.AppendLine($"Successfully read text file {relativePath}");
         notes.AppendLine($"Total lines: {lineCount}");
         notes.AppendLine($"Content size: {content.Length} characters");
         
@@ -227,7 +227,7 @@ public class ReadFileTool
             notes.AppendLine($"Range: lines {offset ?? 0} to {(offset ?? 0) + (limit ?? lineCount) - 1}");
         }
 
-        return $@"<tool_response tool_name=""read_file"">
+        return $@"<tool_response tool_name=""read_text_file"">
     <notes>{SecurityElement.Escape(notes.ToString().Trim())}</notes>
     <result status=""SUCCESS"" absolute_path=""{SecurityElement.Escape(absolutePath)}"" sha256_checksum=""{checksum}"" />
     <content_on_disk>{SecurityElement.Escape(content)}</content_on_disk>

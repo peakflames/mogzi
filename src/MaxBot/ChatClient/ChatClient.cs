@@ -36,7 +36,9 @@ public partial class ChatClient
     public ChatOptions ChatOptions { get; init; }
     private SystemTools SystemTools { get; init; }
     private DiffPatchTools DiffPatchTools { get; init; }
-    private ReadFileTool ReadFileTool { get; init; }
+    private ReadTextFileTool ReadTextFileTool { get; init; }
+    private ReadImageFileTool ReadImageFileTool { get; init; }
+    private ReadPdfFileTool ReadPdfFileTool { get; init; }
     private WriteFileTool WriteFileTool { get; init; }
     private EditTool EditTool { get; init; }
     private LSTool LSTool { get; init; }
@@ -70,7 +72,9 @@ public partial class ChatClient
 
         SystemTools = new SystemTools(config, llmResponseDetailsCallback);
         DiffPatchTools = new DiffPatchTools(config, llmResponseDetailsCallback);
-        ReadFileTool = new ReadFileTool(config, llmResponseDetailsCallback);
+        ReadTextFileTool = new ReadTextFileTool(config, llmResponseDetailsCallback);
+        ReadImageFileTool = new ReadImageFileTool(config, llmResponseDetailsCallback);
+        ReadPdfFileTool = new ReadPdfFileTool(config, llmResponseDetailsCallback);
         WriteFileTool = new WriteFileTool(config, llmResponseDetailsCallback);
         EditTool = new EditTool(config, llmResponseDetailsCallback);
         LSTool = new LSTool(config, llmResponseDetailsCallback);
@@ -80,7 +84,9 @@ public partial class ChatClient
         var allTools = new List<AITool>();
         allTools.AddRange(SystemTools.GetTools().Cast<AITool>());
         allTools.AddRange(DiffPatchTools.GetTools().Cast<AITool>());
-        allTools.Add(ReadFileTool.GetTool());
+        allTools.Add(ReadTextFileTool.GetTool());
+        allTools.Add(ReadImageFileTool.GetTool());
+        allTools.Add(ReadPdfFileTool.GetTool());
         allTools.Add(WriteFileTool.GetTool());
         allTools.Add(EditTool.GetTool());
         allTools.Add(LSTool.GetTool());
