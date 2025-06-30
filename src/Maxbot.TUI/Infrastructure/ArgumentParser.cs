@@ -75,6 +75,19 @@ public static class ArgumentParser
     }
 
     /// <summary>
+    /// Gets a string value from parsed arguments, checking multiple possible keys (for aliases).
+    /// </summary>
+    public static string? GetString(Dictionary<string, string?> args, string[] keys, string? defaultValue = null)
+    {
+        foreach (var key in keys)
+        {
+            if (args.TryGetValue(key, out var value))
+                return value;
+        }
+        return defaultValue;
+    }
+
+    /// <summary>
     /// Gets a boolean value from parsed arguments.
     /// </summary>
     public static bool GetBool(Dictionary<string, string?> args, string key, bool defaultValue = false)

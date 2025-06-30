@@ -9,6 +9,7 @@ public sealed class SlashCommandProcessor
     private readonly Dictionary<string, SlashCommand> _commands = new();
     private readonly ILogger<SlashCommandProcessor>? _logger;
     private readonly IAnsiConsole _console;
+    private readonly ChatClient? _chatClient;
 
     /// <summary>
     /// Event raised when the application should exit.
@@ -23,10 +24,11 @@ public sealed class SlashCommandProcessor
     /// <summary>
     /// Initializes a new instance of SlashCommandProcessor.
     /// </summary>
-    public SlashCommandProcessor(IAnsiConsole console, ILogger<SlashCommandProcessor>? logger = null)
+    public SlashCommandProcessor(IAnsiConsole console, ILogger<SlashCommandProcessor>? logger = null, ChatClient? chatClient = null)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
         _logger = logger;
+        _chatClient = chatClient;
         RegisterCommands();
         _logger?.LogDebug("SlashCommandProcessor initialized with {Count} commands", _commands.Count);
     }
@@ -185,11 +187,21 @@ public sealed class SlashCommandProcessor
         statusTable.BorderColor(Color.Cyan1);
 
         statusTable.AddRow("Application", "[green]MaxBot TUI[/]");
-        statusTable.AddRow("Version", "[blue]1.0.0[/]");
+        statusTable.AddRow("Version", $"[blue]{GetApplicationVersion()}[/]");
         statusTable.AddRow("Status", "[green]Running[/]");
         statusTable.AddRow("Working Directory", $"[dim]{Environment.CurrentDirectory}[/]");
         statusTable.AddRow("Platform", $"[dim]{Environment.OSVersion.Platform}[/]");
         statusTable.AddRow("Runtime", $"[dim].NET {Environment.Version}[/]");
+
+        if (_chatClient != null)
+        {
+            statusTable.AddRow("", ""); // Empty row for spacing
+            statusTable.AddRow("[bold]Configuration[/]", "");
+            statusTable.AddRow("Active Profile", $"[yellow]{_chatClient.ActiveProfile.Name}[/]");
+            statusTable.AddRow("Model", $"[cyan]{_chatClient.ActiveProfile.ModelId}[/]");
+            statusTable.AddRow("API Provider", $"[magenta]{_chatClient.ActiveApiProvider.Name}[/]");
+            statusTable.AddRow("Tool Approvals", $"[orange3]{_chatClient.Config.ToolApprovals}[/]");
+        }
 
         var panel = new Panel(statusTable)
             .Header(" System Status ")
@@ -278,14 +290,43 @@ public sealed class SlashCommandProcessor
     private string GetStatusOutput(string args)
     {
         var output = new StringBuilder();
-        output.AppendLine("System Status:");
-        output.AppendLine($"Application: MaxBot TUI");
-        output.AppendLine($"Version: 1.0.0");
-        output.AppendLine($"Status: Running");
-        output.AppendLine($"Working Directory: {Environment.CurrentDirectory}");
-        output.AppendLine($"Platform: {Environment.OSVersion.Platform}");
-        output.AppendLine($"Runtime: .NET {Environment.Version}");
+        output.AppendLine("[bold]System Status:[/]");
+        output.AppendLine($"[dim]Application:[/] [green]MaxBot TUI[/]");
+        output.AppendLine($"[dim]Version:[/] [green]{GetApplicationVersion()}[/]");
+        output.AppendLine($"[dim]Status:[/] [green]Running[/]");
+        output.AppendLine($"[dim]Working Directory:[/] [green]{Environment.CurrentDirectory}[/]");
+        output.AppendLine($"[dim]Platform:[/] [green]{Environment.OSVersion.Platform}[/]");
+        output.AppendLine($"[dim]Runtime:[/] [green].NET {Environment.Version}[/]");
+        
+        if (_chatClient != null)
+        {
+            output.AppendLine();
+            output.AppendLine("[bold]Configuration:[/]");
+            output.AppendLine($"[dim]Active Profile:[/] [cyan]{_chatClient.ActiveProfile.Name}[/]");
+            output.AppendLine($"[dim]Model:[/] [cyan]{_chatClient.ActiveProfile.ModelId}[/]");
+            output.AppendLine($"[dim]API Provider:[/] [cyan]{_chatClient.ActiveApiProvider.Name}[/]");
+            output.AppendLine($"[dim]Tool Approvals:[/] [cyan]{_chatClient.Config.ToolApprovals}[/]");
+        }
+        
         return output.ToString();
+    }
+
+    /// <summary>
+    /// Gets the application version from the assembly.
+    /// </summary>
+    /// <returns>The application version string.</returns>
+    private static string GetApplicationVersion()
+    {
+        try
+        {
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            var version = assembly.GetName().Version;
+            return version?.ToString() ?? "UNKNOWN";
+        }
+        catch
+        {
+            return "UNKNOWN";
+        }
     }
 }
 

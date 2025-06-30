@@ -25,8 +25,7 @@ public sealed class NonInteractiveCommand : ICommand
             }
             
             // Get prompt
-            var prompt = ArgumentParser.GetString(parsedArgs, "prompt") ?? 
-                        ArgumentParser.GetString(parsedArgs, "p");
+            var prompt = ArgumentParser.GetString(parsedArgs, ["prompt", "p"], null);
             
             if (string.IsNullOrWhiteSpace(prompt))
             {
@@ -34,9 +33,22 @@ public sealed class NonInteractiveCommand : ICommand
                 return 1;
             }
             
+            // Extract configuration parameters
+            var configPath = ArgumentParser.GetString(parsedArgs, ["config"], null);
+            var profileName = ArgumentParser.GetString(parsedArgs, ["profile"], null);
+            var toolApprovals = ArgumentParser.GetString(parsedArgs, ["tool-approvals", "ta"], null);
+            
+            // Validate tool-approvals value if provided
+            if (!string.IsNullOrEmpty(toolApprovals) && 
+                toolApprovals != "readonly" && toolApprovals != "all")
+            {
+                AnsiConsole.MarkupLine("[red]Error: --tool-approvals must be either 'readonly' or 'all'[/]");
+                return 1;
+            }
+            
             // Setup dependency injection
             var services = new ServiceCollection();
-            ServiceConfiguration.ConfigureServices(services);
+            ServiceConfiguration.ConfigureServices(services, configPath, profileName, toolApprovals);
             var serviceProvider = services.BuildServiceProvider();
             
             var appService = serviceProvider.GetRequiredService<IAppService>();
@@ -123,18 +135,21 @@ public sealed class NonInteractiveCommand : ICommand
         AnsiConsole.WriteLine();
         
         AnsiConsole.MarkupLine("[bold]OPTIONS:[/]");
-        AnsiConsole.MarkupLine("    -p, --prompt <PROMPT>      The prompt/message to send to the AI, or path to a .md file containing the prompt");
-        AnsiConsole.MarkupLine("    -v, --verbosity <LEVEL>    Set the verbosity level (quiet, minimal, normal, detailed, diagnostic)");
-        AnsiConsole.MarkupLine("        --config <PATH>        Path to the configuration file (default: maxbot.config.json)");
-        AnsiConsole.MarkupLine("        --profile <NAME>       Configuration profile to use");
-        AnsiConsole.MarkupLine("        --no-history           Don't use or save chat history");
-        AnsiConsole.MarkupLine("    -h, --help                 Show this help message");
+        AnsiConsole.MarkupLine("    -p, --prompt <PROMPT>        The prompt/message to send to the AI, or path to a .md file containing the prompt");
+        AnsiConsole.MarkupLine("    -v, --verbosity <LEVEL>      Set the verbosity level (quiet, minimal, normal, detailed, diagnostic)");
+        AnsiConsole.MarkupLine("        --config <PATH>          Path to the configuration file (default: maxbot.config.json)");
+        AnsiConsole.MarkupLine("        --profile <NAME>         Configuration profile to use");
+        AnsiConsole.MarkupLine("    -ta, --tool-approvals <MODE> Override tool approval mode (readonly, all)");
+        AnsiConsole.MarkupLine("        --no-history             Don't use or save chat history");
+        AnsiConsole.MarkupLine("    -h, --help                   Show this help message");
         AnsiConsole.WriteLine();
         
         AnsiConsole.MarkupLine("[bold]EXAMPLES:[/]");
-        AnsiConsole.MarkupLine("    max run --prompt \"What is the capital of Michigan?\"");
-        AnsiConsole.MarkupLine("    max run --prompt ./prompts/analyze-code.md");
+        AnsiConsole.MarkupLine("    max run -p \"What is the capital of Michigan?\"");
+        AnsiConsole.MarkupLine("    max run -p ./prompts/analyze-code.md");
         AnsiConsole.MarkupLine("    max run --prompt \"Explain this code\" --no-history");
+        AnsiConsole.MarkupLine("    max run -p \"Create a file\" --tool-approvals all");
+        AnsiConsole.MarkupLine("    max run -p \"List files\" -ta readonly");
     }
 
     /// <summary>

@@ -51,7 +51,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         _cancellationTokenSource = new CancellationTokenSource();
 
         _keyboardHandler = new AdvancedKeyboardHandler(_serviceProvider.GetService<ILogger<AdvancedKeyboardHandler>>());
-        _slashCommandProcessor = new SlashCommandProcessor(AnsiConsole.Console, _serviceProvider.GetService<ILogger<SlashCommandProcessor>>());
+        _slashCommandProcessor = new SlashCommandProcessor(AnsiConsole.Console, _serviceProvider.GetService<ILogger<SlashCommandProcessor>>(), _serviceProvider.GetService<ChatClient>());
 
         _keyboardHandler.KeyPressed += OnKeyPressed;
         _keyboardHandler.KeyCombinationPressed += OnKeyCombinationPressed;
@@ -270,7 +270,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         string content;
         if (string.IsNullOrEmpty(currentInput))
         {
-            content = $"{prompt}{cursor}[dim]Type your message[/]";
+            content = $"{prompt}{cursor}[dim]Type your message or /help[/]";
         }
         else
         {

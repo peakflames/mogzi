@@ -14,7 +14,7 @@ public static class ServiceConfiguration
     /// <summary>
     /// Configures the dependency injection container.
     /// </summary>
-    public static void ConfigureServices(IServiceCollection services)
+    public static void ConfigureServices(IServiceCollection services, string? configPath = null, string? profileName = null, string? toolApprovals = null)
     {
         // Add logging - file logging only to keep UI clean
         services.AddLogging(builder =>
@@ -31,9 +31,9 @@ public static class ServiceConfiguration
         
         // Create ChatClient - this will be configured per command based on settings
         var chatClientResult = ChatClient.Create(
-            "maxbot.config.json",
-            null, // Use default profile
-            null,
+            configPath ?? "maxbot.config.json",
+            profileName, // Use specified profile or default
+            toolApprovals, // Use specified tool approvals override
             "chat",
             (details, color) => {},
             false

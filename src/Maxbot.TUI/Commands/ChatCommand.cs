@@ -17,9 +17,29 @@ public sealed class ChatCommand : ICommand
         {
             var parsedArgs = ArgumentParser.Parse(args);
             
+            // Check for help
+            if (ArgumentParser.HasFlag(parsedArgs, "help") || ArgumentParser.HasFlag(parsedArgs, "h"))
+            {
+                ShowHelp();
+                return 0;
+            }
+            
+            // Extract configuration parameters
+            var configPath = ArgumentParser.GetString(parsedArgs, ["config"], null);
+            var profileName = ArgumentParser.GetString(parsedArgs, ["profile"], null);
+            var toolApprovals = ArgumentParser.GetString(parsedArgs, ["tool-approvals", "ta"], null);
+            
+            // Validate tool-approvals value if provided
+            if (!string.IsNullOrEmpty(toolApprovals) && 
+                toolApprovals != "readonly" && toolApprovals != "all")
+            {
+                AnsiConsole.MarkupLine("[red]Error: --tool-approvals must be either 'readonly' or 'all'[/]");
+                return 1;
+            }
+            
             // Setup dependency injection
             var services = new ServiceCollection();
-            ServiceConfiguration.ConfigureServices(services);
+            ServiceConfiguration.ConfigureServices(services, configPath, profileName, toolApprovals);
             var serviceProvider = services.BuildServiceProvider();
             
             // Create and run the FlexColumn TUI application
@@ -53,16 +73,19 @@ public sealed class ChatCommand : ICommand
         AnsiConsole.WriteLine();
         
         AnsiConsole.MarkupLine("[bold]OPTIONS:[/]");
-        AnsiConsole.MarkupLine("    -v, --verbosity <LEVEL>    Set the verbosity level (quiet, minimal, normal, detailed, diagnostic)");
-        AnsiConsole.MarkupLine("        --config <PATH>        Path to the configuration file (default: maxbot.config.json)");
-        AnsiConsole.MarkupLine("        --profile <NAME>       Configuration profile to use");
-        AnsiConsole.MarkupLine("    -h, --help                 Show this help message");
+        AnsiConsole.MarkupLine("    -v, --verbosity <LEVEL>      Set the verbosity level (quiet, minimal, normal, detailed, diagnostic)");
+        AnsiConsole.MarkupLine("        --config <PATH>          Path to the configuration file (default: maxbot.config.json)");
+        AnsiConsole.MarkupLine("        --profile <NAME>         Configuration profile to use");
+        AnsiConsole.MarkupLine("    -ta, --tool-approvals <MODE> Override tool approval mode (readonly, all)");
+        AnsiConsole.MarkupLine("    -h, --help                   Show this help message");
         AnsiConsole.WriteLine();
         
         AnsiConsole.MarkupLine("[bold]EXAMPLES:[/]");
         AnsiConsole.MarkupLine("    max chat");
         AnsiConsole.MarkupLine("    max chat --verbosity normal");
         AnsiConsole.MarkupLine("    max chat --profile development");
+        AnsiConsole.MarkupLine("    max chat --tool-approvals all");
+        AnsiConsole.MarkupLine("    max chat -ta readonly");
     }
 
     private static string[] BuildArgsFromParsed(Dictionary<string, string?> parsedArgs)

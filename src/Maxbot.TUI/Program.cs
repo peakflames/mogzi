@@ -90,15 +90,18 @@ public static class Program
         AnsiConsole.WriteLine();
         
         AnsiConsole.MarkupLine("[bold]GLOBAL OPTIONS:[/]");
-        AnsiConsole.MarkupLine("    -h, --help       Show this help message");
-        AnsiConsole.MarkupLine("    -v, --version    Show version information");
+        AnsiConsole.MarkupLine("    -h, --help                   Show this help message");
+        AnsiConsole.MarkupLine("    -v, --version                Show version information");
+        AnsiConsole.MarkupLine("    -ta, --tool-approvals <MODE> Override tool approval mode (readonly, all)");
         AnsiConsole.WriteLine();
         
         AnsiConsole.MarkupLine("[bold]EXAMPLES:[/]");
         AnsiConsole.MarkupLine("    max                                          # Start interactive chat (default)");
         AnsiConsole.MarkupLine("    max chat --verbosity normal                 # Start chat with verbose logging");
+        AnsiConsole.MarkupLine("    max chat --tool-approvals all               # Start chat with all tools enabled");
         AnsiConsole.MarkupLine("    max run --prompt \"Hello world\"              # Run single prompt");
         AnsiConsole.MarkupLine("    max run --prompt ./my-prompt.md             # Run prompt from file");
+        AnsiConsole.MarkupLine("    max run -p \"Create a file\" -ta all          # Run with all tools enabled");
         AnsiConsole.WriteLine();
         
         AnsiConsole.MarkupLine("Use '[cyan]max <command> --help[/]' for more information about a specific command.");

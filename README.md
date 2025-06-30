@@ -1,39 +1,35 @@
-# Multi-purpose Autonomous eXpert (Max) 😻
+# MAX 😻
 
-An Autonomous AI agent right in your terminal or CI/CD pipeline and open to multiple API providers.
+A Multi-model Autonomous eXpert (Max) right in your terminal or CI/CD pipeline and open to multiple API providers and AI models
 
 Perform engineering research, full coding tasks, and multiple workflow with either natural language or shell scripts 👈
 
 ## Features ✨
 
-- Support both `oneshot` and `Interactive Chat` interface with streaming AI responses
-- Currently supports OpenAI-compatible APIs like Requesty.ai, Openrouter.ai, Supernova, Cerebras, Deepseek, more providers coming soon.
-   - Excellent LLM results with Google Gemini, OpenAI GPT, and Anthropic models.
-
+- Supports both `interactive chat` and `non-tnteractive` interface with streaming AI responses
+- Currently supports the OpenAI-compatible APIs enabling numerous provides like Requesty.ai, Openrouter.ai, Supernova, Cerebras, Deepseek, and more.
+   - For now, the `best` results are with models having excellect tool and instruction following like those form Anthropic, Google, and OpenAI models.
 - Profile-based configuration for easy switching between providers and models
 - Cross-platform support (Windows, MacOS, Linux)
 - Control file system access via tool appproval (`readonly` or `all`)
-- Chat history persistence to continue conversations across sessions
-- Session management to list and load previous chat sessions
-- MCP-Support coming soon
+- Chat history persistence to continue conversations across sessions (coming soon)
+- Session management to list and load previous chat sessions (coming soon)
+- MCP-Support (coming soon)
 
 ### Examples 💡
 
 ```bash
-# oneshot request
-max "Which is the tallest pokemon?"
+# Start a rich interactive chat
+max
 
-# start full chat using your 'Sonnet' profile
-max --chat -p Sonnet
+# Switch to using your profile named 'sonnet'
+max --profile sonnet
 
-# translate a README.md to portugese
-cat README.md | max "Translate to portugese"
+# Translate a README.md to portugese in one shot
+cat README.md | max run -p "Translate to portugese"
 
-# list all saved chat sessions
-max --list-sessions
-
-# load a previous chat session
-max --chat -l 20250621_230940
+# (soon) Run a no non-interactive nworkflow prompt
+max run -p workflows/generate-release-notes.md
 ```
 
 ## Prerequisites ✅
@@ -122,51 +118,7 @@ Before running the application, ensure you have:
    }
    ```
 
-## Usage 📄
-
-```bash
-max [prompt] [options]
-```
-
-To start a chat session, use the `--chat` option:
-
-```bash
-max --chat [options]
-```
-
-### Chat Interface 💬
-
-- Start typing your messages after the prompt
-- AI responses will stream in real-time with green text
-- Exit the chat by typing `exit`, `quit`, or pressing Enter with no message
-- Chat history is automatically saved to disk for future sessions
-- Access previous chat sessions using the `--list-sessions` and `--chat -l <session_id>` commands
-
-#### Slash Commands
-
-While in chat mode, you can use the following slash commands for quick actions:
-
-- `/status` - Display current configuration (similar to `--status` flag)
-- `/tool-approval [readonly|all]` - Change tool approval setting on the fly
-- `/sessions` - List available chat sessions (similar to `--list-sessions` flag)
-- `/load-session [ID]` - Load a specific chat session without exiting chat mode
-- `/help` - Display available slash commands
-
-Example:
-```
-% /tool-approval all
-Tool approval setting updated to 'all'
-
-% /help
-Available Slash Commands:
-  /status                 - Display current configuration
-  /tool-approval [mode]   - Set tool approval mode (readonly|all)
-  /sessions               - List available chat sessions
-  /load-session [ID]      - Load a specific chat session
-  /help                   - Display this help message
-```
-
-### Configuration ⚙️
+### Configuration Schema ⚙️
 
 The application uses a JSON configuration file with the following structure:
 
@@ -193,7 +145,7 @@ To set the default tool approval mode, add the `tool_approvals` property to your
 ```json
 {
     "maxbotConfig": {
-        "tool_approvals": "readonly",
+        "tool_approvals": "all",
         "apiProviders": [ ... ],
         "profiles": [ ... ]
     }
@@ -213,59 +165,7 @@ max "Create a new file" -ta all
 *   `readonly`: (Default) MaxBot will ask for your permission before performing any write operations (e.g., creating or modifying files).
 *   `all`: MaxBot is pre-approved to perform any file system operation without asking for confirmation.
 
-### Session Management 💾
 
-MaxBot automatically saves your chat history to disk, allowing you to continue conversations across multiple sessions. Each chat session is stored in a timestamped directory in your user profile.
-
-**Listing Sessions:**
-
-To view all your saved chat sessions:
-
-```bash
-max --list-sessions
-```
-
-This command displays a card-like view of each session, including:
-- Session ID (timestamp)
-- Creation date
-- Last updated date
-- Number of messages
-- First user prompt (to help identify the conversation)
-
-Example output:
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Session: 20250621_230940                                    │
-├─────────────────────────────────────────────────────────────┤
-│ Created:      2025-06-21 23:09:40                           │
-│ Last Updated: 2025-06-21 23:15:22                           │
-│ Messages:     8 entries                                     │
-├─────────────────────────────────────────────────────────────┤
-│ First Prompt: "How can I implement a binary search tree     │
-│               in C#?"                                       │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Loading a Session:**
-
-To continue a previous conversation, use the `--chat` option with the `-l` or `--load` flag followed by the session ID:
-
-```bash
-max --chat -l 20250621_230940
-```
-
-This will:
-1. Load the entire conversation history
-2. Display the previous messages so you can see the context
-3. Allow you to continue the conversation from where you left off
-
-All chat sessions are stored in the `.maxbot/chats` directory in your user profile. Each session is a separate directory containing a `chatHistory.json` file with the conversation data.
-
-**Session Storage Location:**
-
-- Windows: `C:\Users\<username>\.maxbot\chats\`
-- macOS: `/Users/<username>/.maxbot/chats/`
-- Linux: `/home/<username>/.maxbot/chats/`
 
 ## Available Assistant Tools 🛠️
 
@@ -297,6 +197,9 @@ This work is licensed under the Creative Commons Attribution-NonCommercial 4.0 I
 To view a copy of this license, visit http://creativecommons.org/licenses/by-nc/4.0/ or send a letter
 to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
 
-## Who is Max?
+## Acknowledgements
 
-He's the best damn orange cat on the plant. 🐈
+- [Cline](https://github.com/cline/cline)
+- [Gemini CLI](https://github.com/google-gemini/gemini-cli)
+- [Microsoft.Extensions.AI](https://learn.microsoft.com/en-us/dotnet/ai/microsoft-extensions-ai)
+- [Spectre.Console](https://github.com/spectreconsole/spectre.console)
