@@ -24,12 +24,31 @@ public sealed class NonInteractiveCommand : ICommand
                 return 0;
             }
             
-            // Get prompt
+            // Get prompt from arguments
             var prompt = ArgumentParser.GetString(parsedArgs, ["prompt", "p"], null);
+            
+            // Check for STDIN input and handle it like the CLI version
+            if (Console.IsInputRedirected)
+            {
+                var stdinInput = await Console.In.ReadToEndAsync();
+                if (!string.IsNullOrWhiteSpace(stdinInput))
+                {
+                    if (!string.IsNullOrWhiteSpace(prompt))
+                    {
+                        // Concatenate STDIN input with prompt argument (STDIN first, then prompt)
+                        prompt = stdinInput.Trim() + Environment.NewLine + prompt;
+                    }
+                    else
+                    {
+                        // Use STDIN input as the prompt
+                        prompt = stdinInput.Trim();
+                    }
+                }
+            }
             
             if (string.IsNullOrWhiteSpace(prompt))
             {
-                AnsiConsole.MarkupLine("[red]Error: Prompt is required for non-interactive mode. Use --prompt or -p to specify the message or path to a .md file.[/]");
+                AnsiConsole.MarkupLine("[red]Error: Prompt is required for non-interactive mode. Use --prompt or -p to specify the message, path to a .md file, or pipe input via STDIN.[/]");
                 return 1;
             }
             
@@ -71,7 +90,22 @@ public sealed class NonInteractiveCommand : ICommand
             if (!noHistory)
             {
                 // Load existing history
-                chatHistory.AddRange(historyManager.GetCurrentChatHistory());
+                var existingHistory = historyManager.GetCurrentChatHistory();
+                if (existingHistory.Count > 0)
+                {
+                    // TODO: Implement once session management is implemented
+                    // console.MarkupLine($"[dim]Loading {existingHistory.Count} messages from existing chat history[/]");
+                    chatHistory.AddRange(existingHistory);
+                }
+                else
+                {
+                    // TODO: Implement once session management is implemented
+                    // console.MarkupLine("[dim]No existing chat history found, starting fresh session[/]");
+                }
+            }
+            else
+            {
+                console.MarkupLine("[dim]--no-history flag used, starting fresh session without loading previous chat history[/]");
             }
 
             // Add user message

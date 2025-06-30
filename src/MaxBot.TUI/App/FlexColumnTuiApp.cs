@@ -128,9 +128,16 @@ public sealed class FlexColumnTuiApp : IDisposable
         if (!chatHistory.Any())
         {
             _scrollbackTerminal.WriteStatic(CreateWelcomeMessage());
+
+            // TODO: Implement once session management is implemented
+            // _scrollbackTerminal.WriteStatic(new Markup("[dim]No existing chat history found, starting fresh session[/]"));
+            // _scrollbackTerminal.WriteStatic(new Markup(""));
         }
         else
         {
+            // TODO: Implement once session management is implemented
+            // _scrollbackTerminal.WriteStatic(new Markup($"[dim]Loading {chatHistory.Count} messages from existing chat history[/]"));
+            // _scrollbackTerminal.WriteStatic(new Markup(""));
             RenderHistory();
         }
     }
