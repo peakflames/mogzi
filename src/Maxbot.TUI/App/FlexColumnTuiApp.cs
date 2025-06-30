@@ -1,5 +1,6 @@
 using MaxBot.PawPrints;
 using MaxBot.TUI.Models;
+using MaxBot.Domain;
 
 namespace MaxBot.TUI.App;
 
@@ -13,6 +14,7 @@ public sealed class FlexColumnTuiApp : IDisposable
     private readonly AdvancedKeyboardHandler _keyboardHandler;
     private readonly SlashCommandProcessor _slashCommandProcessor;
     private readonly IScrollbackTerminal _scrollbackTerminal;
+    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
 
     // Application state
     private bool _isRunning = false;
@@ -44,6 +46,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         _appService = serviceProvider.GetRequiredService<IAppService>();
         _historyManager = serviceProvider.GetRequiredService<HistoryManager>();
         _scrollbackTerminal = serviceProvider.GetRequiredService<IScrollbackTerminal>();
+        _workingDirectoryProvider = serviceProvider.GetRequiredService<IWorkingDirectoryProvider>();
 
         _cancellationTokenSource = new CancellationTokenSource();
 
@@ -317,9 +320,51 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private IRenderable CreateFlexFooterComponent()
     {
-        var content = "[dim]~/Desktop/maxbot    no sandbox (see /docs)    gemini-2.5-pro (100% context left)[/]";
+        var currentDir = GetDisplayPath(_workingDirectoryProvider.GetCurrentDirectory());
+        var modelInfo = GetModelDisplayInfo();
+        var content = $"[dim]{currentDir}    no sandbox (see /docs)    {modelInfo} (--TBD-- context left)[/]";
         return new Panel(new Markup(content))
             .NoBorder();
+    }
+
+    private string GetModelDisplayInfo()
+    {
+        try
+        {
+            var chatClient = _appService.ChatClient;
+            var provider = chatClient.ActiveApiProvider.Name;
+            var model = chatClient.ActiveProfile.ModelId;
+            
+            // Format like "provider/model" or just "model" if provider is empty
+            if (!string.IsNullOrEmpty(provider))
+            {
+                return $"{provider}:{model}";
+            }
+            return model;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error getting model display info");
+            return "unknown-model";
+        }
+    }
+
+    private string GetDisplayPath(string fullPath)
+    {
+        try
+        {
+            var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (fullPath.StartsWith(homeDir))
+            {
+                return "~" + fullPath.Substring(homeDir.Length).Replace('\\', '/');
+            }
+            return fullPath.Replace('\\', '/');
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error formatting display path for {Path}", fullPath);
+            return fullPath;
+        }
     }
 
     private void RegisterKeyBindings()
