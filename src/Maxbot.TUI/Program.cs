@@ -1,6 +1,7 @@
 
 
 using MaxBot.PawPrints;
+using MaxBot.TUI.Infrastructure;
 
 namespace MaxBot.TUI;
 
@@ -60,11 +61,17 @@ public static class Program
     /// </summary>
     private static void ConfigureServices(IServiceCollection services, string[] args)
     {
-        // Add logging
+        // Parse verbosity level from command line arguments
+        var logLevel = ParseVerbosityLevel(args);
+        
+        // Add logging - always log to file, verbosity controls level
         services.AddLogging(builder =>
         {
-            builder.AddConsole();
-            builder.SetMinimumLevel(LogLevel.Information);
+            // Always add file logging to ~/.max/logs
+            builder.AddProvider(new FileLoggerProvider(logLevel));
+            builder.SetMinimumLevel(logLevel);
+            
+            // No console logging - keep UI clean
         });
 
         // Add Spectre.Console
@@ -98,5 +105,72 @@ public static class Program
         // Add TUI infrastructure components
         services.AddSingleton<FlexColumnTuiApp>();
         services.AddSingleton<IScrollbackTerminal, ScrollbackTerminal>();
+    }
+
+    /// <summary>
+    /// Parses the verbosity level from command line arguments.
+    /// Supports MSBuild-style verbosity levels: quiet, minimal, normal, detailed, diagnostic.
+    /// </summary>
+    /// <param name="args">Command line arguments.</param>
+    /// <returns>The corresponding LogLevel, or LogLevel.None for quiet/no logging.</returns>
+    private static LogLevel ParseVerbosityLevel(string[] args)
+    {
+        // Default to no logging (quiet operation)
+        var defaultLevel = LogLevel.None;
+
+        for (int i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+            
+            // Check for --verbosity flag
+            if (arg.Equals("--verbosity", StringComparison.OrdinalIgnoreCase) || 
+                arg.Equals("-v", StringComparison.OrdinalIgnoreCase))
+            {
+                // Get the next argument as the verbosity level
+                if (i + 1 < args.Length)
+                {
+                    var level = args[i + 1].ToLowerInvariant();
+                    return level switch
+                    {
+                        "q" or "quiet" => LogLevel.None,
+                        "m" or "minimal" => LogLevel.Error,
+                        "n" or "normal" => LogLevel.Information,
+                        "d" or "detailed" => LogLevel.Debug,
+                        "diag" or "diagnostic" => LogLevel.Trace,
+                        _ => defaultLevel
+                    };
+                }
+            }
+            // Check for combined format like --verbosity=normal
+            else if (arg.StartsWith("--verbosity=", StringComparison.OrdinalIgnoreCase))
+            {
+                var level = arg.Substring("--verbosity=".Length).ToLowerInvariant();
+                return level switch
+                {
+                    "q" or "quiet" => LogLevel.None,
+                    "m" or "minimal" => LogLevel.Error,
+                    "n" or "normal" => LogLevel.Information,
+                    "d" or "detailed" => LogLevel.Debug,
+                    "diag" or "diagnostic" => LogLevel.Trace,
+                    _ => defaultLevel
+                };
+            }
+            // Check for short combined format like -v=normal
+            else if (arg.StartsWith("-v=", StringComparison.OrdinalIgnoreCase))
+            {
+                var level = arg.Substring("-v=".Length).ToLowerInvariant();
+                return level switch
+                {
+                    "q" or "quiet" => LogLevel.None,
+                    "m" or "minimal" => LogLevel.Error,
+                    "n" or "normal" => LogLevel.Information,
+                    "d" or "detailed" => LogLevel.Debug,
+                    "diag" or "diagnostic" => LogLevel.Trace,
+                    _ => defaultLevel
+                };
+            }
+        }
+
+        return defaultLevel;
     }
 }

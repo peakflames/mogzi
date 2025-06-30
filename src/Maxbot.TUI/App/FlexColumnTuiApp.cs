@@ -27,6 +27,10 @@ public sealed class FlexColumnTuiApp : IDisposable
     private readonly List<string> _commandHistory = new();
     private int _commandHistoryIndex = -1;
 
+    // AI operation management
+    private CancellationTokenSource? _aiOperationCts;
+    private DateTime _aiOperationStartTime;
+
     public bool IsRunning => _isRunning;
 
     public event Action? Started;
@@ -280,7 +284,11 @@ public sealed class FlexColumnTuiApp : IDisposable
             _ => "   "
         };
 
-        return new Panel(new Markup($"[orange3]{leadingAnimation}[/] [dim]API Request...[/]"))
+        // Calculate duration since AI operation started
+        var duration = (int)(DateTime.Now - _aiOperationStartTime).TotalSeconds;
+        var durationText = duration > 0 ? $"{duration}s" : "0s";
+
+        return new Panel(new Markup($"[orange3]{leadingAnimation}[/] [dim]Thinking (esc to cancel, {durationText})[/]"))
             .NoBorder();
     }
 
@@ -407,7 +415,7 @@ public sealed class FlexColumnTuiApp : IDisposable
                     break;
 
                 case ConsoleKey.Escape:
-                    ClearCurrentInput();
+                    HandleEscapeKey();
                     e.Handled = true;
                     break;
             }
@@ -477,6 +485,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         _cancellationTokenSource.Cancel();
         _keyboardHandler?.Dispose();
         _cancellationTokenSource?.Dispose();
+        _aiOperationCts?.Dispose();
 
         Started = null;
         Stopped = null;
@@ -592,10 +601,15 @@ public sealed class FlexColumnTuiApp : IDisposable
                 return;
             }
 
+            // Create new cancellation token for this AI operation
+            _aiOperationCts?.Dispose();
+            _aiOperationCts = new CancellationTokenSource();
+            _aiOperationStartTime = DateTime.Now;
+            
             _currentState = ChatState.Thinking;
 
             var chatHistory = _historyManager.GetCurrentChatHistory();
-            var responseStream = _appService.ProcessChatMessageAsync(chatHistory, CancellationToken.None);
+            var responseStream = _appService.ProcessChatMessageAsync(chatHistory, _aiOperationCts.Token);
 
             var assistantMessage = new ChatMessage(ChatRole.Assistant, "");
             _historyManager.AddAssistantMessage(assistantMessage);
@@ -632,6 +646,11 @@ public sealed class FlexColumnTuiApp : IDisposable
             }
             _scrollbackTerminal.WriteStatic(new Markup(""));
             _scrollbackTerminal.WriteStatic(RenderMessage(assistantMessage));
+        }
+        catch (OperationCanceledException) when (_aiOperationCts?.Token.IsCancellationRequested == true)
+        {
+            // AI operation was cancelled by user - this is handled by InterruptAiOperation()
+            _logger?.LogDebug("AI operation was cancelled by user");
         }
         catch (Exception ex)
         {
@@ -762,5 +781,52 @@ public sealed class FlexColumnTuiApp : IDisposable
         _currentInput = string.Empty;
         _cursorPosition = 0;
         _commandHistoryIndex = -1;
+    }
+
+    private void HandleEscapeKey()
+    {
+        switch (_currentState)
+        {
+            case ChatState.Input:
+                // Clear current input when in input state
+                ClearCurrentInput();
+                break;
+                
+            case ChatState.Thinking:
+            case ChatState.ToolExecution:
+                // Interrupt AI operation and return to input
+                InterruptAiOperation();
+                break;
+        }
+    }
+
+    private void InterruptAiOperation()
+    {
+        try
+        {
+            // Cancel the AI operation
+            _aiOperationCts?.Cancel();
+            
+            // Set state back to input
+            _currentState = ChatState.Input;
+            
+            // Clear any progress indicators
+            _toolProgress = string.Empty;
+            _currentToolName = string.Empty;
+            
+            // Display interruption message without assistant prefix
+            _scrollbackTerminal.WriteStatic(new Markup("⚠ Request cancelled."));
+            _scrollbackTerminal.WriteStatic(new Markup(""));
+            
+            // Add to history as assistant message for context
+            var interruptMessage = new ChatMessage(ChatRole.Assistant, "⚠ Request cancelled.");
+            _historyManager.AddAssistantMessage(interruptMessage);
+            
+            _logger?.LogInformation("AI operation interrupted by user (Escape key)");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error interrupting AI operation");
+        }
     }
 }
