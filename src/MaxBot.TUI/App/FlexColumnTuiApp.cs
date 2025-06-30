@@ -352,10 +352,10 @@ public sealed class FlexColumnTuiApp : IDisposable
 
             // Estimate context window size based on model (this could be made configurable)
             var contextWindowSize = EstimateContextWindowSize();
-            var percentageUsed = Math.Min(100, tokenCount * 100 / contextWindowSize);
-            var percentageLeft = 100 - percentageUsed;
+            var percentageUsed = Math.Min(100.0, (double)tokenCount * 100.0 / contextWindowSize);
+            var percentageLeft = 100.0 - percentageUsed;
 
-            return $"{tokenCount:N0} tokens, {percentageLeft}% context left";
+            return $"{tokenCount:N0} tokens, {percentageLeft:F2}% context left";
         }
         catch (Exception ex)
         {

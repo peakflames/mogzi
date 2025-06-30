@@ -32,7 +32,7 @@ max --profile sonnet
 # Translate a README.md to portugese in one shot
 cat README.md | max run -p "Translate to portugese"
 
-# (soon) Run a no non-interactive nworkflow prompt
+# (coming soon) Run a no non-interactive nworkflow prompt
 max run -p workflows/generate-release-notes.md
 ```
 
