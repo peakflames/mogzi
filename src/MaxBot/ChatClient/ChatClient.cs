@@ -38,6 +38,7 @@ public partial class ChatClient
     private DiffPatchTools DiffPatchTools { get; init; }
     private ReadFileTool ReadFileTool { get; init; }
     private WriteFileTool WriteFileTool { get; init; }
+    private EditTool EditTool { get; init; }
     private LSTool LSTool { get; init; }
     private GrepTool GrepTool { get; init; }
 
@@ -70,6 +71,7 @@ public partial class ChatClient
         DiffPatchTools = new DiffPatchTools(config, llmResponseDetailsCallback);
         ReadFileTool = new ReadFileTool(config, llmResponseDetailsCallback);
         WriteFileTool = new WriteFileTool(config, llmResponseDetailsCallback);
+        EditTool = new EditTool(config, llmResponseDetailsCallback);
         LSTool = new LSTool(config, llmResponseDetailsCallback);
         GrepTool = new GrepTool(config, llmResponseDetailsCallback);
 
@@ -78,6 +80,7 @@ public partial class ChatClient
         allTools.AddRange(DiffPatchTools.GetTools().Cast<AITool>());
         allTools.Add(ReadFileTool.GetTool());
         allTools.Add(WriteFileTool.GetTool());
+        allTools.Add(EditTool.GetTool());
         allTools.Add(LSTool.GetTool());
         allTools.Add(GrepTool.GetTool());
 
