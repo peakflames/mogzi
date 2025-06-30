@@ -168,6 +168,133 @@ Integrate a selected AI tool function from the outputs/candidate-tools-impl dire
 - ✅ Use `SecurityElement.Escape()` for XML content
 - ✅ Include detailed error messages in `<error>` tags
 
+## Lessons Learned and Critical Tips
+
+### 1. Gemini CLI Compatibility is ESSENTIAL
+
+**CRITICAL**: Always match Gemini CLI tool and parameter descriptions EXACTLY. This ensures consistent behavior and user experience across both systems.
+
+- **Tool Names**: Must match exactly (e.g., `read_file`, `list_directory`)
+- **Tool Descriptions**: Copy verbatim from TypeScript implementation
+- **Parameter Names**: Use exact names (e.g., `absolute_path`, not `path`)
+- **Parameter Descriptions**: Copy verbatim, including examples and formatting
+- **Path Handling**: Both systems expect absolute paths, not relative paths
+
+**Example Issue**: Initially implemented tools with relative path handling, but Gemini CLI expects absolute paths. This caused confusion for AI models switching between systems.
+
+### 2. Path Validation Logic Pitfalls
+
+**CRITICAL BUG**: The `IsPathInWorkingDirectory()` method has a subtle but critical flaw that prevents listing/reading the working directory itself.
+
+**The Problem**:
+```csharp
+// BROKEN: This fails when path IS the working directory
+if (!normalizedWorkingDirectory.EndsWith(Path.DirectorySeparatorChar.ToString()))
+{
+    normalizedWorkingDirectory += Path.DirectorySeparatorChar;
+}
+return normalizedAbsolutePath.StartsWith(normalizedWorkingDirectory, ...);
+```
+
+**The Fix**:
+```csharp
+// CORRECT: Check exact match first, then subdirectories
+if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory, ...))
+{
+    return true; // Allow exact working directory match
+}
+// Then check subdirectories with trailing separator
+```
+
+**Symptoms**: AI models report "Path must be within the root directory" when trying to list the current working directory, forcing them to use shell commands instead.
+
+### 3. Parameter Name Consistency
+
+**CRITICAL**: When changing parameter names (e.g., `path` to `absolute_path`), update ALL references:
+- Method parameter declarations
+- Variable usage throughout the method
+- Error messages and logging
+- Method calls and responses
+
+**Common Mistake**: Changing the parameter name but forgetting to update variable references in catch blocks or response methods.
+
+### 4. Tool Description Accuracy
+
+**CRITICAL**: Tool descriptions must accurately reflect actual capabilities:
+- If tool supports images/PDFs, mention it in description
+- If tool requires absolute paths, state it clearly
+- Include specific examples in parameter descriptions
+- Match the exact wording from Gemini CLI for consistency
+
+### 5. Security Validation Best Practices
+
+**Path Security Checklist**:
+- ✅ Validate paths are absolute using `Path.IsPathRooted()`
+- ✅ Allow access to the working directory itself (not just subdirectories)
+- ✅ Use cross-platform path comparison with `RuntimeInformation`
+- ✅ Normalize paths with `Path.GetFullPath()` before comparison
+- ✅ Handle both directory separators (`/` and `\`) properly
+
+### 6. Error Message Quality
+
+**Best Practices**:
+- Include the actual path in error messages for debugging
+- Use consistent error message format across tools
+- Provide actionable guidance (e.g., "You must provide an absolute path")
+- Match error message style from Gemini CLI when possible
+
+### 7. Testing Strategy
+
+**Integration Testing Approach**:
+1. **Build First**: Always ensure compilation succeeds before testing
+2. **Run Tests**: Verify no regressions in existing functionality
+3. **Manual Testing**: Test with actual AI model interactions
+4. **Edge Cases**: Test boundary conditions (working directory, non-existent paths, etc.)
+
+**Common Test Scenarios**:
+- List/read the working directory itself
+- List/read subdirectories
+- Handle non-existent paths gracefully
+- Test with paths outside working directory (should fail)
+- Test with malformed paths
+
+### 8. AI Model User Experience
+
+**Key Insights from Real Usage**:
+- AI models expect tools to "just work" like Gemini CLI
+- Confusing error messages lead to workarounds (using shell commands)
+- Consistent parameter names reduce model confusion
+- Clear, specific error messages help models understand limitations
+
+### 9. Development Workflow Tips
+
+**Efficient Development Process**:
+1. **Read TypeScript First**: Always examine the Gemini CLI implementation thoroughly
+2. **Copy Descriptions Exactly**: Don't paraphrase - copy verbatim
+3. **Test Early**: Build and test after each major change
+4. **Fix Security Last**: Get basic functionality working, then add security validation
+5. **Test with AI**: Use actual AI model interactions to validate user experience
+
+### 10. Common Pitfalls to Avoid
+
+**File Location Mistakes**:
+- ❌ Modifying candidate files instead of creating new implementations
+- ❌ Placing tools in wrong directory structure
+
+**Type System Mistakes**:
+- ❌ Using `.Cast<AITool>()` on single `AIFunction` returns
+- ❌ Mismatching return types in tool registration
+
+**Path Handling Mistakes**:
+- ❌ Assuming relative paths when tools expect absolute paths
+- ❌ Blocking access to working directory itself
+- ❌ Platform-specific path handling
+
+**Description Mistakes**:
+- ❌ Paraphrasing instead of copying exact descriptions
+- ❌ Missing parameter examples or formatting
+- ❌ Inconsistent terminology between tools
+
 </detailed_sequence_steps>
 
 </task>

@@ -28,46 +28,46 @@ public class ReadFileTool
             new AIFunctionFactoryOptions
             {
                 Name = "read_file",
-                Description = "Reads and returns the content of a specified file from the local filesystem. Handles text files and can read specific line ranges for large files."
+                Description = "Reads and returns the content of a specified file from the local filesystem. Handles text, images (PNG, JPG, GIF, WEBP, SVG, BMP), and PDF files. For text files, it can read specific line ranges."
             });
     }
 
     public async Task<string> ReadFile(
-        [Description("The path to the file to read (relative to the current working directory). Use forward slashes for cross-platform compatibility.")] string path,
-        [Description("The 0-based line number to start reading from (optional). Requires 'limit' to be set.")] int? offset = null,
-        [Description("The maximum number of lines to read (optional). Use with 'offset' to paginate through large files.")] int? limit = null)
+        [Description("The absolute path to the file to read (e.g., '/home/user/project/file.txt'). Relative paths are not supported. You must provide an absolute path.")] string absolute_path,
+        [Description("Optional: For text files, the 0-based line number to start reading from. Requires 'limit' to be set. Use for paginating through large files.")] int? offset = null,
+        [Description("Optional: For text files, maximum number of lines to read. Use with 'offset' to paginate through large files. If omitted, reads the entire file (if feasible, up to a default limit).")] int? limit = null)
     {
-        _llmResponseDetailsCallback?.Invoke($"Reading file '{path}'{(offset.HasValue ? $" from line {offset}" : "")}{(limit.HasValue ? $" (limit: {limit} lines)" : "")}.", ConsoleColor.DarkGray);
+        _llmResponseDetailsCallback?.Invoke($"Reading file '{absolute_path}'{(offset.HasValue ? $" from line {offset}" : "")}{(limit.HasValue ? $" (limit: {limit} lines)" : "")}.", ConsoleColor.DarkGray);
 
         try
         {
             // Validate parameters
-            var validationError = ValidateParameters(path, offset, limit);
+            var validationError = ValidateParameters(absolute_path, offset, limit);
             if (validationError != null)
             {
                 return CreateErrorResponse("read_file", validationError);
             }
 
             var workingDirectory = _workingDirectoryProvider.GetCurrentDirectory();
-            var absolutePath = Path.GetFullPath(Path.Combine(workingDirectory, path));
+            var absolutePath = Path.GetFullPath(absolute_path);
 
             // Security validation - ensure path is within working directory
             if (!IsPathInWorkingDirectory(absolutePath, workingDirectory))
             {
-                return CreateErrorResponse("read_file", "Path is outside working directory");
+                return CreateErrorResponse("read_file", $"File path must be within the root directory ({workingDirectory}): {absolute_path}");
             }
 
             // Check if file exists
             if (!File.Exists(absolutePath))
             {
-                return CreateErrorResponse("read_file", $"File not found: {path}");
+                return CreateErrorResponse("read_file", $"File not found: {absolute_path}");
             }
 
             // Check if file is readable
             var fileInfo = new FileInfo(absolutePath);
             if (!HasReadPermission(fileInfo))
             {
-                return CreateErrorResponse("read_file", $"File is not readable: {path}");
+                return CreateErrorResponse("read_file", $"File is not readable: {absolute_path}");
             }
 
             // Read file content
@@ -84,19 +84,19 @@ public class ReadFileTool
             var checksum = ComputeSha256(content);
             var lineCount = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None).Length;
 
-            return CreateSuccessResponse(path, absolutePath, content, checksum, lineCount, offset, limit);
+            return CreateSuccessResponse(absolute_path, absolutePath, content, checksum, lineCount, offset, limit);
         }
         catch (UnauthorizedAccessException)
         {
-            return CreateErrorResponse("read_file", $"Access denied reading file: {path}");
+            return CreateErrorResponse("read_file", $"Access denied reading file: {absolute_path}");
         }
         catch (DirectoryNotFoundException)
         {
-            return CreateErrorResponse("read_file", $"Directory not found for file: {path}");
+            return CreateErrorResponse("read_file", $"Directory not found for file: {absolute_path}");
         }
         catch (FileNotFoundException)
         {
-            return CreateErrorResponse("read_file", $"File not found: {path}");
+            return CreateErrorResponse("read_file", $"File not found: {absolute_path}");
         }
         catch (IOException ex)
         {
@@ -119,8 +119,11 @@ public class ReadFileTool
             return "Path cannot be empty or whitespace";
         }
 
-        // Normalize path separators for cross-platform compatibility
-        path = path.Replace('\\', '/');
+        // Check if path is absolute (matching TypeScript implementation)
+        if (!Path.IsPathRooted(path))
+        {
+            return $"File path must be absolute, but was relative: {path}. You must provide an absolute path.";
+        }
 
         // Check for invalid characters
         var invalidChars = Path.GetInvalidPathChars();
@@ -155,7 +158,14 @@ public class ReadFileTool
             var normalizedAbsolutePath = Path.GetFullPath(absolutePath);
             var normalizedWorkingDirectory = Path.GetFullPath(workingDirectory);
 
-            // Ensure both paths end with directory separator for proper comparison
+            // Check if the path is exactly the working directory
+            if (string.Equals(normalizedAbsolutePath, normalizedWorkingDirectory, 
+                RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            // Ensure working directory ends with directory separator for subdirectory comparison
             if (!normalizedWorkingDirectory.EndsWith(Path.DirectorySeparatorChar.ToString()) &&
                 !normalizedWorkingDirectory.EndsWith(Path.AltDirectorySeparatorChar.ToString()))
             {
