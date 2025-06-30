@@ -1,39 +1,22 @@
-using Spectre.Console.Cli;
 using MaxBot.TUI.App;
 using MaxBot.TUI.Infrastructure;
-using System.ComponentModel;
 
 namespace MaxBot.TUI.Commands;
 
 /// <summary>
-/// Settings for the chat command (interactive TUI mode).
-/// </summary>
-public sealed class ChatSettings : CommandSettings
-{
-    [CommandOption("-v|--verbosity <LEVEL>")]
-    [Description("Set the verbosity level (quiet, minimal, normal, detailed, diagnostic)")]
-    [DefaultValue("quiet")]
-    public string Verbosity { get; init; } = "quiet";
-
-    [CommandOption("--config <PATH>")]
-    [Description("Path to the configuration file")]
-    [DefaultValue("maxbot.config.json")]
-    public string ConfigPath { get; init; } = "maxbot.config.json";
-
-    [CommandOption("--profile <NAME>")]
-    [Description("Configuration profile to use")]
-    public string? Profile { get; init; }
-}
-
-/// <summary>
 /// Interactive chat command that launches the TUI.
 /// </summary>
-public sealed class ChatCommand : AsyncCommand<ChatSettings>
+public sealed class ChatCommand : ICommand
 {
-    public override async Task<int> ExecuteAsync(CommandContext context, ChatSettings settings)
+    public string Name => "chat";
+    public string Description => "Start interactive chat mode (default)";
+
+    public async Task<int> ExecuteAsync(string[] args)
     {
         try
         {
+            var parsedArgs = ArgumentParser.Parse(args);
+            
             // Setup dependency injection
             var services = new ServiceCollection();
             ServiceConfiguration.ConfigureServices(services);
@@ -42,10 +25,10 @@ public sealed class ChatCommand : AsyncCommand<ChatSettings>
             // Create and run the FlexColumn TUI application
             var app = serviceProvider.GetRequiredService<FlexColumnTuiApp>();
             
-            // Convert settings to args format for compatibility with existing TUI
-            var args = BuildArgsFromSettings(settings);
+            // Convert parsed args back to string array format for compatibility
+            var tuiArgs = BuildArgsFromParsed(parsedArgs);
             
-            return await app.RunAsync(args);
+            return await app.RunAsync(tuiArgs);
         }
         catch (OperationCanceledException)
         {
@@ -59,26 +42,53 @@ public sealed class ChatCommand : AsyncCommand<ChatSettings>
         }
     }
 
-    private static string[] BuildArgsFromSettings(ChatSettings settings)
+    public void ShowHelp()
+    {
+        AnsiConsole.MarkupLine("[bold]DESCRIPTION:[/]");
+        AnsiConsole.MarkupLine($"    {Description}");
+        AnsiConsole.WriteLine();
+        
+        AnsiConsole.MarkupLine("[bold]USAGE:[/]");
+        AnsiConsole.MarkupLine("    max chat [[OPTIONS]]");
+        AnsiConsole.WriteLine();
+        
+        AnsiConsole.MarkupLine("[bold]OPTIONS:[/]");
+        AnsiConsole.MarkupLine("    -v, --verbosity <LEVEL>    Set the verbosity level (quiet, minimal, normal, detailed, diagnostic)");
+        AnsiConsole.MarkupLine("        --config <PATH>        Path to the configuration file (default: maxbot.config.json)");
+        AnsiConsole.MarkupLine("        --profile <NAME>       Configuration profile to use");
+        AnsiConsole.MarkupLine("    -h, --help                 Show this help message");
+        AnsiConsole.WriteLine();
+        
+        AnsiConsole.MarkupLine("[bold]EXAMPLES:[/]");
+        AnsiConsole.MarkupLine("    max chat");
+        AnsiConsole.MarkupLine("    max chat --verbosity normal");
+        AnsiConsole.MarkupLine("    max chat --profile development");
+    }
+
+    private static string[] BuildArgsFromParsed(Dictionary<string, string?> parsedArgs)
     {
         var args = new List<string>();
         
-        if (!string.IsNullOrEmpty(settings.Verbosity) && settings.Verbosity != "quiet")
+        var verbosity = ArgumentParser.GetString(parsedArgs, "verbosity") ?? 
+                       ArgumentParser.GetString(parsedArgs, "v");
+        if (!string.IsNullOrEmpty(verbosity) && verbosity != "quiet")
         {
             args.Add("--verbosity");
-            args.Add(settings.Verbosity);
+            args.Add(verbosity);
         }
         
-        if (!string.IsNullOrEmpty(settings.ConfigPath) && settings.ConfigPath != "maxbot.config.json")
+        var config = ArgumentParser.GetString(parsedArgs, "config");
+        if (!string.IsNullOrEmpty(config) && config != "maxbot.config.json")
         {
             args.Add("--config");
-            args.Add(settings.ConfigPath);
+            args.Add(config);
         }
         
-        if (!string.IsNullOrEmpty(settings.Profile))
+        var profile = ArgumentParser.GetString(parsedArgs, "profile");
+        if (!string.IsNullOrEmpty(profile))
         {
             args.Add("--profile");
-            args.Add(settings.Profile);
+            args.Add(profile);
         }
         
         return args.ToArray();

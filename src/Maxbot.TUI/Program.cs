@@ -1,5 +1,5 @@
-using Spectre.Console.Cli;
 using MaxBot.TUI.Commands;
+using MaxBot.TUI.Infrastructure;
 using System.Reflection;
 
 namespace MaxBot.TUI;
@@ -9,6 +9,12 @@ namespace MaxBot.TUI;
 /// </summary>
 public static class Program
 {
+    private static readonly ICommand[] Commands = 
+    {
+        new ChatCommand(),
+        new NonInteractiveCommand()
+    };
+
     /// <summary>
     /// Main entry point.
     /// </summary>
@@ -16,45 +22,86 @@ public static class Program
     /// <returns>Exit code.</returns>
     public static async Task<int> Main(string[] args)
     {
-        // If no arguments provided, default to chat mode
-        if (args.Length == 0)
-        {
-            args = new[] { "chat" };
-        }
-        
-        // We don't need to setup DI here since each command handles its own
-        
-        // Create the command app without complex DI integration
-        var app = new CommandApp();
-        
-        app.Configure(config =>
-        {
-            config.SetApplicationName("MaxBot");
-            config.SetApplicationVersion(GetApplicationVersion());
-            
-            // Add commands
-            config.AddCommand<ChatCommand>("chat")
-                .WithDescription("Start interactive chat mode (default)")
-                .WithExample(new[] { "chat" })
-                .WithExample(new[] { "chat", "--verbosity", "normal" })
-                .WithExample(new[] { "chat", "--profile", "Sonnet" });
-                
-            config.AddCommand<NonInteractiveCommand>("run")
-                .WithDescription("Run a single prompt non-interactively")
-                .WithExample(new[] { "run", "--prompt", "What is the capital of Michigan?" })
-                .WithExample(new[] { "run", "--prompt", "./prompts/analyze-code.md" })
-                .WithExample(new[] { "run", "--prompt", "\"Explain the code in this directory\"", "--no-history" });
-        });
-
         try
         {
-            return await app.RunAsync(args);
+            // Parse arguments to get command name
+            var parsedArgs = ArgumentParser.Parse(args);
+            var commandName = ArgumentParser.GetString(parsedArgs, "_0");
+            
+            // Handle global flags only when no command is specified
+            if (string.IsNullOrEmpty(commandName))
+            {
+                if (ArgumentParser.HasFlag(parsedArgs, "help") || ArgumentParser.HasFlag(parsedArgs, "h"))
+                {
+                    ShowGlobalHelp();
+                    return 0;
+                }
+                
+                if (ArgumentParser.HasFlag(parsedArgs, "version") || ArgumentParser.HasFlag(parsedArgs, "v"))
+                {
+                    AnsiConsole.WriteLine(GetApplicationVersion());
+                    return 0;
+                }
+                
+                // Default to chat if no command specified
+                commandName = "chat";
+            }
+
+            // Find and execute command
+            var command = Commands.FirstOrDefault(c => c.Name.Equals(commandName, StringComparison.OrdinalIgnoreCase));
+            if (command == null)
+            {
+                AnsiConsole.MarkupLine($"[red]Error: Unknown command '{commandName}'[/]");
+                AnsiConsole.WriteLine();
+                ShowGlobalHelp();
+                return 1;
+            }
+
+            // Remove command name from args and pass the rest to the command
+            var commandArgs = args.Length > 0 && !string.IsNullOrEmpty(ArgumentParser.GetString(parsedArgs, "_0")) 
+                ? args.Skip(1).ToArray() 
+                : args;
+            return await command.ExecuteAsync(commandArgs);
         }
         catch (Exception ex)
         {
             AnsiConsole.WriteException(ex);
             return 1;
         }
+    }
+
+    /// <summary>
+    /// Shows global help information.
+    /// </summary>
+    private static void ShowGlobalHelp()
+    {
+        AnsiConsole.MarkupLine($"[bold]max[/] [dim]v{GetApplicationVersion()}[/]");
+        AnsiConsole.WriteLine();
+        
+        AnsiConsole.MarkupLine("[bold]USAGE:[/]");
+        AnsiConsole.MarkupLine("    max [[COMMAND]] [[OPTIONS]]");
+        AnsiConsole.WriteLine();
+        
+        AnsiConsole.MarkupLine("[bold]COMMANDS:[/]");
+        foreach (var command in Commands)
+        {
+            AnsiConsole.MarkupLine($"    [cyan]{command.Name,-12}[/] {command.Description}");
+        }
+        AnsiConsole.WriteLine();
+        
+        AnsiConsole.MarkupLine("[bold]GLOBAL OPTIONS:[/]");
+        AnsiConsole.MarkupLine("    -h, --help       Show this help message");
+        AnsiConsole.MarkupLine("    -v, --version    Show version information");
+        AnsiConsole.WriteLine();
+        
+        AnsiConsole.MarkupLine("[bold]EXAMPLES:[/]");
+        AnsiConsole.MarkupLine("    max                                          # Start interactive chat (default)");
+        AnsiConsole.MarkupLine("    max chat --verbosity normal                 # Start chat with verbose logging");
+        AnsiConsole.MarkupLine("    max run --prompt \"Hello world\"              # Run single prompt");
+        AnsiConsole.MarkupLine("    max run --prompt ./my-prompt.md             # Run prompt from file");
+        AnsiConsole.WriteLine();
+        
+        AnsiConsole.MarkupLine("Use '[cyan]max <command> --help[/]' for more information about a specific command.");
     }
 
     /// <summary>

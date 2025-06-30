@@ -1,58 +1,39 @@
-using Spectre.Console.Cli;
 using MaxBot.Domain;
 using MaxBot.TUI.Infrastructure;
-using System.ComponentModel;
 
 namespace MaxBot.TUI.Commands;
 
 /// <summary>
-/// Settings for the non-interactive command.
-/// </summary>
-public sealed class NonInteractiveSettings : CommandSettings
-{
-    [CommandOption("-p|--prompt <PROMPT>")]
-    [Description("The prompt/message to send to the AI, or path to a .md file containing the prompt")]
-    public string? Prompt { get; init; }
-
-    [CommandOption("-v|--verbosity <LEVEL>")]
-    [Description("Set the verbosity level (quiet, minimal, normal, detailed, diagnostic)")]
-    [DefaultValue("quiet")]
-    public string Verbosity { get; init; } = "quiet";
-
-    [CommandOption("--config <PATH>")]
-    [Description("Path to the configuration file")]
-    [DefaultValue("maxbot.config.json")]
-    public string ConfigPath { get; init; } = "maxbot.config.json";
-
-    [CommandOption("--profile <NAME>")]
-    [Description("Configuration profile to use")]
-    public string? Profile { get; init; }
-
-    [CommandOption("--no-history")]
-    [Description("Don't use or save chat history")]
-    [DefaultValue(false)]
-    public bool NoHistory { get; init; }
-
-    public override ValidationResult Validate()
-    {
-        if (string.IsNullOrWhiteSpace(Prompt))
-        {
-            return ValidationResult.Error("Prompt is required for non-interactive mode. Use --prompt or -p to specify the message or path to a .md file.");
-        }
-
-        return ValidationResult.Success();
-    }
-}
-
-/// <summary>
 /// Non-interactive command for AI queries without TUI.
 /// </summary>
-public sealed class NonInteractiveCommand : AsyncCommand<NonInteractiveSettings>
+public sealed class NonInteractiveCommand : ICommand
 {
-    public override async Task<int> ExecuteAsync(CommandContext context, NonInteractiveSettings settings)
+    public string Name => "run";
+    public string Description => "Run a single prompt non-interactively";
+
+    public async Task<int> ExecuteAsync(string[] args)
     {
         try
         {
+            var parsedArgs = ArgumentParser.Parse(args);
+            
+            // Check for help
+            if (ArgumentParser.HasFlag(parsedArgs, "help") || ArgumentParser.HasFlag(parsedArgs, "h"))
+            {
+                ShowHelp();
+                return 0;
+            }
+            
+            // Get prompt
+            var prompt = ArgumentParser.GetString(parsedArgs, "prompt") ?? 
+                        ArgumentParser.GetString(parsedArgs, "p");
+            
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                AnsiConsole.MarkupLine("[red]Error: Prompt is required for non-interactive mode. Use --prompt or -p to specify the message or path to a .md file.[/]");
+                return 1;
+            }
+            
             // Setup dependency injection
             var services = new ServiceCollection();
             ServiceConfiguration.ConfigureServices(services);
@@ -63,16 +44,19 @@ public sealed class NonInteractiveCommand : AsyncCommand<NonInteractiveSettings>
             var console = serviceProvider.GetRequiredService<IAnsiConsole>();
 
             // Resolve the prompt (either from string or file)
-            var promptText = await ResolvePromptAsync(settings.Prompt!, console);
+            var promptText = await ResolvePromptAsync(prompt, console);
             if (string.IsNullOrEmpty(promptText))
             {
                 return 1; // Error already displayed
             }
 
+            // Check if we should use history
+            var noHistory = ArgumentParser.GetBool(parsedArgs, "no-history");
+
             // Create chat history
             var chatHistory = new List<ChatMessage>();
             
-            if (!settings.NoHistory)
+            if (!noHistory)
             {
                 // Load existing history
                 chatHistory.AddRange(historyManager.GetCurrentChatHistory());
@@ -82,7 +66,7 @@ public sealed class NonInteractiveCommand : AsyncCommand<NonInteractiveSettings>
             var userMessage = new ChatMessage(ChatRole.User, promptText);
             chatHistory.Add(userMessage);
 
-            if (!settings.NoHistory)
+            if (!noHistory)
             {
                 historyManager.AddUserMessage(userMessage);
             }
@@ -103,7 +87,7 @@ public sealed class NonInteractiveCommand : AsyncCommand<NonInteractiveSettings>
             var finalResponse = responseText.ToString();
             var assistantMessage = new ChatMessage(ChatRole.Assistant, finalResponse);
 
-            if (!settings.NoHistory)
+            if (!noHistory)
             {
                 historyManager.AddAssistantMessage(assistantMessage);
             }
@@ -126,6 +110,31 @@ public sealed class NonInteractiveCommand : AsyncCommand<NonInteractiveSettings>
             AnsiConsole.WriteException(ex);
             return 1;
         }
+    }
+
+    public void ShowHelp()
+    {
+        AnsiConsole.MarkupLine("[bold]DESCRIPTION:[/]");
+        AnsiConsole.MarkupLine($"    {Description}");
+        AnsiConsole.WriteLine();
+        
+        AnsiConsole.MarkupLine("[bold]USAGE:[/]");
+        AnsiConsole.MarkupLine("    max run [[OPTIONS]]");
+        AnsiConsole.WriteLine();
+        
+        AnsiConsole.MarkupLine("[bold]OPTIONS:[/]");
+        AnsiConsole.MarkupLine("    -p, --prompt <PROMPT>      The prompt/message to send to the AI, or path to a .md file containing the prompt");
+        AnsiConsole.MarkupLine("    -v, --verbosity <LEVEL>    Set the verbosity level (quiet, minimal, normal, detailed, diagnostic)");
+        AnsiConsole.MarkupLine("        --config <PATH>        Path to the configuration file (default: maxbot.config.json)");
+        AnsiConsole.MarkupLine("        --profile <NAME>       Configuration profile to use");
+        AnsiConsole.MarkupLine("        --no-history           Don't use or save chat history");
+        AnsiConsole.MarkupLine("    -h, --help                 Show this help message");
+        AnsiConsole.WriteLine();
+        
+        AnsiConsole.MarkupLine("[bold]EXAMPLES:[/]");
+        AnsiConsole.MarkupLine("    max run --prompt \"What is the capital of Michigan?\"");
+        AnsiConsole.MarkupLine("    max run --prompt ./prompts/analyze-code.md");
+        AnsiConsole.MarkupLine("    max run --prompt \"Explain this code\" --no-history");
     }
 
     /// <summary>
