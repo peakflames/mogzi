@@ -20,8 +20,6 @@ Prepare an AI model to work effectively on the MaxBot project by ensuring compre
 
 5. Use the `read_file` tool to read `docs/process/05_ai_tool_op_requirements.md` to understand the AI tool operational requirements.
 
-6. Use the `read_file` tool to read `docs/process/trace_matrix.md` to understand the requirements traceability and implementation status.
-
 ## 2. Codebase Familiarization
 
 1. Use the `read_file` tool to examine the solution structure by reading `src/MaxBot.sln`.
