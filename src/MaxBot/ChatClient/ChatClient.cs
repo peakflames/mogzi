@@ -37,6 +37,7 @@ public partial class ChatClient
     private SystemTools SystemTools { get; init; }
     private DiffPatchTools DiffPatchTools { get; init; }
     private ReadFileTool ReadFileTool { get; init; }
+    private WriteFileTool WriteFileTool { get; init; }
     private LSTool LSTool { get; init; }
     private GrepTool GrepTool { get; init; }
 
@@ -68,6 +69,7 @@ public partial class ChatClient
         SystemTools = new SystemTools(config, llmResponseDetailsCallback);
         DiffPatchTools = new DiffPatchTools(config, llmResponseDetailsCallback);
         ReadFileTool = new ReadFileTool(config, llmResponseDetailsCallback);
+        WriteFileTool = new WriteFileTool(config, llmResponseDetailsCallback);
         LSTool = new LSTool(config, llmResponseDetailsCallback);
         GrepTool = new GrepTool(config, llmResponseDetailsCallback);
 
@@ -75,6 +77,7 @@ public partial class ChatClient
         allTools.AddRange(SystemTools.GetTools().Cast<AITool>());
         allTools.AddRange(DiffPatchTools.GetTools().Cast<AITool>());
         allTools.Add(ReadFileTool.GetTool());
+        allTools.Add(WriteFileTool.GetTool());
         allTools.Add(LSTool.GetTool());
         allTools.Add(GrepTool.GetTool());
 

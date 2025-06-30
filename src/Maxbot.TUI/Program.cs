@@ -76,7 +76,7 @@ public static class Program
         var chatClientResult = ChatClient.Create(
             "maxbot.config.json",
             null, // Use default profile
-            "readonly",
+            null,
             "chat",
             (details, color) => {},
             false
