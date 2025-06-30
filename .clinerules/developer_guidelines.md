@@ -96,6 +96,7 @@ The project follows these key architectural principles:
 2. **Service-Oriented Design**: Core functionality is exposed through service interfaces
 3. **Dependency Inversion**: High-level modules depend on abstractions, not concrete implementations
 4. **Single Responsibility**: Each class has a single, well-defined responsibility
+5. **Command-Driven and Extensible**: The architecture is designed to be command-driven, allowing for clear separation of CLI functionalities, and extensible through a modular, discoverable tool system.
 
 ### Component Diagram
 
@@ -110,6 +111,7 @@ graph TD
     subgraph "Application Core"
         B[MaxBot Library]
         S[Services Layer]
+        T[Tools Layer]
     end
 
     subgraph "External Services"
@@ -118,31 +120,45 @@ graph TD
 
     A -- "Uses" --> S
     S -- "Uses" --> B
+    B -- "Consumes" --> T
     B -- "Sends requests to" --> C
 
     subgraph "CLI Project"
         direction LR
-        D[Program.cs] --> E[App.cs]
-        E --> F[CliArgParser.cs]
+        D[Program.cs] --> E[CliArgParser.cs]
+        D --> CMDs[Commands]
+        subgraph "Commands"
+            direction TB
+            CMD1[ChatCommand]
+            CMD2[ListSessionsCommand]
+            CMD3[...]
+        end
+        CMDs --> S
     end
 
     subgraph "MaxBot Library"
         direction LR
-        G[ChatClient.cs] --> H[FileSystemTools.cs]
-        G --> I[Microsoft.Extensions.AI]
         
         subgraph "Services"
             direction TB
             J[IAppService] <-- "implements" --> K[AppService]
             L[ChatHistoryService]
         end
-        
-        K --> G
-        K --> L
-    end
 
-    A --> D
-    E --> J
+        subgraph "Tools Layer"
+            direction TB
+            T1[DiffPatchTools]
+            T2[FileSystemTools]
+            T3[SystemTools]
+        end
+        
+        G[ChatClient.cs]
+
+        K --> G
+        G --> T1
+        G --> T2
+        G --> T3
+    end
 ```
 
 ### Sequence Diagram
@@ -153,21 +169,28 @@ This diagram shows the sequence of events from the user running the application 
 sequenceDiagram
     participant User
     participant Cli.Program
-    participant Cli.App
+    participant CLI Command
     participant MaxBot.Services.AppService
     participant MaxBot.ChatClient
     participant OpenAI_API
 
     User->>Cli.Program: Executes with arguments
-    Cli.Program->>Cli.App: new App(chatClient, showStatus)
-    Cli.Program->>Cli.App: Run(mode, prompt)
-    Cli.App->>MaxBot.Services.AppService: ProcessChatMessageAsync(chatHistory, token)
-    MaxBot.Services.AppService->>MaxBot.ChatClient: GetStreamingResponseAsync(chatHistory, options)
-    MaxBot.ChatClient->>OpenAI_API: Sends chat request
-    OpenAI_API-->>MaxBot.ChatClient: Streams response
-    MaxBot.ChatClient-->>MaxBot.Services.AppService: Returns stream
-    MaxBot.Services.AppService-->>Cli.App: Returns stream
-    Cli.App-->>User: Displays response
+    Cli.Program->>CLI Command: Create and run command
+    CLI Command->>MaxBot.Services.AppService: ProcessChatMessageAsync(chatHistory, token)
+    
+    loop Tool Processing
+        MaxBot.Services.AppService->>MaxBot.ChatClient: GetStreamingResponseAsync(chatHistory, tools)
+        MaxBot.ChatClient->>OpenAI_API: Sends chat request with available tools
+        OpenAI_API-->>MaxBot.ChatClient: Streams response (text or tool call)
+        alt If tool call is requested
+            MaxBot.ChatClient->>MaxBot.ChatClient: Execute tool
+            MaxBot.ChatClient-->>MaxBot.Services.AppService: Returns tool output
+        else If text response
+            MaxBot.ChatClient-->>MaxBot.Services.AppService: Returns stream
+        end
+    end
+    MaxBot.Services.AppService-->>CLI Command: Returns final stream
+    CLI Command-->>User: Displays response
 ```
 
 ### Services Layer
@@ -323,3 +346,6 @@ These patterns ensure consistency, security, and proper LLM integration across a
 ## Microsoft.Extensions.AI Developer Docs
 
 - docs\llmctx\usage-of-microsoft-extensions-ai.md
+
+
+ULTRA IMPORTANT: ALWAYS use GlobalUsings and Black Black Testing over unit testings

@@ -1,4 +1,4 @@
-# Multi-purpuse Autonomous eXpert (Max) 😻
+# Multi-purpose Autonomous eXpert (Max) 😻
 
 An Autonomous AI agent right in your terminal or CI/CD pipeline and open to multiple API providers.
 

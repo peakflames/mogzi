@@ -34,10 +34,16 @@ public partial class ChatClient
     private string _mode { get; init; }
 
     public ChatOptions ChatOptions { get; init; }
-
-    private FileSystemTools FileSystemTools { get; init; }
     private SystemTools SystemTools { get; init; }
     private DiffPatchTools DiffPatchTools { get; init; }
+    private ReadTextFileTool ReadTextFileTool { get; init; }
+    private ReadImageFileTool ReadImageFileTool { get; init; }
+    // private ReadPdfFileTool ReadPdfFileTool { get; init; } // Not Native AOT yet
+    private WriteFileTool WriteFileTool { get; init; }
+    private EditTool EditTool { get; init; }
+    private LSTool LSTool { get; init; }
+    private GrepTool GrepTool { get; init; }
+    private ShellTool ShellTool { get; init; }
 
     private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
     {
@@ -64,14 +70,28 @@ public partial class ChatClient
 
         // SystemPrompt is now a computed property, so we don't need to set it here
 
-        FileSystemTools = new FileSystemTools(config, llmResponseDetailsCallback);
         SystemTools = new SystemTools(config, llmResponseDetailsCallback);
         DiffPatchTools = new DiffPatchTools(config, llmResponseDetailsCallback);
+        ReadTextFileTool = new ReadTextFileTool(config, llmResponseDetailsCallback);
+        ReadImageFileTool = new ReadImageFileTool(config, llmResponseDetailsCallback);
+        // ReadPdfFileTool = new ReadPdfFileTool(config, llmResponseDetailsCallback); // Not Native AOT yet
+        WriteFileTool = new WriteFileTool(config, llmResponseDetailsCallback);
+        EditTool = new EditTool(config, llmResponseDetailsCallback);
+        LSTool = new LSTool(config, llmResponseDetailsCallback);
+        GrepTool = new GrepTool(config, llmResponseDetailsCallback);
+        ShellTool = new ShellTool(config, llmResponseDetailsCallback);
 
         var allTools = new List<AITool>();
-        allTools.AddRange(FileSystemTools.GetTools().Cast<AITool>());
         allTools.AddRange(SystemTools.GetTools().Cast<AITool>());
         allTools.AddRange(DiffPatchTools.GetTools().Cast<AITool>());
+        allTools.Add(ReadTextFileTool.GetTool());
+        allTools.Add(ReadImageFileTool.GetTool());
+        // allTools.Add(ReadPdfFileTool.GetTool()); // Not Native AOT yet
+        allTools.Add(WriteFileTool.GetTool());
+        allTools.Add(EditTool.GetTool());
+        allTools.Add(LSTool.GetTool());
+        allTools.Add(GrepTool.GetTool());
+        allTools.Add(ShellTool.GetTool());
 
         ChatOptions = new ChatOptions
         {

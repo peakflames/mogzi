@@ -15,6 +15,7 @@ This workflow automates the implementation of the next priority task from the pr
 
 2. Read the project plan to understand current status and priorities.
    - Use the `read_file` tool to examine `docs/project_plan.md`.
+   - Use the `read_file` tool to examine `docs/features/ui/current_status_and_next_steps.md` if it exists
    - Analyze the content to identify tasks, their priorities, and current implementation status.
 
 3. Cross-reference with existing specifications and trace matrix.
@@ -155,17 +156,19 @@ This workflow automates the implementation of the next priority task from the pr
 
 ## 7. Generate Summary Report
 
-1. Organize outputs under the root directory `outputs/`.
+1. if the file `docs/features/ui/current_status_and_next_steps.md` exists then one can skip any summary report create steps and just update the existing file.
+
+2. Otherwise Organize outputs under the root directory `outputs/`.
    - Use the `list_files` tool to check if the `outputs/` directory exists.
    - Create the directory structure if needed using `write_to_file` with appropriate paths.
    - Create a timestamped subdirectory for this implementation session (format: `YYYY-MM-DD_HHMMSS`).
 
-2. Collect and organize all relevant artifacts.
+3. Collect and organize all relevant artifacts.
    - Capture final test execution output using `execute_command`.
    - Document all files that were created or modified during the implementation.
    - Gather any error messages or warnings that were resolved.
 
-3. Create a comprehensive summary report with the following sections:
+4. Create a comprehensive summary report with the following sections:
    - **Executive Summary**: High-level overview of what was accomplished
    - **Task Summary**: Description of the implemented priority task with context
    - **TOR Analysis**: List of TORs that were addressed with implementation details

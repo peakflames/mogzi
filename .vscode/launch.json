@@ -87,6 +87,18 @@
             "stopAtEntry": false,
             "console": "integratedTerminal",
             "justMyCode": false
-        }
+        },
+        {
+            "name": "C#: maxbot-ui",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/Maxbot.TUI/bin/Debug/net9.0/maxbot-ui.dll",
+            "args": [],
+            "cwd": "~/",
+            "stopAtEntry": false,
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
     ]
 }
