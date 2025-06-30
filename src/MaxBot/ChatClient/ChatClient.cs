@@ -38,6 +38,7 @@ public partial class ChatClient
     private DiffPatchTools DiffPatchTools { get; init; }
     private ReadFileTool ReadFileTool { get; init; }
     private LSTool LSTool { get; init; }
+    private GrepTool GrepTool { get; init; }
 
     private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
     {
@@ -68,12 +69,14 @@ public partial class ChatClient
         DiffPatchTools = new DiffPatchTools(config, llmResponseDetailsCallback);
         ReadFileTool = new ReadFileTool(config, llmResponseDetailsCallback);
         LSTool = new LSTool(config, llmResponseDetailsCallback);
+        GrepTool = new GrepTool(config, llmResponseDetailsCallback);
 
         var allTools = new List<AITool>();
         allTools.AddRange(SystemTools.GetTools().Cast<AITool>());
         allTools.AddRange(DiffPatchTools.GetTools().Cast<AITool>());
         allTools.Add(ReadFileTool.GetTool());
         allTools.Add(LSTool.GetTool());
+        allTools.Add(GrepTool.GetTool());
 
         ChatOptions = new ChatOptions
         {
