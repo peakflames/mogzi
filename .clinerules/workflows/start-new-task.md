@@ -85,6 +85,18 @@ Prepare an AI model to work effectively on the MaxBot project by ensuring compre
 
 2. if their request is to gather more information then do not consider this the user ultimate objective the task and will likely be revealed in follow up requests.
 
+3. Use the `ask_followup_question` tool to ask the user: "Should I perform this request in a simulate PLAN MODE?"
+
+4. Continue according to their response.
+
+## 8. Task Completion
+
+1. When using the `attempt_completion` tool to present the final result, include a suggested git commit message in the result.
+
+2. The git commit message should be concise, descriptive, and follow conventional commit format (e.g., "feat:", "fix:", "refactor:", etc.).
+
+3. Format the commit message as a code block within the result for easy copying.
+
 </detailed_sequence_steps>
 
 </task>
