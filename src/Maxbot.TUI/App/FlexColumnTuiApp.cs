@@ -191,7 +191,7 @@ public sealed class FlexColumnTuiApp : IDisposable
             _ => CreateFlexInputComponent(_currentInput)
         };
 
-        return new Rows(new Text(""), bottomComponent, CreateFlexFooterComponent());
+        return new Rows(new Text(""), bottomComponent, new Text(""), CreateFlexFooterComponent());
     }
 
     private IRenderable CreateWelcomeMessage()
@@ -322,9 +322,58 @@ public sealed class FlexColumnTuiApp : IDisposable
     {
         var currentDir = GetDisplayPath(_workingDirectoryProvider.GetCurrentDirectory());
         var modelInfo = GetModelDisplayInfo();
-        var content = $"[dim]{currentDir}    no sandbox (see /docs)    {modelInfo} (--TBD-- context left)[/]";
+        var tokenInfo = GetTokenUsageInfo();
+        var content = $"[skyblue2]{currentDir}[/]  [rosybrown]{modelInfo}[/] [dim]({tokenInfo})[/]";
         return new Panel(new Markup(content))
             .NoBorder();
+    }
+
+    private string GetTokenUsageInfo()
+    {
+        try
+        {
+            var chatHistory = _historyManager.GetCurrentChatHistory();
+            var tokenCount = _appService.CalculateTokenMetrics(chatHistory);
+            
+            // Estimate context window size based on model (this could be made configurable)
+            var contextWindowSize = EstimateContextWindowSize();
+            var percentageUsed = Math.Min(100, (tokenCount * 100) / contextWindowSize);
+            var percentageLeft = 100 - percentageUsed;
+            
+            return $"{tokenCount:N0} tokens, {percentageLeft}% context left";
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error calculating token usage");
+            return "token calculation unavailable";
+        }
+    }
+
+    private int EstimateContextWindowSize()
+    {
+        try
+        {
+            var modelId = _appService.ChatClient.ActiveProfile.ModelId.ToLowerInvariant();
+            
+            // Common model context window sizes
+            return modelId switch
+            {
+                var m when m.Contains("gpt-4.1") => 1047576, // GPT-4.1 models
+                var m when m.Contains("gpt-4") => 128000,  // GPT-4 Turbo models
+                var m when m.Contains("gpt-3.5-") => 16385, // GPT-3.5 Turbo models
+                var m when m.Contains("o3") => 200000, // o3 models
+                var m when m.Contains("o4") => 200000, // o4 models
+                var m when m.Contains("gemini-2.5") => 1048576, // Gemini 2.5 Flash models
+                var m when m.Contains("gemini-1.5") => 1048576, // Gemini 1.5 Pro models
+                var m when m.Contains("claude") => 200000, // Claude models
+                _ => 128000 // Default fallback
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error estimating context window size");
+            return 128000; // Safe default
+        }
     }
 
     private string GetModelDisplayInfo()
