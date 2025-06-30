@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Version>0.13.0</Version>
     <OutputType>Exe</OutputType>
     <AssemblyName>max</AssemblyName>
     <TargetFramework>net9.0</TargetFramework>
@@ -8,6 +9,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <AllowedReferenceRelatedFileExtensions>*.pdb</AllowedReferenceRelatedFileExtensions>
+    <ExcludeFilesFromDeployment>bin\**\*.pdb</ExcludeFilesFromDeployment>
   </PropertyGroup>
 
   <ItemGroup>
