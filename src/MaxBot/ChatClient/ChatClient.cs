@@ -38,7 +38,7 @@ public partial class ChatClient
     private DiffPatchTools DiffPatchTools { get; init; }
     private ReadTextFileTool ReadTextFileTool { get; init; }
     private ReadImageFileTool ReadImageFileTool { get; init; }
-    private ReadPdfFileTool ReadPdfFileTool { get; init; }
+    // private ReadPdfFileTool ReadPdfFileTool { get; init; } // Not Native AOT yet
     private WriteFileTool WriteFileTool { get; init; }
     private EditTool EditTool { get; init; }
     private LSTool LSTool { get; init; }
@@ -74,7 +74,7 @@ public partial class ChatClient
         DiffPatchTools = new DiffPatchTools(config, llmResponseDetailsCallback);
         ReadTextFileTool = new ReadTextFileTool(config, llmResponseDetailsCallback);
         ReadImageFileTool = new ReadImageFileTool(config, llmResponseDetailsCallback);
-        ReadPdfFileTool = new ReadPdfFileTool(config, llmResponseDetailsCallback);
+        // ReadPdfFileTool = new ReadPdfFileTool(config, llmResponseDetailsCallback); // Not Native AOT yet
         WriteFileTool = new WriteFileTool(config, llmResponseDetailsCallback);
         EditTool = new EditTool(config, llmResponseDetailsCallback);
         LSTool = new LSTool(config, llmResponseDetailsCallback);
@@ -86,7 +86,7 @@ public partial class ChatClient
         allTools.AddRange(DiffPatchTools.GetTools().Cast<AITool>());
         allTools.Add(ReadTextFileTool.GetTool());
         allTools.Add(ReadImageFileTool.GetTool());
-        allTools.Add(ReadPdfFileTool.GetTool());
+        // allTools.Add(ReadPdfFileTool.GetTool()); // Not Native AOT yet
         allTools.Add(WriteFileTool.GetTool());
         allTools.Add(EditTool.GetTool());
         allTools.Add(LSTool.GetTool());
