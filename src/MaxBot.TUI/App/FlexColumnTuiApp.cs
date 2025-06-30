@@ -9,16 +9,16 @@ public sealed class FlexColumnTuiApp : IDisposable
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly AdvancedKeyboardHandler _keyboardHandler;
     private readonly SlashCommandProcessor _slashCommandProcessor;
+    private readonly AutocompleteManager _autocompleteManager;
     private readonly IScrollbackTerminal _scrollbackTerminal;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
     private bool _isDisposed = false;
 
     // Chat state
     private ChatState _currentState = ChatState.Input;
-    private string _currentInput = string.Empty;
+    private readonly InputContext _inputContext = new();
     private string _toolProgress = string.Empty;
     private string _currentToolName = string.Empty;
-    private int _cursorPosition = 0;
     private readonly List<string> _commandHistory = [];
     private int _commandHistoryIndex = -1;
 
@@ -45,6 +45,7 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         _keyboardHandler = new AdvancedKeyboardHandler(_serviceProvider.GetService<ILogger<AdvancedKeyboardHandler>>());
         _slashCommandProcessor = new SlashCommandProcessor(AnsiConsole.Console, _serviceProvider.GetService<ILogger<SlashCommandProcessor>>(), _serviceProvider.GetService<ChatClient>());
+        _autocompleteManager = serviceProvider.GetRequiredService<AutocompleteManager>();
 
         _keyboardHandler.KeyPressed += OnKeyPressed;
         _keyboardHandler.KeyCombinationPressed += OnKeyCombinationPressed;
@@ -188,10 +189,15 @@ public sealed class FlexColumnTuiApp : IDisposable
     {
         var bottomComponent = _currentState switch
         {
-            ChatState.Input => CreateFlexInputComponent(_currentInput),
-            ChatState.Thinking => CreateFlexThinkingComponent(),
-            ChatState.ToolExecution => CreateFlexToolExecutionComponent(_toolProgress),
-            _ => CreateFlexInputComponent(_currentInput)
+            ChatState.Input when _inputContext.ShowSuggestions => 
+                CreateInputWithAutocomplete(_inputContext),
+            ChatState.Input => 
+                CreateFlexInputComponent(_inputContext.CurrentInput),
+            ChatState.Thinking => 
+                CreateFlexThinkingComponent(),
+            ChatState.ToolExecution => 
+                CreateFlexToolExecutionComponent(_toolProgress),
+            _ => CreateFlexInputComponent(_inputContext.CurrentInput)
         };
 
         return new Rows(new Text(""), bottomComponent, new Text(""), CreateFlexFooterComponent());
@@ -278,8 +284,8 @@ public sealed class FlexColumnTuiApp : IDisposable
         else
         {
             // Insert cursor at the correct position
-            var beforeCursor = currentInput[.._cursorPosition];
-            var afterCursor = currentInput[_cursorPosition..];
+            var beforeCursor = currentInput[.._inputContext.CursorPosition];
+            var afterCursor = currentInput[_inputContext.CursorPosition..];
             content = $"{prompt}{beforeCursor}{cursor}{afterCursor}";
         }
 
@@ -288,6 +294,35 @@ public sealed class FlexColumnTuiApp : IDisposable
             .BorderColor(Color.Grey23)
             .Padding(1, 0, 1, 0)
             .Expand();
+    }
+
+    private IRenderable CreateInputWithAutocomplete(InputContext context)
+    {
+        var inputPanel = CreateFlexInputComponent(context.CurrentInput);
+
+        if (!context.ShowSuggestions || context.Suggestions.Count == 0)
+        {
+            return inputPanel;
+        }
+
+        var suggestionItems = context.Suggestions.Select((suggestion, index) => 
+        {
+            var isSelected = index == context.SelectedSuggestionIndex;
+            var style = isSelected ? "[blue on white]" : "[dim]";
+            var prefix = isSelected ? ">" : " ";
+
+            var description = _slashCommandProcessor.GetAllCommands()
+                .GetValueOrDefault(suggestion, "");
+
+            return new Markup($"{style}{prefix} {suggestion,-12} {description}[/]");
+        }).ToArray();
+
+        var suggestionsPanel = new Panel(new Rows(suggestionItems))
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Blue)
+            .Padding(0, 0);
+
+        return new Rows(inputPanel, suggestionsPanel);
     }
 
     private IRenderable CreateFlexThinkingComponent()
@@ -352,7 +387,7 @@ public sealed class FlexColumnTuiApp : IDisposable
 
             // Estimate context window size based on model (this could be made configurable)
             var contextWindowSize = EstimateContextWindowSize();
-            var percentageUsed = Math.Min(100.0, (double)tokenCount * 100.0 / contextWindowSize);
+            var percentageUsed = Math.Min(100.0, tokenCount * 100.0 / contextWindowSize);
             var percentageLeft = 100.0 - percentageUsed;
 
             return $"{tokenCount:N0} tokens, {percentageLeft:F2}% context left";
@@ -479,6 +514,36 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         try
         {
+            // Handle autocomplete navigation first
+            if (_inputContext.State == InputState.Autocomplete && _inputContext.ShowSuggestions)
+            {
+#pragma warning disable IDE0010 // Add missing cases
+                switch (e.Key)
+                {
+                    case ConsoleKey.UpArrow:
+                        NavigateAutocomplete(up: true);
+                        e.Handled = true;
+                        return;
+
+                    case ConsoleKey.DownArrow:
+                        NavigateAutocomplete(up: false);
+                        e.Handled = true;
+                        return;
+
+                    case ConsoleKey.Tab:
+                    case ConsoleKey.Enter:
+                        AcceptAutocompleteSuggestion();
+                        e.Handled = true;
+                        return;
+
+                    case ConsoleKey.Escape:
+                        CancelAutocomplete();
+                        e.Handled = true;
+                        return;
+                }
+#pragma warning restore IDE0010 // Add missing cases
+            }
+
 #pragma warning disable IDE0010 // Add missing cases
             switch (e.Key)
             {
@@ -655,12 +720,12 @@ public sealed class FlexColumnTuiApp : IDisposable
             if (_commandHistoryIndex == -1)
             {
                 _commandHistoryIndex = _commandHistory.Count - 1;
-                _currentInput = _commandHistory[_commandHistoryIndex];
+                _inputContext.CurrentInput = _commandHistory[_commandHistoryIndex];
             }
             else if (_commandHistoryIndex > 0)
             {
                 _commandHistoryIndex--;
-                _currentInput = _commandHistory[_commandHistoryIndex];
+                _inputContext.CurrentInput = _commandHistory[_commandHistoryIndex];
             }
         }
         else
@@ -668,26 +733,27 @@ public sealed class FlexColumnTuiApp : IDisposable
             if (_commandHistoryIndex >= 0 && _commandHistoryIndex < _commandHistory.Count - 1)
             {
                 _commandHistoryIndex++;
-                _currentInput = _commandHistory[_commandHistoryIndex];
+                _inputContext.CurrentInput = _commandHistory[_commandHistoryIndex];
             }
             else if (_commandHistoryIndex == _commandHistory.Count - 1)
             {
                 _commandHistoryIndex = -1;
-                _currentInput = string.Empty;
+                _inputContext.CurrentInput = string.Empty;
             }
         }
 
-        _cursorPosition = _currentInput.Length;
+        _inputContext.CursorPosition = _inputContext.CurrentInput.Length;
+        UpdateAutocompleteState();
     }
 
     private async Task SubmitCurrentInput()
     {
-        if (string.IsNullOrWhiteSpace(_currentInput) || _currentState != ChatState.Input)
+        if (string.IsNullOrWhiteSpace(_inputContext.CurrentInput) || _currentState != ChatState.Input)
         {
             return;
         }
 
-        var inputToSubmit = _currentInput;
+        var inputToSubmit = _inputContext.CurrentInput;
         AddToCommandHistory(inputToSubmit);
         ClearCurrentInput();
 
@@ -912,78 +978,139 @@ public sealed class FlexColumnTuiApp : IDisposable
             return;
         }
 
-        _cursorPosition = Math.Max(0, Math.Min(_cursorPosition, _currentInput.Length));
-        _currentInput = _currentInput.Insert(_cursorPosition, character.ToString());
-        _cursorPosition++;
+        _inputContext.CursorPosition = Math.Max(0, Math.Min(_inputContext.CursorPosition, _inputContext.CurrentInput.Length));
+        _inputContext.CurrentInput = _inputContext.CurrentInput.Insert(_inputContext.CursorPosition, character.ToString());
+        _inputContext.CursorPosition++;
         _commandHistoryIndex = -1;
+        UpdateAutocompleteState();
     }
 
     private void DeleteCharacterBefore()
     {
-        if (_currentState != ChatState.Input || _currentInput.Length == 0)
+        if (_currentState != ChatState.Input || _inputContext.CurrentInput.Length == 0)
         {
             return;
         }
 
-        _cursorPosition = Math.Max(0, Math.Min(_cursorPosition, _currentInput.Length));
+        _inputContext.CursorPosition = Math.Max(0, Math.Min(_inputContext.CursorPosition, _inputContext.CurrentInput.Length));
 
-        if (_cursorPosition > 0)
+        if (_inputContext.CursorPosition > 0)
         {
-            _currentInput = _currentInput.Remove(_cursorPosition - 1, 1);
-            _cursorPosition--;
+            _inputContext.CurrentInput = _inputContext.CurrentInput.Remove(_inputContext.CursorPosition - 1, 1);
+            _inputContext.CursorPosition--;
         }
 
         _commandHistoryIndex = -1;
+        UpdateAutocompleteState();
     }
 
     private void DeleteCharacterAfter()
     {
-        if (_currentState != ChatState.Input || _currentInput.Length == 0)
+        if (_currentState != ChatState.Input || _inputContext.CurrentInput.Length == 0)
         {
             return;
         }
 
-        _cursorPosition = Math.Max(0, Math.Min(_cursorPosition, _currentInput.Length));
+        _inputContext.CursorPosition = Math.Max(0, Math.Min(_inputContext.CursorPosition, _inputContext.CurrentInput.Length));
 
-        if (_cursorPosition < _currentInput.Length)
+        if (_inputContext.CursorPosition < _inputContext.CurrentInput.Length)
         {
-            _currentInput = _currentInput.Remove(_cursorPosition, 1);
+            _inputContext.CurrentInput = _inputContext.CurrentInput.Remove(_inputContext.CursorPosition, 1);
         }
 
         _commandHistoryIndex = -1;
+        UpdateAutocompleteState();
     }
 
     private void MoveCursorLeft()
     {
-        if (_cursorPosition > 0)
+        if (_inputContext.CursorPosition > 0)
         {
-            _cursorPosition--;
+            _inputContext.CursorPosition--;
+            UpdateAutocompleteState();
         }
     }
 
     private void MoveCursorRight()
     {
-        if (_cursorPosition < _currentInput.Length)
+        if (_inputContext.CursorPosition < _inputContext.CurrentInput.Length)
         {
-            _cursorPosition++;
+            _inputContext.CursorPosition++;
+            UpdateAutocompleteState();
         }
     }
 
     private void MoveCursorToStart()
     {
-        _cursorPosition = 0;
+        _inputContext.CursorPosition = 0;
+        UpdateAutocompleteState();
     }
 
     private void MoveCursorToEnd()
     {
-        _cursorPosition = _currentInput.Length;
+        _inputContext.CursorPosition = _inputContext.CurrentInput.Length;
+        UpdateAutocompleteState();
     }
 
     private void ClearCurrentInput()
     {
-        _currentInput = string.Empty;
-        _cursorPosition = 0;
+        _inputContext.Clear();
         _commandHistoryIndex = -1;
+    }
+
+    private async void UpdateAutocompleteState()
+    {
+        try
+        {
+            // Detect which provider should be triggered
+            var provider = _autocompleteManager.DetectTrigger(_inputContext.CurrentInput, _inputContext.CursorPosition);
+
+            if (provider != null)
+            {
+                _inputContext.ActiveProvider = provider;
+                await _autocompleteManager.UpdateSuggestionsAsync(_inputContext);
+            }
+            else
+            {
+                _inputContext.ClearAutocomplete();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating autocomplete state");
+            _inputContext.ClearAutocomplete();
+        }
+    }
+
+    private void NavigateAutocomplete(bool up)
+    {
+        if (!_inputContext.ShowSuggestions || _inputContext.Suggestions.Count == 0)
+        {
+            return;
+        }
+
+        if (up)
+        {
+            _inputContext.SelectedSuggestionIndex = 
+                (_inputContext.SelectedSuggestionIndex - 1 + _inputContext.Suggestions.Count) 
+                % _inputContext.Suggestions.Count;
+        }
+        else
+        {
+            _inputContext.SelectedSuggestionIndex = 
+                (_inputContext.SelectedSuggestionIndex + 1) 
+                % _inputContext.Suggestions.Count;
+        }
+    }
+
+    private void AcceptAutocompleteSuggestion()
+    {
+        _autocompleteManager.AcceptSuggestion(_inputContext);
+    }
+
+    private void CancelAutocomplete()
+    {
+        _inputContext.ClearAutocomplete();
     }
 
     private void HandleEscapeKey()

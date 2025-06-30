@@ -14,6 +14,8 @@ global using MaxBot.TUI.App;
 global using MaxBot.TUI.State;
 global using MaxBot.TUI.Infrastructure;
 global using MaxBot.TUI.Models;
+global using MaxBot.TUI.Utils;
+global using MaxBot.TUI.Services;
 global using Microsoft.Extensions.AI;
 global using MaxBot.PawPrints;
 global using System.Collections.Concurrent;

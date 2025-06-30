@@ -41,6 +41,12 @@ public static class ServiceConfiguration
         _ = services.AddSingleton<HistoryManager>();
         _ = services.AddSingleton<StateManager>();
 
+        // Add autocomplete services
+        _ = services.AddSingleton<SlashCommandProcessor>();
+        _ = services.AddSingleton<IAutocompleteProvider, SlashCommandProvider>();
+        _ = services.AddSingleton<IAutocompleteProvider, FilePathProvider>();
+        _ = services.AddSingleton<AutocompleteManager>();
+
         // Add TUI infrastructure components
         _ = services.AddSingleton<FlexColumnTuiApp>();
         _ = services.AddSingleton<IScrollbackTerminal, ScrollbackTerminal>();
