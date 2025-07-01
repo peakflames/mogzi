@@ -254,7 +254,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         var color = messageType switch
         {
             MessageType.User => "dim",
-            MessageType.Assistant => "white",
+            MessageType.Assistant => "skyblue1",
             _ => "white"
         };
 
