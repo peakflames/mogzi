@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic model family detection and absolute working directory path enforcement
   - Comprehensive design documentation for modular prompt system (04_08)
 
+- Added Environment context automatically appended to user messages for fresh system state per interaction
+
 
 ## [0.13.1] - 2025-07-01
 

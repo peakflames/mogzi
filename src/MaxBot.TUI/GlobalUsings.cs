@@ -1,6 +1,7 @@
 global using MaxBot.Domain;
 global using MaxBot.Domain.Diff;
 global using MaxBot.PawPrints;
+global using MaxBot.Prompts;
 global using MaxBot.Services;
 global using MaxBot.Services.Diff;
 global using MaxBot.TUI.App;

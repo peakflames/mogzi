@@ -258,7 +258,12 @@ public sealed class FlexColumnTuiApp : IDisposable
             _ => "white"
         };
 
-        return new Markup($"[{color}]{prefix}{message.Text}[/]");
+        // Strip system environment context from user messages for display
+        var displayText = message.Role == ChatRole.User
+            ? MaxBot.Utils.MessageUtils.StripSystemEnvironment(message.Text)
+            : message.Text;
+
+        return new Markup($"[{color}]{prefix}{displayText}[/]");
     }
 
     private MessageType GetMessageType(ChatMessage message)
@@ -795,9 +800,31 @@ public sealed class FlexColumnTuiApp : IDisposable
             // Add spacing before user message
             _scrollbackTerminal.WriteStatic(new Markup(""));
 
-            var userMessage = new ChatMessage(ChatRole.User, input);
+            // Get current environment context
+            var envPrompt = EnvSystemPrompt.GetEnvPrompt(
+                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                _appService.ChatClient.OperatingSystem.ToString(),
+                _appService.ChatClient.DefaultShell,
+                _appService.ChatClient.Username,
+                _appService.ChatClient.Hostname,
+                _workingDirectoryProvider.GetCurrentDirectory(),
+                "chat", // mode - could be made configurable
+                _appService.ChatClient.Config.ToolApprovals
+            );
+
+            _logger?.LogDebug("Generated environment prompt: {EnvPrompt}", envPrompt);
+
+            // Create user message with environment context appended (for AI processing)
+            var fullUserMessage = MaxBot.Utils.MessageUtils.AppendSystemEnvironment(input, envPrompt);
+            var userMessage = new ChatMessage(ChatRole.User, fullUserMessage);
             _historyManager.AddUserMessage(userMessage);
-            _scrollbackTerminal.WriteStatic(RenderMessage(userMessage));
+
+            _logger?.LogDebug("Full user message (with env context) length: {Length}", fullUserMessage.Length);
+            _logger?.LogDebug("Original user input: {Input}", input);
+
+            // Display only the original user input (stripped of env context)
+            var displayMessage = new ChatMessage(ChatRole.User, input);
+            _scrollbackTerminal.WriteStatic(RenderMessage(displayMessage));
 
             if (_slashCommandProcessor.TryProcessCommand(input, out var commandOutput))
             {

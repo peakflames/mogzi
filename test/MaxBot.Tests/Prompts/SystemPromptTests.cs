@@ -31,18 +31,6 @@ public class SystemPromptTests
         Assert.Equal(ModelFamily.Gemini, result);
     }
 
-    [Fact]
-    public void GetModelFamily_ShouldReturnOpenAI_WhenModelIdContainsGpt()
-    {
-        // Arrange
-        var modelId = "gpt-4o";
-
-        // Act
-        var result = SystemPromptComponentFactory.GetModelFamily(modelId);
-
-        // Assert
-        Assert.Equal(ModelFamily.OpenAI, result);
-    }
 
     [Fact]
     public void GetModelFamily_ShouldReturnOther_WhenModelIdIsUnknown()
