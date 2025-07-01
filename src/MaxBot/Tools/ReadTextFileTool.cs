@@ -26,8 +26,10 @@ public class ReadTextFileTool(MaxbotConfiguration config, Action<string, Console
     public async Task<string> ReadTextFile(
         [Description("The absolute path to the text file to read (e.g., '/home/user/project/file.txt'). Relative paths are not supported. You must provide an absolute path.")] string absolute_path,
         [Description("Optional: The 0-based line number to start reading from. Requires 'limit' to be set. Use for paginating through large files.")] int? offset = null,
-        [Description("Optional: Maximum number of lines to read. Use with 'offset' to paginate through large files. If omitted, reads the entire file (if feasible, up to a default limit).")] int? limit = null)
+        [Description("Optional: Maximum number of lines to read. Use with 'offset' to paginate through large files. If omitted, reads the entire file (if feasible, up to a default limit of 5000).")] int? limit = 5000)
     {
+        limit ??= 5000;
+
         _llmResponseDetailsCallback?.Invoke($"Reading text file '{absolute_path}'{(offset.HasValue ? $" from line {offset}" : "")}{(limit.HasValue ? $" (limit: {limit} lines)" : "")}.", ConsoleColor.DarkGray);
 
         try

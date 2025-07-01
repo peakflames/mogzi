@@ -63,6 +63,36 @@ Sophisticated code modification capabilities with intelligent conflict resolutio
 
 > **📋 Detailed Documentation**: [Diff/Patch System Design](04_05_diff_patch_design.md)
 
+### Cross-Platform & Performance
+MaxBot is designed for optimal performance across all supported platforms:
+
+- **Platform Detection**: Automatic shell and command selection
+- **AOT Compilation**: Native compilation support for improved startup
+- **Memory Efficiency**: Streaming responses and efficient resource management
+- **Async Operations**: Non-blocking I/O throughout the application
+
+> **📋 Detailed Documentation**: [Cross-Platform & Performance Design](04_06_platform_performance_design.md)
+
+### Tool Execution Flow
+Comprehensive workflow management for AI tool interactions:
+
+- **Execution Pipeline**: Structured tool invocation with validation
+- **Security Enforcement**: Working directory boundary checks
+- **Response Processing**: Structured XML parsing and error handling
+- **State Management**: Tool execution tracking and session persistence
+
+> **📋 Detailed Documentation**: [Tool Execution Flow Design](04_07_tool_execution_flow_design.md)
+
+### Modular System Prompt Architecture
+Dynamic, model-specific prompt generation system:
+
+- **Model Family Detection**: Automatic detection of AI model types (Claude, Gemini, OpenAI)
+- **Component Assembly**: Modular prompt construction with reusable components
+- **Path Resolution**: Absolute working directory path enforcement
+- **Extensible Design**: Clean separation of model-specific and shared prompt components
+
+> **📋 Detailed Documentation**: [Modular System Prompt Design](04_08_modular_system_prompt_design.md)
+
 ## System Prompt Design
 
 **Dynamic Prompt Generation:**
@@ -85,17 +115,7 @@ public string SystemPrompt => Promptinator.GetSystemPrompt(
 - **Security Awareness**: Working directory boundaries emphasized
 - **Configuration Integration**: Tool approval settings and debug mode
 - **Mode-Specific Behavior**: Different prompts for oneshot vs chat modes
-
-## Cross-Platform & Performance
-
-MaxBot is designed for optimal performance across all supported platforms:
-
-- **Platform Detection**: Automatic shell and command selection
-- **AOT Compilation**: Native compilation support for improved startup
-- **Memory Efficiency**: Streaming responses and efficient resource management
-- **Async Operations**: Non-blocking I/O throughout the application
-
-> **📋 Detailed Documentation**: [Cross-Platform & Performance Design](04_06_platform_performance_design.md)
+- **Model-Specific Adaptation**: Tailored prompts for different AI model families
 
 ## Error Handling Strategy
 

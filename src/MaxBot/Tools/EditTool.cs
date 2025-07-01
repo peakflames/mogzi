@@ -18,7 +18,7 @@ public class EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? 
             Replace,
             new AIFunctionFactoryOptions
             {
-                Name = "replace",
+                Name = "replace_in_file",
                 Description = "Replaces text within a file. By default, replaces a single occurrence, but can replace multiple occurrences when `expected_replacements` is specified. This tool requires providing significant context around the change to ensure precise targeting. Always use the read_file tool to examine the file's current content before attempting a text replacement.\n\nExpectation for required parameters:\n1. `file_path` MUST be an absolute path; otherwise an error will be thrown.\n2. `old_string` MUST be the exact literal text to replace (including all whitespace, indentation, newlines, and surrounding code etc.).\n3. `new_string` MUST be the exact literal text to replace `old_string` with (also including all whitespace, indentation, newlines, and surrounding code etc.). Ensure the resulting code is correct and idiomatic.\n4. NEVER escape `old_string` or `new_string`, that would break the exact literal text requirement.\n**Important:** If ANY of the above are not satisfied, the tool will fail. CRITICAL for `old_string`: Must uniquely identify the single instance to change. Include at least 3 lines of context BEFORE and AFTER the target text, matching whitespace and indentation precisely. If this string matches multiple locations, or does not match exactly, the tool will fail.\n**Multiple replacements:** Set `expected_replacements` to the number of occurrences you want to replace. The tool will replace ALL occurrences that match `old_string` exactly. Ensure the number of replacements matches your expectation."
             });
     }
@@ -43,7 +43,7 @@ public class EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? 
             var validationError = ValidateParameters(file_path, old_string, new_string, expectedReplacements);
             if (validationError != null)
             {
-                return CreateErrorResponse("replace", validationError);
+                return CreateErrorResponse("replace_in_file", validationError);
             }
 
             var workingDirectory = _workingDirectoryProvider.GetCurrentDirectory();
@@ -52,13 +52,13 @@ public class EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? 
             // Security validation - ensure path is within working directory
             if (!IsPathInWorkingDirectory(absolutePath, workingDirectory))
             {
-                return CreateErrorResponse("replace", $"File path must be within the root directory ({workingDirectory}): {file_path}");
+                return CreateErrorResponse("replace_in_file", $"File path must be within the root directory ({workingDirectory}): {file_path}");
             }
 
             // Check tool approvals for write operations
             if (_config.ToolApprovals == "readonly")
             {
-                return CreateErrorResponse("replace", "Tool approvals are set to readonly mode. File edit operations are not permitted.");
+                return CreateErrorResponse("replace_in_file", "Tool approvals are set to readonly mode. File edit operations are not permitted.");
             }
 
             // Handle file creation case (old_string is empty)
@@ -70,14 +70,14 @@ public class EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? 
             // Check if file exists for editing
             if (!File.Exists(absolutePath))
             {
-                return CreateErrorResponse("replace", $"File not found. Cannot apply edit. Use an empty old_string to create a new file: {file_path}");
+                return CreateErrorResponse("replace_in_file", $"File not found. Cannot apply edit. Use an empty old_string to create a new file: {file_path}");
             }
 
             // Check if file is writable
             var fileInfo = new FileInfo(absolutePath);
             if (fileInfo.IsReadOnly)
             {
-                return CreateErrorResponse("replace", $"File is read-only and cannot be modified: {file_path}");
+                return CreateErrorResponse("replace_in_file", $"File is read-only and cannot be modified: {file_path}");
             }
 
             // Read current content
@@ -91,12 +91,12 @@ public class EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? 
 
             if (occurrences == 0)
             {
-                return CreateErrorResponse("replace", $"Failed to edit, could not find the string to replace. Failed to edit, 0 occurrences found for old_string in {file_path}. No edits made. The exact text in old_string was not found. Ensure you're not escaping content incorrectly and check whitespace, indentation, and context. Use read_file tool to verify.");
+                return CreateErrorResponse("replace_in_file", $"Failed to edit, could not find the string to replace. Failed to edit, 0 occurrences found for old_string in {file_path}. No edits made. The exact text in old_string was not found. Ensure you're not escaping content incorrectly and check whitespace, indentation, and context. Use read_file tool to verify.");
             }
 
             if (occurrences != expectedReplacements)
             {
-                return CreateErrorResponse("replace", $"Failed to edit, expected {expectedReplacements} occurrence(s) but found {occurrences}. Expected {expectedReplacements} occurrences but found {occurrences} for old_string in file: {file_path}");
+                return CreateErrorResponse("replace_in_file", $"Failed to edit, expected {expectedReplacements} occurrence(s) but found {occurrences}. Expected {expectedReplacements} occurrences but found {occurrences} for old_string in file: {file_path}");
             }
 
             // Perform the replacement
@@ -117,7 +117,7 @@ public class EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? 
                 if (verifyContent != newContent)
                 {
                     File.Delete(tempPath);
-                    return CreateErrorResponse("replace", "Content verification failed during write operation");
+                    return CreateErrorResponse("replace_in_file", "Content verification failed during write operation");
                 }
 
                 // Atomic move from temp to target
@@ -129,7 +129,7 @@ public class EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? 
                 {
                     // Restore from backup
                     File.Move(backupPath, absolutePath, true);
-                    return CreateErrorResponse("replace", "Final content verification failed - restored from backup");
+                    return CreateErrorResponse("replace_in_file", "Final content verification failed - restored from backup");
                 }
 
                 // Clean up backup file on success
@@ -160,19 +160,19 @@ public class EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? 
         }
         catch (UnauthorizedAccessException)
         {
-            return CreateErrorResponse("replace", $"Access denied modifying file: {file_path}");
+            return CreateErrorResponse("replace_in_file", $"Access denied modifying file: {file_path}");
         }
         catch (DirectoryNotFoundException)
         {
-            return CreateErrorResponse("replace", $"Directory not found for file: {file_path}");
+            return CreateErrorResponse("replace_in_file", $"Directory not found for file: {file_path}");
         }
         catch (FileNotFoundException)
         {
-            return CreateErrorResponse("replace", $"File not found: {file_path}");
+            return CreateErrorResponse("replace_in_file", $"File not found: {file_path}");
         }
         catch (IOException ex)
         {
-            return CreateErrorResponse("replace", $"I/O error modifying file: {ex.Message}");
+            return CreateErrorResponse("replace_in_file", $"I/O error modifying file: {ex.Message}");
         }
         catch (Exception ex)
         {
@@ -180,7 +180,7 @@ public class EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? 
             {
                 _llmResponseDetailsCallback?.Invoke($"ERROR: Error replacing text in file. {ex.Message}", ConsoleColor.Red);
             }
-            return CreateErrorResponse("replace", $"Unexpected error: {ex.Message}");
+            return CreateErrorResponse("replace_in_file", $"Unexpected error: {ex.Message}");
         }
     }
 
@@ -191,7 +191,7 @@ public class EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? 
             // Check if file already exists
             if (File.Exists(absolutePath))
             {
-                return CreateErrorResponse("replace", $"Failed to edit. Attempted to create a file that already exists. File already exists, cannot create: {absolutePath}");
+                return CreateErrorResponse("replace_in_file", $"Failed to edit. Attempted to create a file that already exists. File already exists, cannot create: {absolutePath}");
             }
 
             // Create directory if it doesn't exist
@@ -208,7 +208,7 @@ public class EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? 
             var writtenContent = await File.ReadAllTextAsync(absolutePath);
             if (writtenContent != newString)
             {
-                return CreateErrorResponse("replace", "Content verification failed during file creation");
+                return CreateErrorResponse("replace_in_file", "Content verification failed during file creation");
             }
 
             var checksum = ComputeSha256(writtenContent);
@@ -218,7 +218,7 @@ public class EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? 
         }
         catch (Exception ex)
         {
-            return CreateErrorResponse("replace", $"Error creating new file: {ex.Message}");
+            return CreateErrorResponse("replace_in_file", $"Error creating new file: {ex.Message}");
         }
     }
 
@@ -314,7 +314,7 @@ public class EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? 
         _ = notes.AppendLine($"Total lines: {lineCount}");
         _ = notes.AppendLine($"Content size: {content.Length} characters");
 
-        return $@"<tool_response tool_name=""replace"">
+        return $@"<tool_response tool_name=""replace_in_file"">
     <notes>{SecurityElement.Escape(notes.ToString().Trim())}</notes>
     <result status=""SUCCESS"" absolute_path=""{SecurityElement.Escape(absolutePath)}"" sha256_checksum=""{checksum}"" />
     <content_on_disk>{SecurityElement.Escape(content)}</content_on_disk>
@@ -328,7 +328,7 @@ public class EditTool(MaxbotConfiguration config, Action<string, ConsoleColor>? 
         _ = notes.AppendLine($"Total lines: {lineCount}");
         _ = notes.AppendLine($"Content size: {content.Length} characters");
 
-        return $@"<tool_response tool_name=""replace"">
+        return $@"<tool_response tool_name=""replace_in_file"">
     <notes>{SecurityElement.Escape(notes.ToString().Trim())}</notes>
     <result status=""SUCCESS"" absolute_path=""{SecurityElement.Escape(absolutePath)}"" sha256_checksum=""{checksum}"" />
     <content_on_disk>{SecurityElement.Escape(content)}</content_on_disk>

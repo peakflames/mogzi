@@ -490,3 +490,4 @@ data/
 # Maxbot
 dist/
 outputs/
+.gemini/system.md

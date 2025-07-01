@@ -13,8 +13,8 @@ public static class ServiceConfiguration
         // Add logging - file logging only to keep UI clean
         _ = services.AddLogging(builder =>
         {
-            _ = builder.AddProvider(new FileLoggerProvider(LogLevel.Warning));
-            _ = builder.SetMinimumLevel(LogLevel.Warning);
+            _ = builder.AddProvider(new FileLoggerProvider(LogLevel.Information));
+            _ = builder.SetMinimumLevel(LogLevel.Information);
         });
 
         // Add Spectre.Console
@@ -50,5 +50,6 @@ public static class ServiceConfiguration
         // Add TUI infrastructure components
         _ = services.AddSingleton<FlexColumnTuiApp>();
         _ = services.AddSingleton<IScrollbackTerminal, ScrollbackTerminal>();
+        _ = services.AddSingleton<ToolResponseParser>();
     }
 }
