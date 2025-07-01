@@ -3,7 +3,7 @@
 ## References
 
 - **Architecture** - `docs/process/03_architecture.md`
-- **Design** - `docs/process/04_design.md`
+- **Design** - `docs/process/04_00_design.md`
 
 ## Coding Standard and Conventions
 

@@ -50,7 +50,7 @@ Ensure that all architectural and design patterns and decisions found in the Max
    - `docs/process/03_architecture.md` - Current architectural decisions and patterns
 
 2. Use the `read_file` tool to thoroughly examine the current design documentation:
-   - `docs/process/04_design.md` - Current design patterns and implementation details
+   - `docs/process/04_00_design.md` - Current design patterns and implementation details
 
 3. Analyze the documentation structure and identify:
    - What architectural patterns are currently documented
@@ -121,7 +121,7 @@ Ensure that all architectural and design patterns and decisions found in the Max
 
 ## 5. Update Design Documentation
 
-1. Use the `read_file` tool to re-examine `docs/process/04_design.md` in detail.
+1. Use the `read_file` tool to re-examine `docs/process/04_00_design.md` in detail.
 
 2. Use the `replace_in_file` tool to update the design documentation with implementation details:
    - **Service Design Section**: Add specific service implementations, method signatures, interaction patterns
