@@ -15,10 +15,6 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
     /// <returns>Parsed tool response information</returns>
     public ToolResponseInfo ParseToolResponse(string toolName, string response)
     {
-        _logger?.LogDebug("=== ParseToolResponse START ===");
-        _logger?.LogDebug("ToolName: '{ToolName}', Response length: {Length}", toolName, response?.Length ?? 0);
-        _logger?.LogDebug("Response starts with '<tool_response': {StartsWithXml}", response?.StartsWith("<tool_response") ?? false);
-
         var info = new ToolResponseInfo
         {
             ToolName = toolName,
@@ -29,22 +25,15 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
         // Try to parse XML response
         if (response?.StartsWith("<tool_response") == true)
         {
-            _logger?.LogDebug("Parsing as XML response...");
             ParseXmlResponse(info, response);
-            _logger?.LogDebug("XML parsing complete - Status: {Status}, Description: '{Description}', FilePath: '{FilePath}'", 
-                info.Status, info.Description, info.FilePath);
         }
         else
         {
-            _logger?.LogDebug("Parsing as non-XML response...");
             // Fallback for non-XML responses
             info.Description = "Tool executed";
             info.Summary = response?.Length > 100 ? response[..97] + "..." : response ?? "";
-            _logger?.LogDebug("Non-XML parsing complete - Description: '{Description}', Summary length: {Length}", 
-                info.Description, info.Summary?.Length ?? 0);
         }
 
-        _logger?.LogDebug("=== ParseToolResponse END ===");
         return info;
     }
 
@@ -195,26 +184,11 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
 
     private UnifiedDiff? GenerateEditToolDiff(string? originalContent, string? newContent, string? filePath)
     {
-        if (string.IsNullOrEmpty(filePath) || newContent == null)
+        if (string.IsNullOrEmpty(filePath) || newContent == null || originalContent == null)
         {
-            _logger?.LogDebug("EditTool diff generation skipped - missing filePath or newContent");
             return null;
         }
 
-        // For EditTool, we need to reconstruct the original content by reversing the replacement
-        // The originalContent parameter should contain the old_string from the function call
-        // The newContent should be the content_on_disk from the response
-        
-        if (originalContent == null)
-        {
-            _logger?.LogDebug("EditTool diff generation skipped - no original content provided");
-            return null;
-        }
-
-        // Generate diff showing the replacement
-        _logger?.LogDebug("Generating EditTool diff with original length: {OriginalLength}, new length: {NewLength}", 
-            originalContent.Length, newContent.Length);
-        
         try
         {
             // Enable logging in UnifiedDiffGenerator for debugging
@@ -225,14 +199,6 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
                 newContent, 
                 $"a/{Path.GetFileName(filePath)}", 
                 $"b/{Path.GetFileName(filePath)}");
-            
-            _logger?.LogDebug("EditTool diff generation completed - Hunks: {HunkCount}", diff?.Hunks?.Count ?? 0);
-            
-            if (diff?.Hunks?.Count > 0)
-            {
-                _logger?.LogDebug("First hunk details - OriginalStart: {OriginalStart}, ModifiedStart: {ModifiedStart}, Lines: {LineCount}", 
-                    diff.Hunks[0].OriginalStart, diff.Hunks[0].ModifiedStart, diff.Hunks[0].Lines?.Count ?? 0);
-            }
             
             return diff;
         }

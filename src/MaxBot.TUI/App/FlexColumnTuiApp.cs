@@ -882,67 +882,32 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private bool IsToolExecutionUpdate(ChatResponseUpdate responseUpdate)
     {
-        _logger?.LogDebug("=== IsToolExecutionUpdate START ===");
-        _logger?.LogDebug("ResponseUpdate.Contents is null: {IsNull}", responseUpdate.Contents == null);
-        _logger?.LogDebug("ResponseUpdate.Text: '{Text}'", responseUpdate.Text ?? "NULL");
-
         if (responseUpdate.Contents == null)
         {
-            _logger?.LogDebug("Contents is null, checking text for tool responses");
-            
             // Check for tool response XML in text content even when Contents is null
             if (!string.IsNullOrEmpty(responseUpdate.Text))
             {
-                var hasToolResponseStart = responseUpdate.Text.Contains("<tool_response");
-                var hasToolResponseEnd = responseUpdate.Text.Contains("</tool_response>");
-                _logger?.LogDebug("Text contains '<tool_response': {HasStart}", hasToolResponseStart);
-                _logger?.LogDebug("Text contains '</tool_response>': {HasEnd}", hasToolResponseEnd);
-
-                var hasToolResponse = hasToolResponseStart || hasToolResponseEnd;
-                if (hasToolResponse)
-                {
-                    _logger?.LogDebug("=== IsToolExecutionUpdate END: TRUE (XML Content in Text) ===");
-                    return true;
-                }
+                var hasToolResponse = responseUpdate.Text.Contains("<tool_response") || responseUpdate.Text.Contains("</tool_response>");
+                return hasToolResponse;
             }
             
-            _logger?.LogDebug("=== IsToolExecutionUpdate END: FALSE (No Contents, No XML) ===");
             return false;
-        }
-
-        _logger?.LogDebug("Contents count: {Count}", responseUpdate.Contents.Count());
-        foreach (var content in responseUpdate.Contents)
-        {
-            _logger?.LogDebug("Content type: {Type}", content.GetType().Name);
         }
 
         // Check for function call/result content
         var hasFunctionContent = responseUpdate.Contents.Any(content => content is FunctionCallContent or FunctionResultContent);
-        _logger?.LogDebug("Has function call/result content: {HasFunction}", hasFunctionContent);
-
         if (hasFunctionContent)
         {
-            _logger?.LogDebug("=== IsToolExecutionUpdate END: TRUE (Function Content) ===");
             return true;
         }
 
         // Check for tool response XML in text content
         if (!string.IsNullOrEmpty(responseUpdate.Text))
         {
-            var hasToolResponseStart = responseUpdate.Text.Contains("<tool_response");
-            var hasToolResponseEnd = responseUpdate.Text.Contains("</tool_response>");
-            _logger?.LogDebug("Text contains '<tool_response': {HasStart}", hasToolResponseStart);
-            _logger?.LogDebug("Text contains '</tool_response>': {HasEnd}", hasToolResponseEnd);
-
-            var hasToolResponse = hasToolResponseStart || hasToolResponseEnd;
-            if (hasToolResponse)
-            {
-                _logger?.LogDebug("=== IsToolExecutionUpdate END: TRUE (XML Content) ===");
-                return true;
-            }
+            var hasToolResponse = responseUpdate.Text.Contains("<tool_response") || responseUpdate.Text.Contains("</tool_response>");
+            return hasToolResponse;
         }
 
-        _logger?.LogDebug("=== IsToolExecutionUpdate END: FALSE ===");
         return false;
     }
 
@@ -1228,21 +1193,10 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private async Task HandleToolExecutionResult(ChatResponseUpdate responseUpdate)
     {
-        // Extract call ID early for consistent logging prefix
-        var callId = ExtractCallIdFromUpdate(responseUpdate);
-        var logPrefix = !string.IsNullOrEmpty(callId) ? $"[{callId}] " : "";
-
-        _logger?.LogDebug("{Prefix}=== HandleToolExecutionResult START ===", logPrefix);
-
         try
         {
-            _logger?.LogDebug("{Prefix}Contents is null: {IsNull}", logPrefix, responseUpdate.Contents == null);
-            _logger?.LogDebug("{Prefix}Text is null or empty: {IsEmpty}", logPrefix, string.IsNullOrEmpty(responseUpdate.Text));
-
             if (responseUpdate.Contents == null && string.IsNullOrEmpty(responseUpdate.Text))
             {
-                _logger?.LogDebug("{Prefix}Both Contents and Text are null/empty, returning early", logPrefix);
-                _logger?.LogDebug("{Prefix}=== HandleToolExecutionResult END: EARLY RETURN ===", logPrefix);
                 return;
             }
 
@@ -1255,8 +1209,6 @@ public sealed class FlexColumnTuiApp : IDisposable
             {
                 // Store the mapping of call ID to tool name for later use
                 _functionCallToToolName[functionCall.CallId] = functionCall.Name;
-                _logger?.LogDebug("{Prefix}Function call stored - CallId: '{CallId}', ToolName: '{ToolName}'", 
-                    logPrefix, functionCall.CallId, functionCall.Name);
 
                 // For EditTool, capture the pre-edit content (Gemini CLI approach)
                 await CapturePreEditContentForEditTool(functionCall);
@@ -1264,7 +1216,6 @@ public sealed class FlexColumnTuiApp : IDisposable
 
             // Handle function result content (tool execution completed)
             var functionResult = responseUpdate.Contents?.OfType<FunctionResultContent>().FirstOrDefault();
-            _logger?.LogDebug("{Prefix}FunctionResult found: {Found}", logPrefix, functionResult != null);
 
             if (functionResult != null)
             {
@@ -1273,14 +1224,10 @@ public sealed class FlexColumnTuiApp : IDisposable
                 toolName ??= "Unknown Tool";
 
                 result = functionResult.Result?.ToString() ?? "";
-                _logger?.LogDebug("{Prefix}Function result - CallId: '{CallId}', ToolName: '{ToolName}', Result length: {Length}", 
-                    logPrefix, functionResult.CallId, toolName, result.Length);
             }
             // If we only have a function call but no result yet, don't process for display
             else if (functionCall != null && functionResult == null)
             {
-                _logger?.LogDebug("{Prefix}Function call detected but no result yet - skipping display processing", logPrefix);
-                _logger?.LogDebug("{Prefix}=== HandleToolExecutionResult END: FUNCTION CALL ONLY ===", logPrefix);
                 return;
             }
             // Handle XML tool responses in text content
@@ -1288,38 +1235,25 @@ public sealed class FlexColumnTuiApp : IDisposable
                      (responseUpdate.Text.Contains("<tool_response") || responseUpdate.Text.Contains("</tool_response>")))
             {
                 result = responseUpdate.Text;
-                _logger?.LogDebug("{Prefix}XML tool response found in text, length: {Length}", logPrefix, result.Length);
 
                 // Extract tool name from XML if possible
                 try
                 {
                     var toolNameMatch = System.Text.RegularExpressions.Regex.Match(result, @"tool_name=""([^""]+)""");
                     toolName = toolNameMatch.Success ? toolNameMatch.Groups[1].Value : "Unknown Tool";
-                    _logger?.LogDebug("{Prefix}Extracted tool name from XML: '{ToolName}'", logPrefix, toolName);
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogDebug(ex, "{Prefix}Failed to extract tool name from XML", logPrefix);
+                    _logger?.LogDebug(ex, "Failed to extract tool name from XML");
                     toolName = "Unknown Tool";
                 }
             }
-            else
-            {
-                _logger?.LogDebug("{Prefix}No function result or XML tool response found", logPrefix);
-            }
-
-            _logger?.LogDebug("{Prefix}Final values - ToolName: '{ToolName}', Result is null/empty: {IsEmpty}", 
-                logPrefix, toolName, string.IsNullOrEmpty(result));
 
             // If we have a tool result to display
             if (!string.IsNullOrEmpty(result) && !string.IsNullOrEmpty(toolName))
             {
-                _logger?.LogDebug("{Prefix}Processing tool result for display...", logPrefix);
-
                 // Parse the tool response for enhanced display
                 var toolInfo = _toolResponseParser.ParseToolResponse(toolName, result);
-                _logger?.LogDebug("{Prefix}Parsed tool info - Status: {Status}, FilePath: '{FilePath}', HasNewContent: {HasContent}", 
-                    logPrefix, toolInfo.Status, toolInfo.FilePath, !string.IsNullOrEmpty(toolInfo.NewContent));
 
                 // Handle different tool types appropriately
                 UnifiedDiff? diff = null;
@@ -1332,33 +1266,22 @@ public sealed class FlexColumnTuiApp : IDisposable
                     // For WriteFileTool - show content directly, no diff
                     if (IsWriteFileTool(normalizedToolName))
                     {
-                        _logger?.LogDebug("{Prefix}WriteFileTool detected - using content for display", logPrefix);
                         displayContent = toolInfo.NewContent ?? ExtractContentFromXml(result);
                     }
                     // For EditTool and DiffPatchTools - generate/extract diffs
                     else if (IsEditTool(normalizedToolName) || IsDiffPatchTool(normalizedToolName))
                     {
-                        _logger?.LogDebug("{Prefix}Edit/DiffPatch tool detected - generating diff", logPrefix);
-
                         if (!string.IsNullOrEmpty(toolInfo.FilePath))
                         {
-                            _logger?.LogDebug("{Prefix}FilePath found - proceeding with diff generation", logPrefix);
-
                             string? originalContent = null;
                             var newContent = toolInfo.NewContent;
 
                             // For EditTool, use the captured pre-edit content (Gemini CLI approach)
                             if (IsEditTool(normalizedToolName) && functionResult != null)
                             {
-                                _logger?.LogDebug("{Prefix}EditTool detected - using captured pre-edit content", logPrefix);
                                 if (_functionCallToPreEditContent.TryGetValue(functionResult.CallId, out var preEditContent))
                                 {
                                     originalContent = preEditContent;
-                                    _logger?.LogDebug("{Prefix}Retrieved pre-edit content, length: {Length}", logPrefix, originalContent.Length);
-                                }
-                                else
-                                {
-                                    _logger?.LogDebug("{Prefix}No pre-edit content found for CallId: {CallId}", logPrefix, functionResult.CallId);
                                 }
                             }
                             else
@@ -1369,11 +1292,10 @@ public sealed class FlexColumnTuiApp : IDisposable
                                     try
                                     {
                                         originalContent = await File.ReadAllTextAsync(toolInfo.FilePath);
-                                        _logger?.LogDebug("{Prefix}Read original content for diff, length: {Length}", logPrefix, originalContent.Length);
                                     }
                                     catch (Exception ex)
                                     {
-                                        _logger?.LogDebug(ex, "{Prefix}Could not read original file content for diff: {FilePath}", logPrefix, toolInfo.FilePath);
+                                        _logger?.LogDebug(ex, "Could not read original file content for diff: {FilePath}", toolInfo.FilePath);
                                     }
                                 }
                             }
@@ -1385,62 +1307,34 @@ public sealed class FlexColumnTuiApp : IDisposable
                                 try
                                 {
                                     newContent = await File.ReadAllTextAsync(toolInfo.FilePath);
-                                    _logger?.LogDebug("{Prefix}Read current file content as new content, length: {Length}", logPrefix, newContent.Length);
                                 }
                                 catch (Exception ex)
                                 {
-                                    _logger?.LogDebug(ex, "{Prefix}Could not read current file content: {FilePath}", logPrefix, toolInfo.FilePath);
+                                    _logger?.LogDebug(ex, "Could not read current file content: {FilePath}", toolInfo.FilePath);
                                 }
                             }
 
-                        // Set up logger for UnifiedDiffGenerator debugging
-                        UnifiedDiffGenerator.SetLogger(_logger);
+                            // Set up logger for UnifiedDiffGenerator debugging
+                            UnifiedDiffGenerator.SetLogger(_logger);
 
-                        // Generate diff using the tool response parser
-                        diff = _toolResponseParser.ExtractFileDiff(
-                            toolInfo.ToolName,
-                            result,
-                            originalContent,
-                            newContent,
-                            toolInfo.FilePath);
-
-                        _logger?.LogDebug("{Prefix}Generated diff: {HasDiff}", logPrefix, diff != null);
-                        if (diff != null)
-                        {
-                            _logger?.LogDebug("{Prefix}Diff details - OriginalFile: '{OriginalFile}', ModifiedFile: '{ModifiedFile}', HunkCount: {HunkCount}", 
-                                logPrefix, diff.OriginalFile, diff.ModifiedFile, diff.Hunks?.Count ?? 0);
-                            
-                            if (diff.Hunks?.Count > 0)
-                            {
-                                var firstHunk = diff.Hunks[0];
-                                _logger?.LogDebug("{Prefix}First hunk - OriginalStart: {OriginalStart}, ModifiedStart: {ModifiedStart}, LineCount: {LineCount}", 
-                                    logPrefix, firstHunk.OriginalStart, firstHunk.ModifiedStart, firstHunk.Lines?.Count ?? 0);
-                                
-                                if (firstHunk.Lines?.Count > 0)
-                                {
-                                    var sampleLines = firstHunk.Lines.Take(3).Select(l => $"{l.Type}: {l.Content}").ToArray();
-                                    _logger?.LogDebug("{Prefix}Sample diff lines: {SampleLines}", logPrefix, string.Join(" | ", sampleLines));
-                                }
-                            }
-                        }
-                        }
-                        else
-                        {
-                            _logger?.LogDebug("{Prefix}Skipping diff generation - FilePath is empty", logPrefix);
+                            // Generate diff using the tool response parser
+                            diff = _toolResponseParser.ExtractFileDiff(
+                                toolInfo.ToolName,
+                                result,
+                                originalContent,
+                                newContent,
+                                toolInfo.FilePath);
                         }
                     }
                     else
                     {
-                        _logger?.LogDebug("{Prefix}Unknown tool type - using summary for display", logPrefix);
                         displayContent = toolInfo.Summary;
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger?.LogDebug(ex, "{Prefix}Could not process tool result for display", logPrefix);
+                    _logger?.LogDebug(ex, "Could not process tool result for display");
                 }
-
-                _logger?.LogDebug("{Prefix}Creating tool display...", logPrefix);
 
                 // Create enhanced tool display with clean styling
                 var toolDisplay = ToolExecutionDisplay.CreateToolDisplay(
@@ -1451,25 +1345,16 @@ public sealed class FlexColumnTuiApp : IDisposable
                     result: displayContent ?? toolInfo.Summary ?? result
                 );
 
-                _logger?.LogDebug("{Prefix}Displaying tool result in scrollback...", logPrefix);
-
                 // Display the tool execution result in scrollback
                 _scrollbackTerminal.WriteStatic(toolDisplay);
                 _scrollbackTerminal.WriteStatic(new Markup(""));
-
-                _logger?.LogDebug("{Prefix}Tool result displayed successfully", logPrefix);
-            }
-            else
-            {
-                _logger?.LogDebug("{Prefix}Skipping tool display - missing toolName or result", logPrefix);
             }
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "{Prefix}Error handling tool execution result", logPrefix);
+            _logger?.LogError(ex, "Error handling tool execution result");
         }
 
-        _logger?.LogDebug("{Prefix}=== HandleToolExecutionResult END ===", logPrefix);
         await Task.CompletedTask;
     }
 
