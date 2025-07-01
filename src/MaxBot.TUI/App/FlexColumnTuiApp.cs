@@ -12,6 +12,7 @@ public sealed class FlexColumnTuiApp : IDisposable
     private readonly AutocompleteManager _autocompleteManager;
     private readonly IScrollbackTerminal _scrollbackTerminal;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
+    private readonly ToolResponseParser _toolResponseParser;
     private bool _isDisposed = false;
 
     // Chat state
@@ -25,6 +26,10 @@ public sealed class FlexColumnTuiApp : IDisposable
     // AI operation management
     private CancellationTokenSource? _aiOperationCts;
     private DateTime _aiOperationStartTime;
+
+    // Tool execution tracking
+    private readonly Dictionary<string, string> _functionCallToToolName = new();
+    private readonly Dictionary<string, string> _functionCallToPreEditContent = new();
 
     public bool IsRunning { get; private set; } = false;
 
@@ -40,6 +45,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         _historyManager = serviceProvider.GetRequiredService<HistoryManager>();
         _scrollbackTerminal = serviceProvider.GetRequiredService<IScrollbackTerminal>();
         _workingDirectoryProvider = serviceProvider.GetRequiredService<IWorkingDirectoryProvider>();
+        _toolResponseParser = serviceProvider.GetRequiredService<ToolResponseParser>();
 
         _cancellationTokenSource = new CancellationTokenSource();
 
@@ -248,11 +254,16 @@ public sealed class FlexColumnTuiApp : IDisposable
         var color = messageType switch
         {
             MessageType.User => "dim",
-            MessageType.Assistant => "white",
+            MessageType.Assistant => "skyblue1",
             _ => "white"
         };
 
-        return new Markup($"[{color}]{prefix}{message.Text}[/]");
+        // Strip system environment context from user messages for display
+        var displayText = message.Role == ChatRole.User
+            ? MaxBot.Utils.MessageUtils.StripSystemEnvironment(message.Text)
+            : message.Text;
+
+        return new Markup($"[{color}]{prefix}{displayText}[/]");
     }
 
     private MessageType GetMessageType(ChatMessage message)
@@ -789,9 +800,31 @@ public sealed class FlexColumnTuiApp : IDisposable
             // Add spacing before user message
             _scrollbackTerminal.WriteStatic(new Markup(""));
 
-            var userMessage = new ChatMessage(ChatRole.User, input);
+            // Get current environment context
+            var envPrompt = EnvSystemPrompt.GetEnvPrompt(
+                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                _appService.ChatClient.OperatingSystem.ToString(),
+                _appService.ChatClient.DefaultShell,
+                _appService.ChatClient.Username,
+                _appService.ChatClient.Hostname,
+                _workingDirectoryProvider.GetCurrentDirectory(),
+                "chat", // mode - could be made configurable
+                _appService.ChatClient.Config.ToolApprovals
+            );
+
+            _logger?.LogDebug("Generated environment prompt: {EnvPrompt}", envPrompt);
+
+            // Create user message with environment context appended (for AI processing)
+            var fullUserMessage = MaxBot.Utils.MessageUtils.AppendSystemEnvironment(input, envPrompt);
+            var userMessage = new ChatMessage(ChatRole.User, fullUserMessage);
             _historyManager.AddUserMessage(userMessage);
-            _scrollbackTerminal.WriteStatic(RenderMessage(userMessage));
+
+            _logger?.LogDebug("Full user message (with env context) length: {Length}", fullUserMessage.Length);
+            _logger?.LogDebug("Original user input: {Input}", input);
+
+            // Display only the original user input (stripped of env context)
+            var displayMessage = new ChatMessage(ChatRole.User, input);
+            _scrollbackTerminal.WriteStatic(RenderMessage(displayMessage));
 
             if (_slashCommandProcessor.TryProcessCommand(input, out var commandOutput))
             {
@@ -824,6 +857,7 @@ public sealed class FlexColumnTuiApp : IDisposable
                 if (!string.IsNullOrEmpty(responseUpdate.Text))
                 {
                     var newText = assistantMessage.Text + responseUpdate.Text;
+                    _logger?.LogInformation($"ChatMsg[Assistant, '{newText}'");
                     assistantMessage = new ChatMessage(ChatRole.Assistant, newText);
                     _historyManager.UpdateLastMessage(assistantMessage);
                     _scrollbackTerminal.WriteStatic(RenderMessage(assistantMessage), isUpdatable: true);
@@ -846,9 +880,15 @@ public sealed class FlexColumnTuiApp : IDisposable
                         _toolProgress = $"Executing {_currentToolName}...";
                         _scrollbackTerminal.WriteStatic(new Markup($"[green]•[/] [dim]{_toolProgress}[/]"));
                     }
+
+                    _logger?.LogInformation($"ChatMsg[Tool, '{_toolProgress}'");
+
+                    // Handle tool result display
+                    await HandleToolExecutionResult(responseUpdate);
                 }
             }
             _scrollbackTerminal.WriteStatic(new Markup(""));
+            _logger?.LogInformation($"ChatMsg[Assistant, '{assistantMessage.Text}'");
             _scrollbackTerminal.WriteStatic(RenderMessage(assistantMessage));
         }
         catch (OperationCanceledException) when (_aiOperationCts?.Token.IsCancellationRequested == true)
@@ -875,11 +915,31 @@ public sealed class FlexColumnTuiApp : IDisposable
     {
         if (responseUpdate.Contents == null)
         {
+            // Check for tool response XML in text content even when Contents is null
+            if (!string.IsNullOrEmpty(responseUpdate.Text))
+            {
+                var hasToolResponse = responseUpdate.Text.Contains("<tool_response") || responseUpdate.Text.Contains("</tool_response>");
+                return hasToolResponse;
+            }
+            
             return false;
         }
 
-        return responseUpdate.Contents.Any(content =>
-            content is FunctionCallContent or FunctionResultContent);
+        // Check for function call/result content
+        var hasFunctionContent = responseUpdate.Contents.Any(content => content is FunctionCallContent or FunctionResultContent);
+        if (hasFunctionContent)
+        {
+            return true;
+        }
+
+        // Check for tool response XML in text content
+        if (!string.IsNullOrEmpty(responseUpdate.Text))
+        {
+            var hasToolResponse = responseUpdate.Text.Contains("<tool_response") || responseUpdate.Text.Contains("</tool_response>");
+            return hasToolResponse;
+        }
+
+        return false;
     }
 
     private void ExtractToolNameFromUpdate(ChatResponseUpdate responseUpdate)
@@ -1091,14 +1151,14 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         if (up)
         {
-            _inputContext.SelectedSuggestionIndex = 
-                (_inputContext.SelectedSuggestionIndex - 1 + _inputContext.Suggestions.Count) 
+            _inputContext.SelectedSuggestionIndex =
+                (_inputContext.SelectedSuggestionIndex - 1 + _inputContext.Suggestions.Count)
                 % _inputContext.Suggestions.Count;
         }
         else
         {
-            _inputContext.SelectedSuggestionIndex = 
-                (_inputContext.SelectedSuggestionIndex + 1) 
+            _inputContext.SelectedSuggestionIndex =
+                (_inputContext.SelectedSuggestionIndex + 1)
                 % _inputContext.Suggestions.Count;
         }
     }
@@ -1160,5 +1220,316 @@ public sealed class FlexColumnTuiApp : IDisposable
         {
             _logger?.LogError(ex, "Error interrupting AI operation");
         }
+    }
+
+    private async Task HandleToolExecutionResult(ChatResponseUpdate responseUpdate)
+    {
+        try
+        {
+            if (responseUpdate.Contents == null && string.IsNullOrEmpty(responseUpdate.Text))
+            {
+                return;
+            }
+
+            string? toolName = null;
+            string? result = null;
+
+            // Handle function call content (tool execution starting)
+            var functionCall = responseUpdate.Contents?.OfType<FunctionCallContent>().FirstOrDefault();
+            if (functionCall != null)
+            {
+                // Store the mapping of call ID to tool name for later use
+                _functionCallToToolName[functionCall.CallId] = functionCall.Name;
+
+                // For EditTool, capture the pre-edit content (Gemini CLI approach)
+                await CapturePreEditContentForEditTool(functionCall);
+            }
+
+            // Handle function result content (tool execution completed)
+            var functionResult = responseUpdate.Contents?.OfType<FunctionResultContent>().FirstOrDefault();
+
+            if (functionResult != null)
+            {
+                // Get the tool name from our stored mapping
+                _ = _functionCallToToolName.TryGetValue(functionResult.CallId, out toolName);
+                toolName ??= "Unknown Tool";
+
+                result = functionResult.Result?.ToString() ?? "";
+            }
+            // If we only have a function call but no result yet, don't process for display
+            else if (functionCall != null && functionResult == null)
+            {
+                return;
+            }
+            // Handle XML tool responses in text content
+            else if (!string.IsNullOrEmpty(responseUpdate.Text) && 
+                     (responseUpdate.Text.Contains("<tool_response") || responseUpdate.Text.Contains("</tool_response>")))
+            {
+                result = responseUpdate.Text;
+
+                // Extract tool name from XML if possible
+                try
+                {
+                    var toolNameMatch = System.Text.RegularExpressions.Regex.Match(result, @"tool_name=""([^""]+)""");
+                    toolName = toolNameMatch.Success ? toolNameMatch.Groups[1].Value : "Unknown Tool";
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogDebug(ex, "Failed to extract tool name from XML");
+                    toolName = "Unknown Tool";
+                }
+            }
+
+            // If we have a tool result to display
+            if (!string.IsNullOrEmpty(result) && !string.IsNullOrEmpty(toolName))
+            {
+                // Parse the tool response for enhanced display
+                var toolInfo = _toolResponseParser.ParseToolResponse(toolName, result);
+
+                // Handle different tool types appropriately
+                UnifiedDiff? diff = null;
+                string? displayContent = null;
+
+                try
+                {
+                    var normalizedToolName = toolInfo.ToolName.ToLowerInvariant();
+
+                    // For WriteFileTool - show content directly, no diff
+                    if (IsWriteFileTool(normalizedToolName))
+                    {
+                        displayContent = toolInfo.NewContent ?? ExtractContentFromXml(result);
+                    }
+                    // For EditTool and DiffPatchTools - generate/extract diffs
+                    else if (IsEditTool(normalizedToolName) || IsDiffPatchTool(normalizedToolName))
+                    {
+                        if (!string.IsNullOrEmpty(toolInfo.FilePath))
+                        {
+                            string? originalContent = null;
+                            var newContent = toolInfo.NewContent;
+
+                            // For EditTool, use the captured pre-edit content (Gemini CLI approach)
+                            if (IsEditTool(normalizedToolName) && functionResult != null)
+                            {
+                                if (_functionCallToPreEditContent.TryGetValue(functionResult.CallId, out var preEditContent))
+                                {
+                                    originalContent = preEditContent;
+                                }
+                            }
+                            else
+                            {
+                                // For DiffPatchTools, try to read original content from file
+                                if (File.Exists(toolInfo.FilePath))
+                                {
+                                    try
+                                    {
+                                        originalContent = await File.ReadAllTextAsync(toolInfo.FilePath);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _logger?.LogDebug(ex, "Could not read original file content for diff: {FilePath}", toolInfo.FilePath);
+                                    }
+                                }
+                            }
+
+                            // For EditTool, use content_on_disk as new content
+                            // For DiffPatchTools, read current file content if needed
+                            if (string.IsNullOrEmpty(newContent) && File.Exists(toolInfo.FilePath))
+                            {
+                                try
+                                {
+                                    newContent = await File.ReadAllTextAsync(toolInfo.FilePath);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger?.LogDebug(ex, "Could not read current file content: {FilePath}", toolInfo.FilePath);
+                                }
+                            }
+
+                            // Set up logger for UnifiedDiffGenerator debugging
+                            UnifiedDiffGenerator.SetLogger(_logger);
+
+                            // Generate diff using the tool response parser
+                            diff = _toolResponseParser.ExtractFileDiff(
+                                toolInfo.ToolName,
+                                result,
+                                originalContent,
+                                newContent,
+                                toolInfo.FilePath);
+                        }
+                    }
+                    else
+                    {
+                        displayContent = toolInfo.Summary;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogDebug(ex, "Could not process tool result for display");
+                }
+
+                // Create enhanced tool display with clean styling
+                var toolDisplay = ToolExecutionDisplay.CreateToolDisplay(
+                    toolInfo.ToolName,
+                    toolInfo.Status,
+                    toolInfo.Description,
+                    diff: diff,
+                    result: displayContent ?? toolInfo.Summary ?? result
+                );
+
+                // Display the tool execution result in scrollback
+                _scrollbackTerminal.WriteStatic(toolDisplay);
+                _scrollbackTerminal.WriteStatic(new Markup(""));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error handling tool execution result");
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private static bool IsWriteFileTool(string normalizedToolName)
+    {
+        return normalizedToolName is "write_file" or "writefile" or "write_to_file";
+    }
+
+    private static bool IsEditTool(string normalizedToolName)
+    {
+        return normalizedToolName is "replace_in_file" or "edit_file" or "editfile" or "edit";
+    }
+
+    private static bool IsDiffPatchTool(string normalizedToolName)
+    {
+        return normalizedToolName is "apply_code_patch" or "generate_code_patch" or "preview_patch_application";
+    }
+
+    private static string? ExtractContentFromXml(string xmlResponse)
+    {
+        try
+        {
+            var doc = new XmlDocument();
+            doc.LoadXml(xmlResponse);
+
+            // Look for content_on_disk element
+            var contentNode = doc.SelectSingleNode("//content_on_disk");
+            if (contentNode != null)
+            {
+                return contentNode.InnerText;
+            }
+
+            // Fallback: look for any content in notes
+            var notesNode = doc.SelectSingleNode("//notes");
+            if (notesNode != null)
+            {
+                return notesNode.InnerText?.Trim();
+            }
+
+            return null;
+        }
+        catch (XmlException)
+        {
+            // If XML parsing fails, return null
+            return null;
+        }
+    }
+
+    private async Task CapturePreEditContentForEditTool(FunctionCallContent functionCall)
+    {
+        _logger?.LogDebug("=== CapturePreEditContentForEditTool START ===");
+
+        try
+        {
+            // Only capture for EditTool
+            if (!IsEditTool(functionCall.Name.ToLowerInvariant()))
+            {
+                _logger?.LogDebug("Not an EditTool, skipping pre-edit capture");
+                return;
+            }
+
+            // Extract file_path from function arguments
+            if (functionCall.Arguments?.TryGetValue("file_path", out var filePathValue) == true)
+            {
+                var filePath = filePathValue?.ToString();
+                if (!string.IsNullOrEmpty(filePath))
+                {
+                    _logger?.LogDebug("Capturing pre-edit content for file: {FilePath}", filePath);
+
+                    // Read the entire file content before the edit (Gemini CLI approach)
+                    if (File.Exists(filePath))
+                    {
+                        try
+                        {
+                            var preEditContent = await File.ReadAllTextAsync(filePath);
+                            _functionCallToPreEditContent[functionCall.CallId] = preEditContent;
+                            _logger?.LogDebug("Captured pre-edit content, length: {Length}", preEditContent.Length);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger?.LogDebug(ex, "Failed to read pre-edit content from file: {FilePath}", filePath);
+                        }
+                    }
+                    else
+                    {
+                        _logger?.LogDebug("File does not exist, storing empty pre-edit content: {FilePath}", filePath);
+                        _functionCallToPreEditContent[functionCall.CallId] = string.Empty;
+                    }
+                }
+                else
+                {
+                    _logger?.LogDebug("File path is null or empty");
+                }
+            }
+            else
+            {
+                _logger?.LogDebug("No file_path argument found in function call");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error capturing pre-edit content");
+        }
+
+        _logger?.LogDebug("=== CapturePreEditContentForEditTool END ===");
+    }
+
+    private string? ExtractOriginalContentFromFunctionCall(FunctionCallContent? functionCall)
+    {
+        if (functionCall?.Arguments == null)
+        {
+            _logger?.LogDebug("No function call or arguments available for original content extraction");
+            return null;
+        }
+
+        // For EditTool (replace_in_file), extract the old_string parameter
+        if (functionCall.Arguments.TryGetValue("old_string", out var oldStringValue))
+        {
+            var oldString = oldStringValue?.ToString();
+            _logger?.LogDebug("Extracted old_string from function call, length: {Length}", oldString?.Length ?? 0);
+            return oldString;
+        }
+
+        _logger?.LogDebug("No old_string parameter found in function call arguments");
+        return null;
+    }
+
+    private string? ExtractCallIdFromUpdate(ChatResponseUpdate responseUpdate)
+    {
+        // Try to extract call ID from function call content
+        var functionCall = responseUpdate.Contents?.OfType<FunctionCallContent>().FirstOrDefault();
+        if (functionCall != null)
+        {
+            return functionCall.CallId;
+        }
+
+        // Try to extract call ID from function result content
+        var functionResult = responseUpdate.Contents?.OfType<FunctionResultContent>().FirstOrDefault();
+        if (functionResult != null)
+        {
+            return functionResult.CallId;
+        }
+
+        // No call ID found
+        return null;
     }
 }

@@ -63,7 +63,7 @@
   - **Notes**:
     - **Arguments**: `file_path` (string), `content` (string)
     - **Returns**: (string) A message indicating the result of the operation.
-- **TOR-AIT-2.2**: The system SHALL provide a tool to replace text within a file (`Replace`).
+- **TOR-AIT-2.2**: The system SHALL provide a tool to replace text within a file (`ReplaceInFile`).
   - **Priority**: Critical
   - **Impl Status**: To Be Determined
   - **Verification**: Test, Analysis
