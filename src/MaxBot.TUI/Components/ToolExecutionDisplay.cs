@@ -28,16 +28,16 @@ public static class ToolExecutionDisplay
         var statusLine = CreateCleanToolStatus(toolName, status, description);
         components.Add(statusLine);
 
-        // Add diff visualization if provided (clean, no borders)
+        // Add diff visualization if provided (with borders for replace tools)
         if (diff != null)
         {
-            components.Add(DiffRenderer.RenderCleanDiff(diff));
+            components.Add(DiffRenderer.RenderBorderedDiff(diff));
         }
 
         // Add result content if provided (for write_file operations)
         if (!string.IsNullOrWhiteSpace(result))
         {
-            components.Add(CreateCleanResultDisplay(result, toolName));
+            components.Add(CreateCleanResultDisplay(result, toolName, description));
         }
 
         return new Rows(components);
@@ -97,12 +97,12 @@ public static class ToolExecutionDisplay
     /// <summary>
     /// Creates a clean result display for tool output, especially for write_file operations.
     /// </summary>
-    private static IRenderable CreateCleanResultDisplay(string result, string toolName)
+    private static IRenderable CreateCleanResultDisplay(string result, string toolName, string? description = null)
     {
         // For write_file operations, show the actual content written
         if (IsWriteFileTool(toolName))
         {
-            return CreateFileContentDisplay(result);
+            return CreateBorderedFileContentDisplay(result, toolName, description);
         }
 
         // For other tools, show clean result without heavy borders
@@ -116,6 +116,46 @@ public static class ToolExecutionDisplay
     }
 
     /// <summary>
+    /// Creates a bordered display of file content for write operations with rounded borders.
+    /// Shows the last ~50 lines for WriteFileTool as requested.
+    /// </summary>
+    private static IRenderable CreateBorderedFileContentDisplay(string content, string toolName, string? description = null)
+    {
+        var lines = content.Split('\n');
+        var maxLines = 50;
+
+        var components = new List<IRenderable>();
+
+        // For WriteFileTool, show the last ~50 lines (or all if fewer)
+        var startIndex = Math.Max(0, lines.Length - maxLines);
+        var displayLines = lines.Skip(startIndex).ToArray();
+
+        // Add truncation indicator if we're not showing the beginning
+        if (startIndex > 0)
+        {
+            components.Add(new Markup($"[dim]... (showing last {displayLines.Length} of {lines.Length} lines)[/]"));
+        }
+
+        for (var i = 0; i < displayLines.Length; i++)
+        {
+            var actualLineNumber = startIndex + i + 1;
+            var lineNumber = actualLineNumber.ToString().PadLeft(3);
+            var lineContent = displayLines[i].EscapeMarkup();
+            components.Add(new Markup($"[dim]{lineNumber}[/] {lineContent}"));
+        }
+
+        // Extract filename from description or tool name
+        var fileName = ExtractFileNameFromDescription(description) ?? ExtractFileNameFromToolName(toolName) ?? "file";
+
+        // Wrap content in a bordered panel with rounded borders
+        return new Panel(new Rows(components))
+            .Header($"[bold]{fileName}[/]")
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Grey23)
+            .Padding(1, 0);
+    }
+
+    /// <summary>
     /// Creates a clean display of file content for write operations.
     /// Shows the last ~50 lines for WriteFileTool as requested.
     /// </summary>
@@ -123,7 +163,7 @@ public static class ToolExecutionDisplay
     {
         var lines = content.Split('\n');
         var maxLines = 50;
-        
+
         var components = new List<IRenderable>();
 
         // For WriteFileTool, show the last ~50 lines (or all if fewer)
@@ -201,6 +241,41 @@ public static class ToolExecutionDisplay
     {
         var writeTools = new[] { "write_file", "writefile", "write_to_file", "WriteFile" };
         return writeTools.Contains(toolName, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Extracts filename from description text for display purposes.
+    /// </summary>
+    private static string? ExtractFileNameFromDescription(string? description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+            return null;
+
+        // Look for common filename patterns in the description
+        // e.g., "test_file.js", "src/components/App.tsx", etc.
+        var words = description.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var word in words)
+        {
+            // Check if word looks like a filename (has extension)
+            if (word.Contains('.') && !word.StartsWith('.') && word.Length > 3)
+            {
+                // Extract just the filename part if it's a path
+                return Path.GetFileName(word);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Extracts filename from tool name or description for display purposes.
+    /// </summary>
+    private static string? ExtractFileNameFromToolName(string toolName)
+    {
+        // For now, return a generic name since we don't have the actual filename
+        // In the future, this could be enhanced to extract from tool arguments
+        return "file";
     }
 
     private static string GetStatusIcon(ToolExecutionStatus status)

@@ -191,6 +191,53 @@ public static class DiffRenderer
     }
 
     /// <summary>
+    /// Renders a diff with rounded borders for enhanced visual separation.
+    /// </summary>
+    /// <param name="diff">The unified diff to render</param>
+    /// <returns>A bordered renderable diff with line numbers</returns>
+    public static IRenderable RenderBorderedDiff(UnifiedDiff diff)
+    {
+        if (diff.Hunks.Count == 0)
+        {
+            return new Markup("[dim]No changes detected[/]");
+        }
+
+        // Check if all hunks are empty (have no lines)
+        var totalLines = diff.Hunks.Sum(h => h.Lines?.Count ?? 0);
+        if (totalLines == 0)
+        {
+            return new Markup("[dim]No changes detected (empty diff)[/]");
+        }
+
+        var components = new List<IRenderable>();
+
+        // Render each hunk with line numbers (like Gemini)
+        foreach (var hunk in diff.Hunks)
+        {
+            if (hunk.Lines?.Count > 0)
+            {
+                components.AddRange(RenderCleanHunk(hunk));
+            }
+        }
+
+        // If no components were added, show no changes message
+        if (components.Count == 0)
+        {
+            return new Markup("[dim]No changes detected (no valid hunks)[/]");
+        }
+
+        // Extract filename for header
+        var fileName = Path.GetFileName(diff.ModifiedFile);
+
+        // Wrap the diff content in a bordered panel
+        return new Panel(new Rows(components))
+            .Header($"[bold]{fileName}[/]")
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Blue)
+            .Padding(1, 0);
+    }
+
+    /// <summary>
     /// Creates a diff summary showing the number of additions and deletions.
     /// </summary>
     /// <param name="diff">The unified diff to summarize</param>
