@@ -13,8 +13,8 @@ public static class ServiceConfiguration
         // Add logging - file logging only to keep UI clean
         _ = services.AddLogging(builder =>
         {
-            _ = builder.AddProvider(new FileLoggerProvider(LogLevel.Warning));
-            _ = builder.SetMinimumLevel(LogLevel.Warning);
+            _ = builder.AddProvider(new FileLoggerProvider(LogLevel.Debug));
+            _ = builder.SetMinimumLevel(LogLevel.Debug);
         });
 
         // Add Spectre.Console

@@ -3,8 +3,10 @@ namespace MaxBot.TUI.Services;
 /// <summary>
 /// Parses tool responses and extracts information for enhanced display.
 /// </summary>
-public class ToolResponseParser
+public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
 {
+    private readonly ILogger<ToolResponseParser>? _logger = logger;
+
     /// <summary>
     /// Parses a tool response and extracts display information.
     /// </summary>
@@ -13,30 +15,41 @@ public class ToolResponseParser
     /// <returns>Parsed tool response information</returns>
     public ToolResponseInfo ParseToolResponse(string toolName, string response)
     {
+        _logger?.LogDebug("=== ParseToolResponse START ===");
+        _logger?.LogDebug("ToolName: '{ToolName}', Response length: {Length}", toolName, response?.Length ?? 0);
+        _logger?.LogDebug("Response starts with '<tool_response': {StartsWithXml}", response?.StartsWith("<tool_response") ?? false);
+
         var info = new ToolResponseInfo
         {
             ToolName = toolName,
-            RawResponse = response,
+            RawResponse = response ?? "",
             Status = ToolExecutionStatus.Success
         };
 
         // Try to parse XML response
-        if (response.StartsWith("<tool_response"))
+        if (response?.StartsWith("<tool_response") == true)
         {
+            _logger?.LogDebug("Parsing as XML response...");
             ParseXmlResponse(info, response);
+            _logger?.LogDebug("XML parsing complete - Status: {Status}, Description: '{Description}', FilePath: '{FilePath}'", 
+                info.Status, info.Description, info.FilePath);
         }
         else
         {
+            _logger?.LogDebug("Parsing as non-XML response...");
             // Fallback for non-XML responses
             info.Description = "Tool executed";
-            info.Summary = response.Length > 100 ? response[..97] + "..." : response;
+            info.Summary = response?.Length > 100 ? response[..97] + "..." : response ?? "";
+            _logger?.LogDebug("Non-XML parsing complete - Description: '{Description}', Summary length: {Length}", 
+                info.Description, info.Summary?.Length ?? 0);
         }
 
+        _logger?.LogDebug("=== ParseToolResponse END ===");
         return info;
     }
 
     /// <summary>
-    /// Extracts file change information from tool responses to generate diffs.
+    /// Extracts file change information from tool responses to generate appropriate display content.
     /// </summary>
     /// <param name="toolName">The name of the tool</param>
     /// <param name="response">The tool response</param>
@@ -46,32 +59,34 @@ public class ToolResponseParser
     /// <returns>A unified diff if file changes are detected</returns>
     public UnifiedDiff? ExtractFileDiff(string toolName, string response, string? originalContent, string? newContent, string? filePath)
     {
-        // Only generate diffs for file modification tools
-        if (!IsFileModificationTool(toolName) || string.IsNullOrEmpty(filePath))
+        _logger?.LogDebug("ExtractFileDiff called - ToolName: '{ToolName}', FilePath: '{FilePath}', HasOriginal: {HasOriginal}, HasNew: {HasNew}", 
+            toolName, filePath, originalContent != null, newContent != null);
+
+        // Handle different tool types appropriately
+        var normalizedToolName = toolName.ToLowerInvariant();
+
+        // For WriteFileTool - don't generate diffs, content will be shown directly
+        if (IsWriteFileTool(normalizedToolName))
         {
+            _logger?.LogDebug("WriteFileTool detected - skipping diff generation");
             return null;
         }
 
-        // If we have both original and new content, generate a diff
-        if (originalContent != null && newContent != null && originalContent != newContent)
+        // For EditTool - generate diff to show old vs new replacement
+        if (IsEditTool(normalizedToolName))
         {
-            return UnifiedDiffGenerator.GenerateDiff(
-                originalContent, 
-                newContent, 
-                $"a/{Path.GetFileName(filePath)}", 
-                $"b/{Path.GetFileName(filePath)}");
+            _logger?.LogDebug("EditTool detected - generating replacement diff");
+            return GenerateEditToolDiff(originalContent, newContent, filePath);
         }
 
-        // For new files, show as all additions
-        if (originalContent == null && newContent != null)
+        // For DiffPatchTools - extract diff from response or generate if needed
+        if (IsDiffPatchTool(normalizedToolName))
         {
-            return UnifiedDiffGenerator.GenerateDiff(
-                "", 
-                newContent, 
-                "/dev/null", 
-                $"b/{Path.GetFileName(filePath)}");
+            _logger?.LogDebug("DiffPatchTool detected - extracting or generating diff");
+            return ExtractOrGeneratePatchDiff(response, originalContent, newContent, filePath);
         }
 
+        _logger?.LogDebug("Unknown tool type - no diff generated");
         return null;
     }
 
@@ -163,16 +178,211 @@ public class ToolResponseParser
         }
     }
 
+    private static bool IsWriteFileTool(string normalizedToolName)
+    {
+        return normalizedToolName is "write_file" or "writefile" or "write_to_file";
+    }
+
+    private static bool IsEditTool(string normalizedToolName)
+    {
+        return normalizedToolName is "replace" or "edit_file" or "editfile" or "edit";
+    }
+
+    private static bool IsDiffPatchTool(string normalizedToolName)
+    {
+        return normalizedToolName is "apply_code_patch" or "generate_code_patch" or "preview_patch_application";
+    }
+
+    private UnifiedDiff? GenerateEditToolDiff(string? originalContent, string? newContent, string? filePath)
+    {
+        if (string.IsNullOrEmpty(filePath) || newContent == null)
+        {
+            _logger?.LogDebug("EditTool diff generation skipped - missing filePath or newContent");
+            return null;
+        }
+
+        // For EditTool, we need to reconstruct the original content by reversing the replacement
+        // The originalContent parameter should contain the old_string from the function call
+        // The newContent should be the content_on_disk from the response
+        
+        if (originalContent == null)
+        {
+            _logger?.LogDebug("EditTool diff generation skipped - no original content provided");
+            return null;
+        }
+
+        // Generate diff showing the replacement
+        _logger?.LogDebug("Generating EditTool diff with original length: {OriginalLength}, new length: {NewLength}", 
+            originalContent.Length, newContent.Length);
+        
+        try
+        {
+            // Enable logging in UnifiedDiffGenerator for debugging
+            UnifiedDiffGenerator.SetLogger(_logger);
+            
+            var diff = UnifiedDiffGenerator.GenerateDiff(
+                originalContent, 
+                newContent, 
+                $"a/{Path.GetFileName(filePath)}", 
+                $"b/{Path.GetFileName(filePath)}");
+            
+            _logger?.LogDebug("EditTool diff generation completed - Hunks: {HunkCount}", diff?.Hunks?.Count ?? 0);
+            
+            if (diff?.Hunks?.Count > 0)
+            {
+                _logger?.LogDebug("First hunk details - OriginalStart: {OriginalStart}, ModifiedStart: {ModifiedStart}, Lines: {LineCount}", 
+                    diff.Hunks[0].OriginalStart, diff.Hunks[0].ModifiedStart, diff.Hunks[0].Lines?.Count ?? 0);
+            }
+            
+            return diff;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error generating EditTool diff");
+            return null;
+        }
+    }
+
+    private UnifiedDiff? ExtractOrGeneratePatchDiff(string response, string? originalContent, string? newContent, string? filePath)
+    {
+        // First try to extract diff from the response XML
+        try
+        {
+            var doc = new XmlDocument();
+            doc.LoadXml(response);
+
+            // Look for patch content in the response
+            var patchNode = doc.SelectSingleNode("//patch");
+            if (patchNode != null)
+            {
+                var patchContent = patchNode.InnerText?.Trim();
+                if (!string.IsNullOrEmpty(patchContent))
+                {
+                    _logger?.LogDebug("Found patch content in response, parsing...");
+                    return ParseUnifiedDiffFromResponse(patchContent);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Could not extract patch from response XML");
+        }
+
+        // Fallback: generate diff if we have content
+        if (originalContent != null && newContent != null && !string.IsNullOrEmpty(filePath))
+        {
+            _logger?.LogDebug("Generating fallback diff for DiffPatchTool");
+            return UnifiedDiffGenerator.GenerateDiff(
+                originalContent, 
+                newContent, 
+                $"a/{Path.GetFileName(filePath)}", 
+                $"b/{Path.GetFileName(filePath)}");
+        }
+
+        _logger?.LogDebug("No diff generated for DiffPatchTool");
+        return null;
+    }
+
+    private UnifiedDiff? ParseUnifiedDiffFromResponse(string patchContent)
+    {
+        try
+        {
+            var lines = patchContent.Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
+            var hunks = new List<DiffHunk>();
+            var currentHunkLines = new List<DiffLine>();
+            string? originalFile = null;
+            string? modifiedFile = null;
+            var originalStart = 0;
+            var modifiedStart = 0;
+            var originalLength = 0;
+            var modifiedLength = 0;
+
+            foreach (var line in lines)
+            {
+                if (line.StartsWith("--- "))
+                {
+                    originalFile = line[4..].Split('\t')[0];
+                    continue;
+                }
+                if (line.StartsWith("+++ "))
+                {
+                    modifiedFile = line[4..].Split('\t')[0];
+                    continue;
+                }
+                if (line.StartsWith("@@ "))
+                {
+                    if (currentHunkLines.Count > 0)
+                    {
+                        hunks.Add(new DiffHunk 
+                        { 
+                            Lines = currentHunkLines, 
+                            OriginalStart = originalStart, 
+                            OriginalLength = originalLength, 
+                            ModifiedStart = modifiedStart, 
+                            ModifiedLength = modifiedLength 
+                        });
+                        currentHunkLines = [];
+                    }
+
+                    var match = System.Text.RegularExpressions.Regex.Match(line, @"^@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@");
+                    if (!match.Success)
+                    {
+                        _logger?.LogDebug("Failed to parse hunk header: {Line}", line);
+                        return null;
+                    }
+
+                    originalStart = int.Parse(match.Groups[1].Value);
+                    originalLength = match.Groups[3].Success ? int.Parse(match.Groups[3].Value) : 1;
+                    modifiedStart = int.Parse(match.Groups[4].Value);
+                    modifiedLength = match.Groups[6].Success ? int.Parse(match.Groups[6].Value) : 1;
+                    continue;
+                }
+
+                if (line.StartsWith("+"))
+                {
+                    currentHunkLines.Add(new DiffLine { Type = DiffLineType.Added, Content = line[1..] });
+                }
+                else if (line.StartsWith("-"))
+                {
+                    currentHunkLines.Add(new DiffLine { Type = DiffLineType.Removed, Content = line[1..] });
+                }
+                else if (line.StartsWith(" "))
+                {
+                    currentHunkLines.Add(new DiffLine { Type = DiffLineType.Context, Content = line[1..] });
+                }
+            }
+
+            if (currentHunkLines.Count > 0)
+            {
+                hunks.Add(new DiffHunk 
+                { 
+                    Lines = currentHunkLines, 
+                    OriginalStart = originalStart, 
+                    OriginalLength = originalLength, 
+                    ModifiedStart = modifiedStart, 
+                    ModifiedLength = modifiedLength 
+                });
+            }
+
+            if (originalFile == null || modifiedFile == null)
+            {
+                _logger?.LogDebug("Patch did not contain file headers");
+                return null;
+            }
+
+            return new UnifiedDiff { OriginalFile = originalFile, ModifiedFile = modifiedFile, Hunks = hunks };
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Error parsing unified diff from response");
+            return null;
+        }
+    }
+
     private static bool IsFileModificationTool(string toolName)
     {
-        var fileTools = new[]
-        {
-            "write_file", "writefile", "write_to_file",
-            "edit_file", "editfile", "edit",
-            "create_file", "createfile"
-        };
-
-        return fileTools.Contains(toolName.ToLowerInvariant());
+        var normalizedToolName = toolName.ToLowerInvariant();
+        return IsWriteFileTool(normalizedToolName) || IsEditTool(normalizedToolName) || IsDiffPatchTool(normalizedToolName);
     }
 }
 

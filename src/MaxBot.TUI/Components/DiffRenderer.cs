@@ -152,6 +152,45 @@ public static class DiffRenderer
     }
 
     /// <summary>
+    /// Renders a clean diff without borders, matching Gemini CLI's style with line numbers.
+    /// </summary>
+    /// <param name="diff">The unified diff to render</param>
+    /// <returns>A clean renderable diff with line numbers</returns>
+    public static IRenderable RenderCleanDiff(UnifiedDiff diff)
+    {
+        if (diff.Hunks.Count == 0)
+        {
+            return new Markup("[dim]No changes detected[/]");
+        }
+
+        // Check if all hunks are empty (have no lines)
+        var totalLines = diff.Hunks.Sum(h => h.Lines?.Count ?? 0);
+        if (totalLines == 0)
+        {
+            return new Markup("[dim]No changes detected (empty diff)[/]");
+        }
+
+        var components = new List<IRenderable>();
+
+        // Render each hunk with line numbers (like Gemini)
+        foreach (var hunk in diff.Hunks)
+        {
+            if (hunk.Lines?.Count > 0)
+            {
+                components.AddRange(RenderCleanHunk(hunk));
+            }
+        }
+
+        // If no components were added, show no changes message
+        if (components.Count == 0)
+        {
+            return new Markup("[dim]No changes detected (no valid hunks)[/]");
+        }
+
+        return new Rows(components);
+    }
+
+    /// <summary>
     /// Creates a diff summary showing the number of additions and deletions.
     /// </summary>
     /// <param name="diff">The unified diff to summarize</param>
@@ -197,5 +236,58 @@ public static class DiffRenderer
         }
 
         return new Markup($"[dim]({string.Join(" ", parts)})[/]");
+    }
+
+    /// <summary>
+    /// Renders a clean hunk with line numbers on the left, matching Gemini CLI's style.
+    /// </summary>
+    private static IEnumerable<IRenderable> RenderCleanHunk(DiffHunk hunk)
+    {
+        var components = new List<IRenderable>();
+
+        // Render each line in the hunk with line numbers
+        foreach (var line in hunk.Lines)
+        {
+            components.Add(RenderCleanDiffLine(line));
+        }
+
+        return components;
+    }
+
+    /// <summary>
+    /// Renders a single diff line with line number, prefix, and content.
+    /// </summary>
+    private static IRenderable RenderCleanDiffLine(DiffLine line)
+    {
+        var prefix = line.Type switch
+        {
+            DiffLineType.Added => "+",
+            DiffLineType.Removed => "-",
+            DiffLineType.Context => " ",
+            _ => " "
+        };
+
+        var color = line.Type switch
+        {
+            DiffLineType.Added => "green",
+            DiffLineType.Removed => "red",
+            DiffLineType.Context => "white",
+            _ => "white"
+        };
+
+        var content = line.Content.EscapeMarkup();
+
+        // Get line number based on line type
+        var lineNumber = line.Type switch
+        {
+            DiffLineType.Added => line.ModifiedLineNumber?.ToString() ?? "",
+            DiffLineType.Removed => line.OriginalLineNumber?.ToString() ?? "",
+            DiffLineType.Context => line.ModifiedLineNumber?.ToString() ?? line.OriginalLineNumber?.ToString() ?? "",
+            _ => ""
+        };
+
+        // Format like Gemini: "  1  + const hello = () => {"
+        var lineNumberPadded = lineNumber.PadLeft(3);
+        return new Markup($"[dim]{lineNumberPadded}[/]  [{color}]{prefix} {content}[/]");
     }
 }

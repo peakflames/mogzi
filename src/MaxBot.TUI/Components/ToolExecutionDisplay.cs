@@ -1,20 +1,20 @@
 namespace MaxBot.TUI.Components;
 
 /// <summary>
-/// Displays tool execution results with enhanced visual feedback, including colored diffs and structured output.
-/// Inspired by Gemini CLI's ToolGroupMessage component.
+/// Displays tool execution results with clean, minimal visual feedback.
+/// No heavy borders or nested panels - focuses on content clarity.
 /// </summary>
 public static class ToolExecutionDisplay
 {
     /// <summary>
-    /// Creates a visual display for tool execution with status indicator and optional diff.
+    /// Creates a clean visual display for tool execution with status indicator and optional diff.
     /// </summary>
     /// <param name="toolName">The name of the tool being executed</param>
     /// <param name="status">The execution status</param>
     /// <param name="description">Optional description of what the tool is doing</param>
     /// <param name="diff">Optional diff to display for file changes</param>
     /// <param name="result">Optional result content to display</param>
-    /// <returns>A renderable component showing the tool execution</returns>
+    /// <returns>A clean renderable component showing the tool execution</returns>
     public static IRenderable CreateToolDisplay(
         string toolName,
         ToolExecutionStatus status,
@@ -24,32 +24,23 @@ public static class ToolExecutionDisplay
     {
         var components = new List<IRenderable>();
 
-        // Create header with tool name and status
-        var header = CreateToolHeader(toolName, status, description);
-        components.Add(header);
+        // Create clean tool status line
+        var statusLine = CreateCleanToolStatus(toolName, status, description);
+        components.Add(statusLine);
 
-        // Add diff visualization if provided
+        // Add diff visualization if provided (clean, no borders)
         if (diff != null)
         {
-            components.Add(new Text(""));
-            components.Add(DiffRenderer.RenderDiff(diff));
+            components.Add(DiffRenderer.RenderCleanDiff(diff));
         }
 
-        // Add result content if provided
+        // Add result content if provided (for write_file operations)
         if (!string.IsNullOrWhiteSpace(result))
         {
-            components.Add(new Text(""));
-            components.Add(CreateResultDisplay(result));
+            components.Add(CreateCleanResultDisplay(result, toolName));
         }
 
-        // Wrap in a bordered panel for visual separation
-        var content = new Rows(components);
-        return new Panel(content)
-            .Border(BoxBorder.Rounded)
-            .BorderColor(GetBorderColor(status))
-            .Header($" {GetStatusIcon(status)} Tool Execution ")
-            .HeaderAlignment(Justify.Left)
-            .Padding(1, 0);
+        return new Rows(components);
     }
 
     /// <summary>
@@ -77,39 +68,92 @@ public static class ToolExecutionDisplay
         return new Markup($"[yellow]{text}[/]");
     }
 
-    private static IRenderable CreateToolHeader(string toolName, ToolExecutionStatus status, string? description)
+
+    /// <summary>
+    /// Creates a clean, compact tool status line matching.
+    /// </summary>
+    private static IRenderable CreateCleanToolStatus(string toolName, ToolExecutionStatus status, string? description)
     {
         var statusIcon = GetStatusIcon(status);
         var statusColor = GetStatusColor(status);
 
-        var headerText = !string.IsNullOrWhiteSpace(description)
-            ? $"[{statusColor}]{statusIcon}[/] [bold]{toolName}[/] [dim]→ {description}[/]"
+        // Create compact status line: "✓ ReadFile test_file.js"
+        var statusText = !string.IsNullOrWhiteSpace(description)
+            ? $"[{statusColor}]{statusIcon}[/] [bold]{toolName}[/] [dim]{description}[/]"
             : $"[{statusColor}]{statusIcon}[/] [bold]{toolName}[/]";
 
-        return new Markup(headerText);
-    }
-
-    private static IRenderable CreateResultDisplay(string result)
-    {
-        // Try to parse XML tool response for better formatting
-        if (result.StartsWith("<tool_response"))
+        // For completed tools, create a subtle visual distinction
+        if (status == ToolExecutionStatus.Success)
         {
-            return FormatXmlToolResponse(result);
+            // Use a simple panel without borders to create visual grouping
+            return new Panel(new Markup(statusText))
+                .Border(BoxBorder.None)
+                .Padding(0, 0);
         }
 
-        // Fallback to simple text display
-        return new Panel(new Markup(result.EscapeMarkup()))
-            .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Grey23)
-            .Header(" Result ")
-            .Padding(1, 0);
+        return new Markup(statusText);
     }
 
-    private static IRenderable FormatXmlToolResponse(string xmlResponse)
+    /// <summary>
+    /// Creates a clean result display for tool output, especially for write_file operations.
+    /// </summary>
+    private static IRenderable CreateCleanResultDisplay(string result, string toolName)
+    {
+        // For write_file operations, show the actual content written
+        if (IsWriteFileTool(toolName))
+        {
+            return CreateFileContentDisplay(result);
+        }
+
+        // For other tools, show clean result without heavy borders
+        if (result.StartsWith("<tool_response"))
+        {
+            return FormatCleanXmlResponse(result);
+        }
+
+        // Simple text display for other results
+        return new Markup($"[dim]{result.EscapeMarkup()}[/]");
+    }
+
+    /// <summary>
+    /// Creates a clean display of file content for write operations.
+    /// Shows the last ~50 lines for WriteFileTool as requested.
+    /// </summary>
+    private static IRenderable CreateFileContentDisplay(string content)
+    {
+        var lines = content.Split('\n');
+        var maxLines = 50;
+        
+        var components = new List<IRenderable>();
+
+        // For WriteFileTool, show the last ~50 lines (or all if fewer)
+        var startIndex = Math.Max(0, lines.Length - maxLines);
+        var displayLines = lines.Skip(startIndex).ToArray();
+
+        // Add truncation indicator if we're not showing the beginning
+        if (startIndex > 0)
+        {
+            components.Add(new Markup($"[dim]... (showing last {displayLines.Length} of {lines.Length} lines)[/]"));
+        }
+
+        for (var i = 0; i < displayLines.Length; i++)
+        {
+            var actualLineNumber = startIndex + i + 1;
+            var lineNumber = actualLineNumber.ToString().PadLeft(3);
+            var lineContent = displayLines[i].EscapeMarkup();
+            components.Add(new Markup($"[dim]{lineNumber}[/] {lineContent}"));
+        }
+
+        return new Rows(components);
+    }
+
+    /// <summary>
+    /// Formats XML tool responses without heavy borders.
+    /// </summary>
+    private static IRenderable FormatCleanXmlResponse(string xmlResponse)
     {
         try
         {
-            // Simple XML parsing to extract key information
             var lines = new List<string>();
 
             if (xmlResponse.Contains("<notes>"))
@@ -119,7 +163,7 @@ public static class ToolExecutionDisplay
                 if (notesEnd > notesStart)
                 {
                     var notes = xmlResponse[notesStart..notesEnd].Trim();
-                    lines.AddRange(notes.Split('\n').Select(line => line.Trim()));
+                    lines.AddRange(notes.Split('\n').Select(line => $"[dim]{line.Trim().EscapeMarkup()}[/]"));
                 }
             }
 
@@ -143,24 +187,20 @@ public static class ToolExecutionDisplay
                 }
             }
 
-            var content = lines.Count > 0
+            return lines.Count > 0
                 ? new Rows(lines.Select(line => new Markup(line)))
-                : (IRenderable)new Markup(xmlResponse.EscapeMarkup());
-            return new Panel(content)
-                .Border(BoxBorder.Rounded)
-                .BorderColor(Color.Grey23)
-                .Header(" Result ")
-                .Padding(1, 0);
+                : new Markup($"[dim]{xmlResponse.EscapeMarkup()}[/]");
         }
         catch
         {
-            // Fallback to raw display if XML parsing fails
-            return new Panel(new Markup(xmlResponse.EscapeMarkup()))
-                .Border(BoxBorder.Rounded)
-                .BorderColor(Color.Grey23)
-                .Header(" Result ")
-                .Padding(1, 0);
+            return new Markup($"[dim]{xmlResponse.EscapeMarkup()}[/]");
         }
+    }
+
+    private static bool IsWriteFileTool(string toolName)
+    {
+        var writeTools = new[] { "write_file", "writefile", "write_to_file", "WriteFile" };
+        return writeTools.Contains(toolName, StringComparer.OrdinalIgnoreCase);
     }
 
     private static string GetStatusIcon(ToolExecutionStatus status)
@@ -184,18 +224,6 @@ public static class ToolExecutionDisplay
             ToolExecutionStatus.Failed => "red",
             ToolExecutionStatus.Confirming => "blue",
             _ => "white"
-        };
-    }
-
-    private static Color GetBorderColor(ToolExecutionStatus status)
-    {
-        return status switch
-        {
-            ToolExecutionStatus.Executing => Color.Yellow,
-            ToolExecutionStatus.Success => Color.Green,
-            ToolExecutionStatus.Failed => Color.Red,
-            ToolExecutionStatus.Confirming => Color.Blue,
-            _ => Color.Grey23
         };
     }
 }
