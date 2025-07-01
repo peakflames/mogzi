@@ -29,6 +29,16 @@ graph TD
     C --> F[SlashCommandProcessor]
     C --> G[HistoryManager]
     C --> H[StateManager]
+    C --> AC[AutocompleteManager]
+    
+    AC --> FP[FilePathProvider]
+    AC --> SCP[SlashCommandProvider]
+    FP --> IAP[IAutocompleteProvider]
+    SCP --> IAP
+    
+    C --> IC[InputContext]
+    IC --> IS[InputState]
+    IC --> CT[CompletionItem]
     
     I[IAppService] --> J[ChatClient]
     J --> K[SystemTools]
@@ -119,6 +129,11 @@ public static void ConfigureServices(IServiceCollection services)
     services.AddSingleton<IAppService, AppService>();
     services.AddSingleton<HistoryManager>();
     services.AddSingleton<StateManager>();
+
+    // Add autocomplete services
+    services.AddSingleton<AutocompleteManager>();
+    services.AddSingleton<IAutocompleteProvider, FilePathProvider>();
+    services.AddSingleton<IAutocompleteProvider, SlashCommandProvider>();
 
     // Add TUI infrastructure components
     services.AddSingleton<FlexColumnTuiApp>();
@@ -310,6 +325,162 @@ IChatClient chatClient = new OpenAIClient(credentials, options)
 - **JSON Configuration**: File-based configuration with validation
 - **Environment Integration**: System information injection (username, hostname, working directory)
 - **Profile Management**: Multiple AI provider and model configurations
+
+## Autocomplete Architecture
+
+**Provider Pattern with Trigger-Based System:**
+```csharp
+// Core autocomplete interface with provider pattern
+public interface IAutocompleteProvider
+{
+    AutocompleteType Type { get; }
+    char TriggerCharacter { get; }
+    bool ShouldTrigger(string input, int cursorPosition);
+    string ExtractPartial(string input, int cursorPosition);
+    Task<List<CompletionItem>> GetSuggestionsAsync(string partialInput);
+    (string newInput, int newCursorPos) ReplacePartial(string input, int cursorPos, string completion);
+}
+
+// Autocomplete coordination service
+public class AutocompleteManager
+{
+    public IAutocompleteProvider? DetectTrigger(string input, int cursorPosition);
+    public async Task UpdateSuggestionsAsync(InputContext context);
+    public void AcceptSuggestion(InputContext context);
+}
+```
+
+**Autocomplete Flow Architecture:**
+```mermaid
+sequenceDiagram
+    participant User
+    participant FlexColumnTuiApp
+    participant InputContext
+    participant AutocompleteManager
+    participant Provider
+    participant FileSystem
+
+    User->>FlexColumnTuiApp: Types trigger character (@, /)
+    FlexColumnTuiApp->>InputContext: UpdateAutocompleteState()
+    InputContext->>AutocompleteManager: DetectTrigger()
+    AutocompleteManager->>Provider: ShouldTrigger()
+    Provider-->>AutocompleteManager: true/false
+    
+    alt Trigger Detected
+        AutocompleteManager->>Provider: ExtractPartial()
+        Provider-->>AutocompleteManager: partial input
+        AutocompleteManager->>Provider: GetSuggestionsAsync()
+        Provider->>FileSystem: Scan directories/commands
+        FileSystem-->>Provider: Results
+        Provider-->>AutocompleteManager: List<CompletionItem>
+        AutocompleteManager->>InputContext: Update suggestions
+        InputContext-->>FlexColumnTuiApp: Show autocomplete UI
+    end
+    
+    User->>FlexColumnTuiApp: Selects suggestion (Tab/Enter)
+    FlexColumnTuiApp->>AutocompleteManager: AcceptSuggestion()
+    AutocompleteManager->>Provider: ReplacePartial()
+    Provider-->>AutocompleteManager: (newInput, newCursorPos)
+    AutocompleteManager->>InputContext: Update input and cursor
+```
+
+**Input Context State Management:**
+```csharp
+// Unified input state with autocomplete integration
+public class InputContext
+{
+    public string CurrentInput { get; set; }
+    public int CursorPosition { get; set; }
+    public InputState State { get; set; } // Normal, Autocomplete
+    public AutocompleteType ActiveAutocompleteType { get; set; }
+    public IAutocompleteProvider? ActiveProvider { get; set; }
+    public List<CompletionItem> CompletionItems { get; set; }
+    public bool ShowSuggestions { get; set; }
+    public int SelectedSuggestionIndex { get; set; }
+}
+```
+
+**Provider Implementations:**
+
+**FilePathProvider Architecture:**
+- **Security-First Design**: All file operations validated within working directory boundaries
+- **Async File System Operations**: Non-blocking directory scanning with Task<List<CompletionItem>>
+- **Performance Optimization**: Results limited to 20 items, sorted by type (directories first)
+- **Cross-Platform Path Handling**: Normalized forward slashes, relative path calculation
+- **Trigger Logic**: '@' character detection with word boundary validation
+- **Smart Path Extraction**: Handles partial paths, directory separators, and cursor positioning
+
+```csharp
+// FilePathProvider security and performance patterns
+private bool IsWithinWorkingDirectory(string path, string workingDir)
+{
+    var fullPath = Path.GetFullPath(path);
+    var fullWorkingDir = Path.GetFullPath(workingDir);
+    return fullPath.StartsWith(fullWorkingDir, StringComparison.OrdinalIgnoreCase);
+}
+
+// Efficient file system scanning with limits
+var directories = Directory.GetDirectories(searchDirectory)
+    .Where(dir => string.IsNullOrEmpty(searchPattern) || 
+                 Path.GetFileName(dir).StartsWith(searchPattern, StringComparison.OrdinalIgnoreCase))
+    .Take(20);
+```
+
+**SlashCommandProvider Architecture:**
+- **Command Registry Integration**: Leverages existing SlashCommandProcessor for command enumeration
+- **Trigger Detection**: '/' character at word boundaries using InputUtils helper methods
+- **Command Metadata**: Provides descriptions and usage information for each command
+- **Text Replacement**: Smart command replacement with automatic space insertion
+
+**Terminal UI Integration:**
+```csharp
+// Composite UI rendering with autocomplete overlay
+private IRenderable CreateInputWithAutocomplete(InputContext context)
+{
+    var inputPanel = CreateFlexInputComponent(context.CurrentInput);
+    
+    if (!context.ShowSuggestions || context.Suggestions.Count == 0)
+        return inputPanel;
+
+    var suggestionItems = context.Suggestions.Select((suggestion, index) => 
+    {
+        var isSelected = index == context.SelectedSuggestionIndex;
+        var style = isSelected ? "[blue on white]" : "[dim]";
+        var prefix = isSelected ? ">" : " ";
+        return new Markup($"{style}{prefix} {suggestion}[/]");
+    }).ToArray();
+
+    var suggestionsPanel = new Panel(new Rows(suggestionItems))
+        .Border(BoxBorder.Rounded)
+        .BorderColor(Color.Blue);
+
+    return new Rows(inputPanel, suggestionsPanel);
+}
+```
+
+**Keyboard Event Integration:**
+- **Event-Driven Architecture**: Integrates with AdvancedKeyboardHandler's event system
+- **Priority Handling**: Autocomplete navigation (Up/Down/Tab/Enter/Escape) takes precedence over normal input
+- **State-Aware Processing**: Different key behaviors based on InputState (Normal vs Autocomplete)
+- **Graceful Cancellation**: Escape key clears autocomplete state and returns to normal input
+
+**Error Handling and Resilience:**
+- **Provider Isolation**: Exceptions in one provider don't affect others or crash the application
+- **Graceful Degradation**: Failed autocomplete operations clear state and continue normal input
+- **Comprehensive Logging**: Debug-level logging for troubleshooting without UI disruption
+- **Memory Management**: Autocomplete state cleared when not needed to prevent memory leaks
+
+**Extensibility Architecture:**
+- **Plugin Pattern**: New autocomplete types can be added by implementing IAutocompleteProvider
+- **Dependency Injection**: Providers automatically discovered and registered through DI container
+- **Type Safety**: AutocompleteType enum ensures type-safe provider identification
+- **Metadata Support**: CompletionItem includes type, description, and extensible metadata
+
+**Performance Characteristics:**
+- **Non-Blocking Operations**: All file system and command enumeration operations are async
+- **Efficient Text Processing**: String operations optimized for cursor position tracking
+- **Minimal UI Updates**: Only updates autocomplete UI when suggestions change
+- **Resource Limits**: Built-in limits prevent excessive memory usage or long operations
 
 ## State Management Architecture
 

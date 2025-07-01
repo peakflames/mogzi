@@ -16,7 +16,7 @@ Prepare an AI model to work effectively on the MaxBot project by ensuring compre
 
 3. Use the `read_file` tool to read `docs/process/03_architecture.md` to understand the system architecture, patterns, and component relationships.
 
-4. Use the `read_file` tool to read `docs/process/04_design.md` to understand the detailed implementation design and coding patterns.
+4. Use the `read_file` tool to read `docs/process/04_00_design.md` to understand the detailed implementation design and coding patterns.
 
 5. Use the `read_file` tool to read `docs/process/05_ai_tool_op_requirements.md` to understand the AI tool operational requirements.
 
@@ -88,6 +88,14 @@ Prepare an AI model to work effectively on the MaxBot project by ensuring compre
 3. Use the `ask_followup_question` tool to ask the user: "Should I perform this request in a simulate PLAN MODE?"
 
 4. Continue according to their response.
+
+## 8. Update Architecture and Design Documentation
+
+1. Use the `ask_followup_question` tool to ask the user: "Should I update the arch and design documents to reflect the change made during this task?"
+
+2. Continue according to their response.
+
+REMINDER: Prefer to only update to reflect the implemenation and AVOID documenting anything else
 
 ## 8. Task Completion
 
