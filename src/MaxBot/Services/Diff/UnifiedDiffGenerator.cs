@@ -8,7 +8,7 @@ namespace MaxBot.Services.Diff;
 /// <summary>
 /// Generates a unified diff from two sequences of strings.
 /// </summary>
-internal static class UnifiedDiffGenerator
+public static class UnifiedDiffGenerator
 {
     /// <summary>
     /// Generates a unified diff.

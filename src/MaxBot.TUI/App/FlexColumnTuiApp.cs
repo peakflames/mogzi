@@ -12,6 +12,7 @@ public sealed class FlexColumnTuiApp : IDisposable
     private readonly AutocompleteManager _autocompleteManager;
     private readonly IScrollbackTerminal _scrollbackTerminal;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
+    private readonly ToolResponseParser _toolResponseParser;
     private bool _isDisposed = false;
 
     // Chat state
@@ -40,6 +41,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         _historyManager = serviceProvider.GetRequiredService<HistoryManager>();
         _scrollbackTerminal = serviceProvider.GetRequiredService<IScrollbackTerminal>();
         _workingDirectoryProvider = serviceProvider.GetRequiredService<IWorkingDirectoryProvider>();
+        _toolResponseParser = serviceProvider.GetRequiredService<ToolResponseParser>();
 
         _cancellationTokenSource = new CancellationTokenSource();
 
@@ -846,6 +848,9 @@ public sealed class FlexColumnTuiApp : IDisposable
                         _toolProgress = $"Executing {_currentToolName}...";
                         _scrollbackTerminal.WriteStatic(new Markup($"[green]•[/] [dim]{_toolProgress}[/]"));
                     }
+
+                    // Handle tool result display
+                    await HandleToolExecutionResult(responseUpdate);
                 }
             }
             _scrollbackTerminal.WriteStatic(new Markup(""));
@@ -1160,5 +1165,46 @@ public sealed class FlexColumnTuiApp : IDisposable
         {
             _logger?.LogError(ex, "Error interrupting AI operation");
         }
+    }
+
+    private async Task HandleToolExecutionResult(ChatResponseUpdate responseUpdate)
+    {
+        try
+        {
+            if (responseUpdate.Contents == null)
+            {
+                return;
+            }
+
+            // Handle function result content (tool execution completed)
+            var functionResult = responseUpdate.Contents.OfType<FunctionResultContent>().FirstOrDefault();
+            if (functionResult != null)
+            {
+                var toolName = functionResult.CallId ?? "Unknown Tool";
+                var result = functionResult.Result?.ToString() ?? "";
+
+                // Parse the tool response for enhanced display
+                var toolInfo = _toolResponseParser.ParseToolResponse(toolName, result);
+
+                // Create enhanced tool display
+                var toolDisplay = ToolExecutionDisplay.CreateToolDisplay(
+                    toolInfo.ToolName,
+                    toolInfo.Status,
+                    toolInfo.Description,
+                    diff: null, // We'll add diff generation in a future enhancement
+                    result: toolInfo.Summary ?? result
+                );
+
+                // Display the tool execution result in scrollback
+                _scrollbackTerminal.WriteStatic(toolDisplay);
+                _scrollbackTerminal.WriteStatic(new Markup(""));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error handling tool execution result");
+        }
+
+        await Task.CompletedTask;
     }
 }

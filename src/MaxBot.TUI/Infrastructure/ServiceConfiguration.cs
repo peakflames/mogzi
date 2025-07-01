@@ -50,5 +50,6 @@ public static class ServiceConfiguration
         // Add TUI infrastructure components
         _ = services.AddSingleton<FlexColumnTuiApp>();
         _ = services.AddSingleton<IScrollbackTerminal, ScrollbackTerminal>();
+        _ = services.AddSingleton<ToolResponseParser>();
     }
 }
