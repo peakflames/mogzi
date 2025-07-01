@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.13.2 - IN PROGRESS]
 
-- TBD
+- Add **Enhanced Tool Display**: Tool execution results now display in bordered panels for improved visual separation
+  - Write file operations show content in grey rounded border panels with filename headers
+  - Replace operations show diffs in blue rounded border panels with filename headers
+  - Intelligent filename extraction from tool descriptions for accurate panel headers
+  - Borders persist in scrollback history for easy reference
+  - Line numbers and syntax highlighting maintained within bordered containers
 
 ## [0.13.1] - 2025-07-01
 
