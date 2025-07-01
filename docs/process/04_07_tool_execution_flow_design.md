@@ -346,7 +346,7 @@ graph TD
     B --> C{Tool Type?}
     
     C -->|write_file, writefile, write_to_file| D[WriteFileTool]
-    C -->|replace, edit_file, editfile, edit| E[EditTool]
+    C -->|replace_in_file, edit_file, editfile, edit| E[EditTool]
     C -->|apply_code_patch, generate_code_patch, preview_patch_application| F[DiffPatchTool]
     C -->|Other| G[GenericTool]
     

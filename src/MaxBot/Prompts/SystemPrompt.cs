@@ -11,13 +11,13 @@ public static partial class Promptinator
     public static string GetSystemPrompt(string currentDataTime, string userOperatingSystem, string userShell, string username, string hostname, string currentWorkingDirectory, MaxbotConfiguration config, string mode)
     {
         // Ensure we have an absolute path for the working directory
-        var absoluteWorkingDirectory = Path.IsPathRooted(currentWorkingDirectory) 
-            ? currentWorkingDirectory 
+        var absoluteWorkingDirectory = Path.IsPathRooted(currentWorkingDirectory)
+            ? currentWorkingDirectory
             : Path.GetFullPath(currentWorkingDirectory);
 
         // Get the active profile to determine model family
         var activeProfile = config.Profiles.FirstOrDefault(p => p.Default) ?? config.Profiles.FirstOrDefault();
-        var modelFamily = activeProfile != null 
+        var modelFamily = activeProfile != null
             ? SystemPromptComponentFactory.GetModelFamily(activeProfile.ModelId)
             : ModelFamily.Claude; // Default fallback
 
@@ -29,7 +29,7 @@ public static partial class Promptinator
         _ = promptBuilder.AppendLine();
 
         // 2. Tool usage instructions (model-agnostic)
-        _ = promptBuilder.AppendLine(ToolUsageSystemPrompt.GetToolUsagePrompt());
+        _ = promptBuilder.AppendLine(ToolUsageSystemPrompt.GetToolUsagePrompt(absoluteWorkingDirectory));
         _ = promptBuilder.AppendLine();
 
         // 3. Environment information
@@ -53,7 +53,7 @@ public static partial class Promptinator
         }
 
         // 5. Model-specific epilog
-        _ = promptBuilder.AppendLine(SystemPromptComponentFactory.GetModelSpecificEpilogSystemPrompt(modelFamily));
+        _ = promptBuilder.AppendLine(SystemPromptComponentFactory.GetModelSpecificEpilogSystemPrompt(modelFamily, absoluteWorkingDirectory));
 
         return promptBuilder.ToString().Trim();
     }

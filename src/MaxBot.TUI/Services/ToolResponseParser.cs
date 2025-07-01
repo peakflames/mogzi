@@ -174,7 +174,7 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
 
     private static bool IsEditTool(string normalizedToolName)
     {
-        return normalizedToolName is "replace" or "edit_file" or "editfile" or "edit";
+        return normalizedToolName is "replace_in_file" or "edit_file" or "editfile" or "edit";
     }
 
     private static bool IsDiffPatchTool(string normalizedToolName)

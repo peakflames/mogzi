@@ -7,6 +7,5 @@ public enum ModelFamily
 {
     Claude,
     Gemini,
-    OpenAI,
     Other
 }

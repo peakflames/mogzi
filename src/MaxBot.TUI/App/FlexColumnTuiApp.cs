@@ -830,6 +830,7 @@ public sealed class FlexColumnTuiApp : IDisposable
                 if (!string.IsNullOrEmpty(responseUpdate.Text))
                 {
                     var newText = assistantMessage.Text + responseUpdate.Text;
+                    _logger?.LogInformation($"ChatMsg[Assistant, '{newText}'");
                     assistantMessage = new ChatMessage(ChatRole.Assistant, newText);
                     _historyManager.UpdateLastMessage(assistantMessage);
                     _scrollbackTerminal.WriteStatic(RenderMessage(assistantMessage), isUpdatable: true);
@@ -853,11 +854,14 @@ public sealed class FlexColumnTuiApp : IDisposable
                         _scrollbackTerminal.WriteStatic(new Markup($"[green]•[/] [dim]{_toolProgress}[/]"));
                     }
 
+                    _logger?.LogInformation($"ChatMsg[Tool, '{_toolProgress}'");
+
                     // Handle tool result display
                     await HandleToolExecutionResult(responseUpdate);
                 }
             }
             _scrollbackTerminal.WriteStatic(new Markup(""));
+            _logger?.LogInformation($"ChatMsg[Assistant, '{assistantMessage.Text}'");
             _scrollbackTerminal.WriteStatic(RenderMessage(assistantMessage));
         }
         catch (OperationCanceledException) when (_aiOperationCts?.Token.IsCancellationRequested == true)
@@ -1365,7 +1369,7 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private static bool IsEditTool(string normalizedToolName)
     {
-        return normalizedToolName is "replace" or "edit_file" or "editfile" or "edit";
+        return normalizedToolName is "replace_in_file" or "edit_file" or "editfile" or "edit";
     }
 
     private static bool IsDiffPatchTool(string normalizedToolName)
@@ -1470,7 +1474,7 @@ public sealed class FlexColumnTuiApp : IDisposable
             return null;
         }
 
-        // For EditTool (replace), extract the old_string parameter
+        // For EditTool (replace_in_file), extract the old_string parameter
         if (functionCall.Arguments.TryGetValue("old_string", out var oldStringValue))
         {
             var oldString = oldStringValue?.ToString();

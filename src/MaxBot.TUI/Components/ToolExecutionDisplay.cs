@@ -28,7 +28,7 @@ public static class ToolExecutionDisplay
         var statusLine = CreateCleanToolStatus(toolName, status, description);
         components.Add(statusLine);
 
-        // Add diff visualization if provided (with borders for replace tools)
+        // Add diff visualization if provided (with borders for replace_in_file tools)
         if (diff != null)
         {
             components.Add(DiffRenderer.RenderBorderedDiff(diff));

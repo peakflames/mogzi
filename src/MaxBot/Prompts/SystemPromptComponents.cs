@@ -22,11 +22,6 @@ public static class SystemPromptComponentFactory
             return ModelFamily.Gemini;
         }
 
-        if (lowerModelId.Contains("gpt") || lowerModelId.Contains("openai"))
-        {
-            return ModelFamily.OpenAI;
-        }
-
         return ModelFamily.Other;
     }
 
@@ -39,7 +34,6 @@ public static class SystemPromptComponentFactory
         {
             ModelFamily.Claude => ClaudeSystemPrompts.GetPreludePrompt(),
             ModelFamily.Gemini => GeminiSystemPrompts.GetPreludePrompt(),
-            ModelFamily.OpenAI => OpenAISystemPrompts.GetPreludePrompt(),
             _ => ClaudeSystemPrompts.GetPreludePrompt() // Default to Claude prompt for compatibility
         };
     }
@@ -47,14 +41,13 @@ public static class SystemPromptComponentFactory
     /// <summary>
     /// Gets the model-specific epilog system prompt
     /// </summary>
-    public static string GetModelSpecificEpilogSystemPrompt(ModelFamily modelFamily)
+    public static string GetModelSpecificEpilogSystemPrompt(ModelFamily modelFamily, string absoluteWorkingDirectory)
     {
         return modelFamily switch
         {
-            ModelFamily.Claude => ClaudeSystemPrompts.GetEpilogPrompt(),
-            ModelFamily.Gemini => GeminiSystemPrompts.GetEpilogPrompt(),
-            ModelFamily.OpenAI => OpenAISystemPrompts.GetEpilogPrompt(),
-            _ => ClaudeSystemPrompts.GetEpilogPrompt() // Default to Claude prompt for compatibility
+            ModelFamily.Claude => ClaudeSystemPrompts.GetEpilogPrompt(absoluteWorkingDirectory),
+            ModelFamily.Gemini => GeminiSystemPrompts.GetEpilogPrompt(absoluteWorkingDirectory),
+            _ => ClaudeSystemPrompts.GetEpilogPrompt(absoluteWorkingDirectory) // Default to Claude prompt for compatibility
         };
     }
 }
