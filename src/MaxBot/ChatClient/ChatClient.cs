@@ -18,7 +18,7 @@ public partial class ChatClient
         DefaultShell,
         Username,
         Hostname,
-        Directory.GetCurrentDirectory(),
+        WorkingDirectoryProvider.GetCurrentDirectory(),
         Config,
         Mode);
 
@@ -27,6 +27,7 @@ public partial class ChatClient
     public string Username { get; init; }
     public string Hostname { get; init; }
     private string Mode { get; init; }
+    private IWorkingDirectoryProvider WorkingDirectoryProvider { get; init; }
 
     public ChatOptions ChatOptions { get; init; }
     private SystemTools SystemTools { get; init; }
@@ -62,6 +63,9 @@ public partial class ChatClient
 
         // Get hostname
         Hostname = System.Net.Dns.GetHostName();
+
+        // Initialize working directory provider
+        WorkingDirectoryProvider = new DefaultWorkingDirectoryProvider();
 
         // SystemPrompt is now a computed property, so we don't need to set it here
 

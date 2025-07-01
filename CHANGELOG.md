@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Borders persist in scrollback history for easy reference
   - Line numbers and syntax highlighting maintained within bordered containers
 
+- Added **Modular System Prompt Design**:
+  - Modular system prompt architecture with model-specific prompts for Claude, Gemini, and OpenAI
+  - Automatic model family detection and absolute working directory path enforcement
+  - Comprehensive design documentation for modular prompt system (04_08)
+
+
 ## [0.13.1] - 2025-07-01
 
 - Add .editorconfig and address all warnings
