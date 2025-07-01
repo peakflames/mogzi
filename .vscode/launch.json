@@ -92,10 +92,10 @@
             "name": "C#: maxbot-ui",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/Maxbot.TUI/bin/Debug/net9.0/maxbot-ui.dll",
+            "preLaunchTask": "build",     
+            "program": "${workspaceFolder}/src/MaxBot.TUI/bin/Debug/net9.0/max.dll",
             "args": [],
-            "cwd": "~/",
+            "cwd": "${workspaceFolder}",
             "stopAtEntry": false,
             "console": "integratedTerminal",
             "justMyCode": false
