@@ -129,7 +129,7 @@ public partial class ChatClient
         {
             configRoot = JsonSerializer.Deserialize(
                 jsonContent,
-                MaxbotConfigurationContext.Default.ApplicationConfigurationRoot);
+                ApplicationConfigurationContext.Default.ApplicationConfigurationRoot);
         }
         catch (Exception ex)
         {

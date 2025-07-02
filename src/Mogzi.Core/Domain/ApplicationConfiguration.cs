@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Mogzi.Domain;
 
 [JsonSerializable(typeof(ApplicationConfigurationRoot))]
-public partial class MaxbotConfigurationContext : JsonSerializerContext
+public partial class ApplicationConfigurationContext : JsonSerializerContext
 {
 }
 
