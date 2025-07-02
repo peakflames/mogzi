@@ -1,5 +1,9 @@
 # Changelog
 
+ [0.13.4] - 2025-07-01
+
+- TBD
+  
 ## [0.13.3] - 2025-07-01
 
 - Add **--list-profiles** command
