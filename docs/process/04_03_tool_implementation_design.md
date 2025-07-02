@@ -1,8 +1,8 @@
-# MaxBot Tool Implementation Design
+# Mogzi Tool Implementation Design
 
 ## Tool Architecture Overview
 
-MaxBot's tool system provides AI function calling capabilities through a comprehensive set of tools that enable file operations, system interactions, and code manipulation. The design emphasizes security, reliability, and extensibility while maintaining consistent patterns across all tool implementations.
+Mogzi's tool system provides AI function calling capabilities through a comprehensive set of tools that enable file operations, system interactions, and code manipulation. The design emphasizes security, reliability, and extensibility while maintaining consistent patterns across all tool implementations.
 
 ## Base Tool Pattern
 
@@ -12,11 +12,11 @@ MaxBot's tool system provides AI function calling capabilities through a compreh
 ```csharp
 public class ReadTextFileTool
 {
-    private readonly MaxbotConfiguration _config;
+    private readonly ApplicationConfiguration _config;
     private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
 
-    public ReadTextFileTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
+    public ReadTextFileTool(ApplicationConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
     {
         _config = config;
         _llmResponseDetailsCallback = llmResponseDetailsCallback;
@@ -464,4 +464,4 @@ private string GetSecureErrorMessage(Exception ex, string operation)
 ```
 
 
-This tool implementation design ensures MaxBot's tools are secure, reliable, and maintainable while providing comprehensive functionality for AI-assisted development tasks. The consistent patterns and robust error handling make the system both user-friendly and developer-friendly.
+This tool implementation design ensures Mogzi's tools are secure, reliable, and maintainable while providing comprehensive functionality for AI-assisted development tasks. The consistent patterns and robust error handling make the system both user-friendly and developer-friendly.

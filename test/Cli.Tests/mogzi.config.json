@@ -1,0 +1,32 @@
+{
+    "mogziConfig": {
+        "defaultMode": "chat",
+        "apiProviders": [
+            {
+                "name": "RequestyAI",
+                "type": "OpenAI-Compatible",
+                "apiKey": "YOUR-KEY-HERE",
+                "baseUrl": "https://router.requesty.ai/v1"
+            }
+        ],
+        "profiles": [
+            {
+                "name": "gpt",
+                "apiProvider": "RequestyAI",
+                "modelId": "openai/gpt-4.1-mini"
+            },
+            {
+                "default": true,
+                "name": "gemini",
+                "apiProvider": "RequestyAI",
+                "modelId": "google/gemini-2.5-flash"
+            },
+            {
+                "name": "sonnet",
+                "apiProvider": "RequestyAI",
+                "modelId": "coding/claude-4-sonnet"
+            }
+        ],
+        "tool_approvals": "All"
+    }
+}

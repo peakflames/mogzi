@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using System.IO;
 using System;
-using MaxBot;
+using Mogzi;
 using System.Text.RegularExpressions;
 using Cli.UI;
 
@@ -25,7 +25,7 @@ public class BlackBoxTests
         // Assert
         exitCode.Should().Be(0);
         var response = output.ToString();
-        response.Should().Contain("Usage: max [prompt] [options]");
+        response.Should().Contain("Usage:mogzi [prompt] [options]");
     }
 
     [Fact]
@@ -36,7 +36,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
         var testChatClient = new TestChatClient("Hello, world!");
-        var clientResult = ChatClient.Create(testChatClient, "maxbot.config.json");
+        var clientResult = ChatClient.Create(testChatClient, "mogzi.config.json");
         clientResult.IsFailed.Should().Be(false);
 
         // Act
@@ -58,7 +58,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
         var testChatClient = new TestChatClient("Hello, world!");
-        var clientResult = ChatClient.Create(testChatClient, "maxbot.config.json");
+        var clientResult = ChatClient.Create(testChatClient, "mogzi.config.json");
         clientResult.IsFailed.Should().Be(false);
 
         // Act
@@ -80,7 +80,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
         var testChatClient = new TestChatClient("Piped input summarized.");
-        var clientResult = ChatClient.Create(testChatClient, "maxbot.config.json", null, "oneshot");
+        var clientResult = ChatClient.Create(testChatClient, "mogzi.config.json", null, "oneshot");
         clientResult.IsFailed.Should().Be(false);
 
         // Act
@@ -112,7 +112,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
 
-        var clientResult = ChatClient.Create("maxbot.config.json", profileName, null, "oneshot", (message, color) => ConsoleRenderer.ConsoleWriteLLMResponseDetails(message, color));
+        var clientResult = ChatClient.Create("mogzi.config.json", profileName, null, "oneshot", (message, color) => ConsoleRenderer.ConsoleWriteLLMResponseDetails(message, color));
         clientResult.IsFailed.Should().Be(false);
 
         // Act
@@ -146,7 +146,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
 
-        var clientResult = ChatClient.Create("maxbot.config.json", profileName, null, "oneshot", (message, color) => ConsoleRenderer.ConsoleWriteLLMResponseDetails(message, color));
+        var clientResult = ChatClient.Create("mogzi.config.json", profileName, null, "oneshot", (message, color) => ConsoleRenderer.ConsoleWriteLLMResponseDetails(message, color));
         clientResult.IsFailed.Should().Be(false);
 
         // Act
@@ -205,7 +205,7 @@ public class BlackBoxTests
         // Create a config file with an invalid API key
         var invalidConfig = """
         {
-            "maxbotConfig": {
+            "mogziConfig": {
                 "apiProviders": [ { "name": "TestProvider", "type": "OpenAI-Compatible", "apiKey": "invalid-key", "baseUrl": "https://api.openai.com/v1" } ],
                 "profiles": [ { "default": true, "name": "Default", "apiProvider": "TestProvider", "modelId": "gpt-3.5-turbo" } ]
             }

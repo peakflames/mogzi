@@ -1,11 +1,11 @@
-# MaxBot AI Assistant System - Tool Operational Requirements
+# Mogzi AI Assistant System - Tool Operational Requirements
 
 ## 1. System Identification and Overview
 
-- **Tool Name**: MaxBot AI Assistant System
+- **Tool Name**: Mogzi AI Assistant System
 - **Tool Category**: AI-Powered Development Assistant
 - **System Purpose**: Intelligent software development support and automation
-- **Operational Environment**: MaxBot extension with local system integration
+- **Operational Environment**: Mogzi extension with local system integration
 - **Document Scope**: Complete system operational requirements
 - **Document Version**: 1.0
 - **Last Updated**: 2025-06-21
@@ -65,7 +65,7 @@
 
 ### TOR-4: Development Environment Integration
 
-- **TOR-4.1**: The system SHALL integrate with MaxBot development environment
+- **TOR-4.1**: The system SHALL integrate with Mogzi development environment
   - **Priority**: Critical
   - **Impl Status**: Implemented
   - **Verification**: Test, Demonstration
@@ -170,7 +170,7 @@
 
 ## 4. Related Documentation
 
-- **[Tool Specifications](05_ai_tool_op_requirements.md)** - Detailed specifications for individual MaxBot tools
+- **[Tool Specifications](05_ai_tool_op_requirements.md)** - Detailed specifications for individual Mogzi tools
 - **[Traceability Matrix](trace_matrix.md)** - Requirements traceability and verification status mapping
 - **System Architecture** - High-level system design and component relationships
 - **User Documentation** - End-user guides and operational procedures

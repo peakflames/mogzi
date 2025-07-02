@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the complex flow of tool execution in MaxBot's TUI, from the initial user input through AI model processing to the final display in the scrollback terminal. The system involves multiple components working together to provide enhanced tool feedback with visual diff displays.
+This document describes the complex flow of tool execution in Mogzi's TUI, from the initial user input through AI model processing to the final display in the scrollback terminal. The system involves multiple components working together to provide enhanced tool feedback with visual diff displays.
 
 ## Architecture Components
 
@@ -383,6 +383,6 @@ graph TD
 
 ## Conclusion
 
-The tool execution flow in MaxBot's TUI is a sophisticated system that provides enhanced feedback for AI tool operations. The integration of multiple components enables real-time tool execution tracking, intelligent diff generation, and rich visual displays that help users understand what tools are doing and what changes they're making.
+The tool execution flow in Mogzi's TUI is a sophisticated system that provides enhanced feedback for AI tool operations. The integration of multiple components enables real-time tool execution tracking, intelligent diff generation, and rich visual displays that help users understand what tools are doing and what changes they're making.
 
 The system's modular design allows for easy extension and customization while maintaining clean separation of concerns between UI management, tool response processing, and display generation.

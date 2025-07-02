@@ -1,6 +1,6 @@
-# Contributing to MaxBot
+# Contributing to Mogzi
 
-Thank you for your interest in contributing to MaxBot! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to Mogzi! This document provides guidelines and instructions for contributing to the project.
 
 ## Development Setup
 
@@ -9,8 +9,8 @@ Thank you for your interest in contributing to MaxBot! This document provides gu
 1. Clone the repository
 
    ```bash
-   git clone https://github.com/peakflames/maxbot.git
-   cd maxbot
+   git clone https://github.com/peakflames/mogzi.git
+   cd mogzi
    ```
 
 1. Install the required toolchain
@@ -25,7 +25,7 @@ Thank you for your interest in contributing to MaxBot! This document provides gu
 
    ```bash
    # change to the Terminal User Interface (TUI) project directory
-   src/MaxBot.TUI
+   src/Mogzi.TUI
 
    # build the project
    dotnet build

@@ -1,4 +1,4 @@
-using MaxBot;
+using Mogzi;
 using Microsoft.Extensions.AI;
 using System;
 using System.Collections.Generic;

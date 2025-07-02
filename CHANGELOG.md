@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.13.6] - 2025-07-02
+
+- renamed to Mogzi
+
 ## [0.13.5] - 2025-07-02
 
 - fix bug when running --list-profiles
@@ -40,7 +44,7 @@
 
 ### 🎉 Initial Release
 
-MaxBot is a powerful AI-powered CLI assistant that provides intelligent file operations, code editing, and system interaction capabilities through a rich terminal user interface.
+Mogzi is a powerful AI-powered CLI assistant that provides intelligent file operations, code editing, and system interaction capabilities through a rich terminal user interface.
 
 ### ✨ Core Features
 
@@ -226,4 +230,4 @@ MaxBot is a powerful AI-powered CLI assistant that provides intelligent file ope
 - Comprehensive error handling and validation
 - Security boundaries enforced at the tool level
 
-This initial release establishes MaxBot as a powerful, secure, and user-friendly AI assistant for developers and system administrators, providing a solid foundation for future enhancements and capabilities.
+This initial release establishes Mogzi as a powerful, secure, and user-friendly AI assistant for developers and system administrators, providing a solid foundation for future enhancements and capabilities.
