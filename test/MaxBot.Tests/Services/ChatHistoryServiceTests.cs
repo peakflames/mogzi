@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using MaxBot.Domain;
-using MaxBot.Services;
+using Mogzi.Domain;
+using Mogzi.Services;
 using Microsoft.Extensions.AI;
 using Xunit;
 
-namespace MaxBot.Tests.Services;
+namespace Mogzi.Tests.Services;
 
 public class ChatHistoryServiceTests : IDisposable
 {
@@ -55,7 +55,7 @@ public class ChatHistoryServiceTests : IDisposable
             new ChatMessage(ChatRole.Assistant, "I'm doing well, thank you for asking!")
         };
         
-        string newSystemPrompt = "You are an AI assistant named Max.";
+        string newSystemPrompt = "You are an AI assistant namedMogzi.";
         
         // Act
         await _chatHistoryService.SaveChatHistoryAsync(_testSessionPath, chatHistory);

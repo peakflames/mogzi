@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace MaxBot.Services;
+namespace Mogzi.Services;
 
 /// <summary>
 /// Service for managing chat history persistence to disk

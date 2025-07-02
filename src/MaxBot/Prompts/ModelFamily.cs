@@ -1,4 +1,4 @@
-namespace MaxBot.Prompts;
+namespace Mogzi.Prompts;
 
 /// <summary>
 /// Represents different AI model families for system prompt customization

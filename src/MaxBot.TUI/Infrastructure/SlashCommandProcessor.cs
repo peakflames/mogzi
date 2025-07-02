@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Infrastructure;
+namespace Mogzi.TUI.Infrastructure;
 
 /// <summary>
 /// Processes slash commands for the TUI application.
@@ -180,7 +180,7 @@ public sealed class SlashCommandProcessor
     /// </summary>
     private void RequestExit(string args)
     {
-        var panel = new Panel(new Markup("[yellow]Goodbye![/] Exiting MaxBot..."))
+        var panel = new Panel(new Markup("[yellow]Goodbye![/] Exiting Mogzi..."))
             .Border(BoxBorder.Rounded)
             .BorderColor(Color.Yellow)
             .Padding(1, 0);
@@ -202,7 +202,7 @@ public sealed class SlashCommandProcessor
         statusTable.Border = TableBorder.Rounded;
         _ = statusTable.BorderColor(Color.Cyan1);
 
-        _ = statusTable.AddRow("Application", "[green]MaxBot TUI[/]");
+        _ = statusTable.AddRow("Application", "[green]Mogzi TUI[/]");
         _ = statusTable.AddRow("Version", $"[blue]{GetApplicationVersion()}[/]");
         _ = statusTable.AddRow("Status", "[green]Running[/]");
         _ = statusTable.AddRow("Working Directory", $"[dim]{Environment.CurrentDirectory}[/]");
@@ -297,7 +297,7 @@ public sealed class SlashCommandProcessor
     private string GetExitOutput(string args)
     {
         ExitRequested?.Invoke();
-        return "Goodbye! Exiting MaxBot...";
+        return "Goodbye! Exiting Mogzi...";
     }
 
     /// <summary>
@@ -307,7 +307,7 @@ public sealed class SlashCommandProcessor
     {
         var output = new StringBuilder();
         _ = output.AppendLine("[bold]System Status:[/]");
-        _ = output.AppendLine($"[dim]Application:[/] [green]MaxBot TUI[/]");
+        _ = output.AppendLine($"[dim]Application:[/] [green]Mogzi TUI[/]");
         _ = output.AppendLine($"[dim]Version:[/] [green]{GetApplicationVersion()}[/]");
         _ = output.AppendLine($"[dim]Status:[/] [green]Running[/]");
         _ = output.AppendLine($"[dim]Working Directory:[/] [green]{Environment.CurrentDirectory}[/]");

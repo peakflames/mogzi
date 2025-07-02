@@ -1,7 +1,7 @@
-using MaxBot.Domain;
-using MaxBot.Prompts;
+using Mogzi.Domain;
+using Mogzi.Prompts;
 
-namespace MaxBot.Tests.Prompts;
+namespace Mogzi.Tests.Prompts;
 
 public class SystemPromptTests
 {
@@ -114,7 +114,7 @@ public class SystemPromptTests
             "oneshot");
 
         // Assert
-        Assert.Contains("MaxBot, created by Peakflames", systemPrompt);
+        Assert.Contains("Mogzi, created by Peakflames", systemPrompt);
         Assert.Contains("Max loves animals and hates emojis", systemPrompt);
     }
 
@@ -149,7 +149,7 @@ public class SystemPromptTests
             "oneshot");
 
         // Assert
-        Assert.Contains("You are MaxBot (Max), an advanced AI assistant created by Peakflames", systemPrompt);
+        Assert.Contains("You are Mogzi (Max), an advanced AI assistant created by Peakflames", systemPrompt);
         Assert.Contains("Stay focused on completing the user's request efficiently", systemPrompt);
     }
 

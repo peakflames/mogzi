@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Models;
+namespace Mogzi.TUI.Models;
 
 public enum AutocompleteType
 {

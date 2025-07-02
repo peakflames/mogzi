@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.State;
+namespace Mogzi.TUI.State;
 
 public class HistoryManager(StateManager stateManager)
 {

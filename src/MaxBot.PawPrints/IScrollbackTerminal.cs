@@ -1,4 +1,4 @@
-namespace MaxBot.PawPrints;
+namespace Mogzi.PawPrints;
 
 /// <summary>
 /// A terminal controller that provides a scrollback buffer for static content

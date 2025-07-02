@@ -1,4 +1,4 @@
-# MaxBot Service Layer & Domain Design
+# Mogzi Service Layer & Domain Design
 
 ## Service Layer Design
 
@@ -58,7 +58,7 @@ public class AppService : IAppService
 
     public int CalculateTokenMetrics(List<ChatMessage> chatHistory)
     {
-        return MaxBot.Utils.ApiMetricUtils.GetSimplisticTokenCount(chatHistory);
+        return Mogzi.Utils.ApiMetricUtils.GetSimplisticTokenCount(chatHistory);
     }
 }
 ```
@@ -286,7 +286,7 @@ chatClient = new OpenAIClient(
 **Configuration Features:**
 - **Retry Policy**: Automatic retry with exponential backoff
 - **Timeout Management**: 10-minute timeout for long operations
-- **User Agent**: Identifies requests as coming from MaxBot
+- **User Agent**: Identifies requests as coming from Mogzi
 - **Function Calling**: Enables AI tool execution
 - **Token Limits**: Configurable output token limits
 - **Temperature Control**: Deterministic responses with 0.0 temperature
@@ -417,4 +417,4 @@ public static Result<ChatClient> Create(...)
 - **Logging Integration**: Structured logging for debugging
 - **User Feedback**: Clear error messages for user-facing operations
 
-This service layer and domain design provides a robust foundation for MaxBot's functionality, emphasizing reliability, performance, and maintainability while supporting the complex requirements of an AI-powered CLI application.
+This service layer and domain design provides a robust foundation for Mogzi's functionality, emphasizing reliability, performance, and maintainability while supporting the complex requirements of an AI-powered CLI application.

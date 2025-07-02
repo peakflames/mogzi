@@ -3,7 +3,7 @@ using System.Security;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 
-namespace MaxBot.Tools;
+namespace Mogzi.Tools;
 
 public class ReadImageFileTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
 {

@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Infrastructure;
+namespace Mogzi.TUI.Infrastructure;
 
 /// <summary>
 /// Simple argument parser for AOT compatibility.

@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Components;
+namespace Mogzi.TUI.Components;
 
 /// <summary>
 /// Renders unified diffs with colored output, inspired by Gemini CLI's DiffRenderer component.

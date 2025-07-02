@@ -1,8 +1,8 @@
 // using FluentAssertions;
-// using MaxBot.Domain;
-// using MaxBot.Tools;
+// using Mogzi.Domain;
+// using Mogzi.Tools;
 
-// namespace MaxBot.Tests.Tools;
+// namespace Mogzi.Tests.Tools;
 
 // /// <summary>
 // /// Tests for TOR-3.1: Safe file system interaction.

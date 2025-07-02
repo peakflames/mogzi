@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Commands;
+namespace Mogzi.TUI.Commands;
 
 /// <summary>
 /// Interactive chat command that launches the TUI.
@@ -66,23 +66,23 @@ public sealed class ChatCommand : ICommand
         AnsiConsole.WriteLine();
 
         AnsiConsole.MarkupLine("[bold]USAGE:[/]");
-        AnsiConsole.MarkupLine("    max chat [[OPTIONS]]");
+        AnsiConsole.MarkupLine("   mogzi chat [[OPTIONS]]");
         AnsiConsole.WriteLine();
 
         AnsiConsole.MarkupLine("[bold]OPTIONS:[/]");
         AnsiConsole.MarkupLine("    -v, --verbosity <LEVEL>      Set the verbosity level (quiet, minimal, normal, detailed, diagnostic)");
-        AnsiConsole.MarkupLine("        --config <PATH>          Path to the configuration file (default: maxbot.config.json)");
+        AnsiConsole.MarkupLine("        --config <PATH>          Path to the configuration file (default: mogzi.config.json)");
         AnsiConsole.MarkupLine("        --profile <NAME>         Configuration profile to use");
         AnsiConsole.MarkupLine("    -ta, --tool-approvals <MODE> Override tool approval mode (readonly, all)");
         AnsiConsole.MarkupLine("    -h, --help                   Show this help message");
         AnsiConsole.WriteLine();
 
         AnsiConsole.MarkupLine("[bold]EXAMPLES:[/]");
-        AnsiConsole.MarkupLine("    max chat");
-        AnsiConsole.MarkupLine("    max chat --verbosity normal");
-        AnsiConsole.MarkupLine("    max chat --profile development");
-        AnsiConsole.MarkupLine("    max chat --tool-approvals all");
-        AnsiConsole.MarkupLine("    max chat -ta readonly");
+        AnsiConsole.MarkupLine("   mogzi chat");
+        AnsiConsole.MarkupLine("   mogzi chat --verbosity normal");
+        AnsiConsole.MarkupLine("   mogzi chat --profile development");
+        AnsiConsole.MarkupLine("   mogzi chat --tool-approvals all");
+        AnsiConsole.MarkupLine("   mogzi chat -ta readonly");
     }
 
     private static string[] BuildArgsFromParsed(Dictionary<string, string?> parsedArgs)

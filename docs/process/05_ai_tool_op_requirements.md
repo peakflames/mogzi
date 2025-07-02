@@ -1,11 +1,11 @@
-# MaxBot AI Assistant - Tool Specification from API
+# Mogzi AI Assistant - Tool Specification from API
 
 ## 1. System Identification and Overview
 
-- **Tool Name**: MaxBot AI Assistant Tools (from API Definition)
+- **Tool Name**: Mogzi AI Assistant Tools (from API Definition)
 - **Tool Category**: AI-Powered Development Tools
 - **System Purpose**: To provide the AI Assistant with a defined set of capabilities for software development, analysis, and interaction.
-- **Operational Environment**: Integrated within the MaxBot AI Assistant System
+- **Operational Environment**: Integrated within the Mogzi AI Assistant System
 - **Document Scope**: Operational requirements for the AI toolset derived exclusively from the API documentation.
 
 ## 2. Tool Operational Requirements (TOR)

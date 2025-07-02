@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Components;
+namespace Mogzi.TUI.Components;
 
 /// <summary>
 /// Displays tool execution results with clean, minimal visual feedback.

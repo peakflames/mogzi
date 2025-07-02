@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Services;
+namespace Mogzi.TUI.Services;
 
 public class ToolApprovalsProvider(ChatClient chatClient) : IUserSelectionProvider
 {

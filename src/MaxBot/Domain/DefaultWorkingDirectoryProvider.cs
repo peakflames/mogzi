@@ -1,4 +1,4 @@
-namespace MaxBot.Domain;
+namespace Mogzi.Domain;
 
 public class DefaultWorkingDirectoryProvider : IWorkingDirectoryProvider
 {

@@ -24,16 +24,16 @@ Perform engineering research, full coding tasks, and multiple workflow with eith
 
 ```bash
 # Start a rich interactive chat
-max
+mogzi
 
 # Switch to using your profile named 'sonnet'
-max --profile sonnet
+mogzi --profile sonnet
 
 # Translate a README.md to portugese in one shot
-cat README.md | max run -p "Translate to portugese"
+cat README.md | mogzi run -p "Translate to portugese"
 
 # (coming soon) Run a no non-interactive nworkflow prompt
-max run -p workflows/generate-release-notes.md
+mogzi run -p workflows/generate-release-notes.md
 ```
 
 ## Prerequisites ✅
@@ -49,25 +49,25 @@ Before running the application, ensure you have:
 
    For Windows:
 
-   - Download loads max.exe and moves it to your WindowsApp directory
+   - Download loads mogzi.exe and moves it to your WindowsApp directory
    ```sh
-   Start-BitsTransfer -Source https://github.com/peakflames/maxbot/releases/latest/download/max-win-x64.exe -Destination max.exe; move -Force max.exe $env:USERPROFILE\\AppData\\Local\\Microsoft\\WindowsApps
+   Start-BitsTransfer -Source https://github.com/peakflames/maxbot/releases/latest/download/mogzi-win-x64.exe -Destination mogzi.exe; move -Force mogzi.exe $env:USERPROFILE\\AppData\\Local\\Microsoft\\WindowsApps
    ```
 
     For MacOS (sudo):
 
-    - Download loads max and moves it to your `/usr/local/bin`
+    - Download loads mogzi and moves it to your `/usr/local/bin`
   
     ```sh
-    sudo curl -L -o max https://github.com/peakflames/maxbot/releases/latest/download/max-osx-x64 && sudo chmod +x max && sudo mv -f max /usr/local/bin
+    sudo curl -L -o mogzi https://github.com/peakflames/maxbot/releases/latest/download/mogzi-osx-x64 && sudo chmod +x mogzi && sudo mv -f mogzi /usr/local/bin
     ```
 
     For Linux (sudo)
 
-    - Download loads max and moves it to your `/usr/local/bin`
+    - Download loads mogzi and moves it to your `/usr/local/bin`
 
     ```sh
-    sudo curl -L -o max https://github.com/peakflames/maxbot/releases/latest/download/max-linux-x64 && sudo chmod +x max && sudo mv -f max /usr/local/bin
+    sudo curl -L -o mogzi https://github.com/peakflames/maxbot/releases/latest/download/mogzi-linux-x64 && sudo chmod +x mogzi && sudo mv -f mogzi /usr/local/bin
     ```
 
 2. In your home directory, create a configuration file (`maxbot.config.json`) with your API provider details:
@@ -140,7 +140,7 @@ The application uses a JSON configuration file with the following structure:
 
 ### Tool Approval 🔒
 
-MaxBot includes a tool approval feature to provide control over file system operations. This setting can be configured in your `maxbot.config.json` file or overridden at runtime with a command-line argument.
+Mogzi includes a tool approval feature to provide control over file system operations. This setting can be configured in your `maxbot.config.json` file or overridden at runtime with a command-line argument.
 
 **Configuration:**
 
@@ -161,19 +161,19 @@ To set the default tool approval mode, add the `tool_approvals` property to your
 You can override the configuration file setting using the `--tool-approvals` or `-ta` argument:
 
 ```bash
-max "Create a new file" -ta all
+mogzi "Create a new file" -ta all
 ```
 
 **Modes:**
 
-*   `readonly`: (Default) MaxBot will ask for your permission before performing any write operations (e.g., creating or modifying files).
-*   `all`: MaxBot is pre-approved to perform any file system operation without asking for confirmation.
+*   `readonly`: (Default) Mogzi will ask for your permission before performing any write operations (e.g., creating or modifying files).
+*   `all`: Mogzi is pre-approved to perform any file system operation without asking for confirmation.
 
 
 
 ## Available Assistant Tools 🛠️
 
-MaxBot is equipped with a powerful set of tools to interact with your local system. Here is a summary of the currently implemented tools:
+Mogzi is equipped with a powerful set of tools to interact with your local system. Here is a summary of the currently implemented tools:
 
 | Tool Name           | Status | Notes                                                              | Safety/Security Features                                                                                                                            |
 | ------------------- | ------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |

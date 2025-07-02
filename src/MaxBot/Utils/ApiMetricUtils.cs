@@ -1,4 +1,4 @@
-namespace MaxBot.Utils;
+namespace Mogzi.Utils;
 
 public static class ApiMetricUtils
 {

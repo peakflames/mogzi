@@ -1,4 +1,4 @@
-namespace MaxBot.Services;
+namespace Mogzi.Services;
 
 /// <summary>
 /// Interface for the core application service

@@ -1,6 +1,6 @@
-using MaxBot.Domain;
+using Mogzi.Domain;
 
-namespace MaxBot.Tests.Tools;
+namespace Mogzi.Tests.Tools;
 
 public class MockWorkingDirectoryProvider : IWorkingDirectoryProvider
 {

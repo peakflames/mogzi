@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Infrastructure;
+namespace Mogzi.TUI.Infrastructure;
 
 /// <summary>
 /// Advanced keyboard input handler with event-driven architecture and key combination support.

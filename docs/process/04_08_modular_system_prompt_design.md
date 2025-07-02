@@ -112,7 +112,7 @@ public static ModelFamily GetModelFamily(string modelId)
 ### Class Structure
 
 ```
-src/MaxBot/Prompts/
+src/Mogzi/Prompts/
 ├── ModelFamily.cs                 # Enum definition
 ├── SystemPrompt.cs               # Main orchestrator
 ├── SystemPromptComponents.cs     # Factory class

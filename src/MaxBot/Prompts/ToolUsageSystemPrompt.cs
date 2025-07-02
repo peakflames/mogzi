@@ -1,4 +1,4 @@
-namespace MaxBot.Prompts;
+namespace Mogzi.Prompts;
 
 /// <summary>
 /// Contains the core tool usage system prompt that is model-agnostic
@@ -158,7 +158,7 @@ This guide covers the three primary approaches for modifying files: complete fil
 """;
     }
 
-    // TODO: Be able to support the following in Max:
+    // TODO: Be able to support the following inMogzi:
     // - **Parallelism:** Execute multiple independent tool calls in parallel when feasible (i.e. searching the codebase).
     // - **Remembering Facts:** Use the 'save_memory' tool to remember specific, *user-related* facts or preferences when the user explicitly asks, or when they state a clear, concise piece of information that would help personalize or streamline *your future interactions with them* (e.g., preferred coding style, common project paths they use, personal tool aliases). This tool is for user-specific information that should persist across sessions. Do *not* use it for general project context or information that belongs in project-specific `AGENT.md` files. If unsure whether to save something, you can ask the user, "Should I remember that for you?"
 }

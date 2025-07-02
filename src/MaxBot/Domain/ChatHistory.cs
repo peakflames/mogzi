@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace MaxBot.Domain;
+namespace Mogzi.Domain;
 
 /// <summary>
 /// Serializable representation of a chat message

@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.State;
+namespace Mogzi.TUI.State;
 
 /// <summary>
 /// Manages global state changes and coordinates re-rendering across the application.

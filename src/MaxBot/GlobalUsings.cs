@@ -2,6 +2,6 @@ global using System.ClientModel;
 global using Microsoft.Extensions.AI;
 global using OpenAI;
 
-global using MaxBot.Prompts;
-global using MaxBot.Domain;
-global using MaxBot.Tools;
+global using Mogzi.Prompts;
+global using Mogzi.Domain;
+global using Mogzi.Tools;

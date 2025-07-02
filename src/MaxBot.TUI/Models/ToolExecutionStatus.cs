@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Models;
+namespace Mogzi.TUI.Models;
 
 /// <summary>
 /// Represents the execution status of a tool.

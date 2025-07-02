@@ -1,4 +1,4 @@
-namespace MaxBot.Prompts;
+namespace Mogzi.Prompts;
 
 /// <summary>
 /// Factory for creating model-specific system prompt components

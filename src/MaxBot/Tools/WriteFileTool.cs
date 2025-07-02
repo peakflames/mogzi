@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Runtime.InteropServices;
 
-namespace MaxBot.Tools;
+namespace Mogzi.Tools;
 
 public class WriteFileTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
 {

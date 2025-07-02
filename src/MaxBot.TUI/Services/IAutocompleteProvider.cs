@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Services;
+namespace Mogzi.TUI.Services;
 
 public interface IAutocompleteProvider
 {

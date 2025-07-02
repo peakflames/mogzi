@@ -1,7 +1,7 @@
-namespace MaxBot.Utils;
+namespace Mogzi.Utils;
 
 /// <summary>
-/// Helper class to locate the maxbot.config.json file.
+/// Helper class to locate the mogzi.config.json file.
 /// </summary>
 public static class ConfigurationLocator
 {

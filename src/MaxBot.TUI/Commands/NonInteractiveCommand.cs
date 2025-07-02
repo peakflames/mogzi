@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Commands;
+namespace Mogzi.TUI.Commands;
 
 /// <summary>
 /// Non-interactive command for AI queries without TUI.
@@ -162,13 +162,13 @@ public sealed class NonInteractiveCommand : ICommand
         AnsiConsole.WriteLine();
 
         AnsiConsole.MarkupLine("[bold]USAGE:[/]");
-        AnsiConsole.MarkupLine("    max run [[OPTIONS]]");
+        AnsiConsole.MarkupLine("   mogzi run [[OPTIONS]]");
         AnsiConsole.WriteLine();
 
         AnsiConsole.MarkupLine("[bold]OPTIONS:[/]");
         AnsiConsole.MarkupLine("    -p, --prompt <PROMPT>        The prompt/message to send to the AI, or path to a .md file containing the prompt");
         AnsiConsole.MarkupLine("    -v, --verbosity <LEVEL>      Set the verbosity level (quiet, minimal, normal, detailed, diagnostic)");
-        AnsiConsole.MarkupLine("        --config <PATH>          Path to the configuration file (default: maxbot.config.json)");
+        AnsiConsole.MarkupLine("        --config <PATH>          Path to the configuration file (default: mogzi.config.json)");
         AnsiConsole.MarkupLine("        --profile <NAME>         Configuration profile to use");
         AnsiConsole.MarkupLine("    -ta, --tool-approvals <MODE> Override tool approval mode (readonly, all)");
         AnsiConsole.MarkupLine("        --no-history             Don't use or save chat history");
@@ -176,11 +176,11 @@ public sealed class NonInteractiveCommand : ICommand
         AnsiConsole.WriteLine();
 
         AnsiConsole.MarkupLine("[bold]EXAMPLES:[/]");
-        AnsiConsole.MarkupLine("    max run -p \"What is the capital of Michigan?\"");
-        AnsiConsole.MarkupLine("    max run -p ./prompts/analyze-code.md");
-        AnsiConsole.MarkupLine("    max run --prompt \"Explain this code\" --no-history");
-        AnsiConsole.MarkupLine("    max run -p \"Create a file\" --tool-approvals all");
-        AnsiConsole.MarkupLine("    max run -p \"List files\" -ta readonly");
+        AnsiConsole.MarkupLine("   mogzi run -p \"What is the capital of Michigan?\"");
+        AnsiConsole.MarkupLine("   mogzi run -p ./prompts/analyze-code.md");
+        AnsiConsole.MarkupLine("   mogzi run --prompt \"Explain this code\" --no-history");
+        AnsiConsole.MarkupLine("   mogzi run -p \"Create a file\" --tool-approvals all");
+        AnsiConsole.MarkupLine("   mogzi run -p \"List files\" -ta readonly");
     }
 
     /// <summary>

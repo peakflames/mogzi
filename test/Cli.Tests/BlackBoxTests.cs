@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using System.IO;
 using System;
-using MaxBot;
+using Mogzi;
 using System.Text.RegularExpressions;
 using Cli.UI;
 
@@ -25,7 +25,7 @@ public class BlackBoxTests
         // Assert
         exitCode.Should().Be(0);
         var response = output.ToString();
-        response.Should().Contain("Usage: max [prompt] [options]");
+        response.Should().Contain("Usage:mogzi [prompt] [options]");
     }
 
     [Fact]

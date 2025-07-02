@@ -1,7 +1,7 @@
 <task name="Align Documentation with Implementation">
 
 <task_objective>
-Ensure that all architectural and design patterns and decisions found in the MaxBot implementation are reflected and sufficiently articulated by the corresponding documentation. The analysis should provide enough detail that after an AI Model reads the architecture and design documents, it will be effectively prepared to work in the project. No MCP servers are required. The expected output is updated documentation files that align with the actual source code implementation.
+Ensure that all architectural and design patterns and decisions found in the Mogzi implementation are reflected and sufficiently articulated by the corresponding documentation. The analysis should provide enough detail that after an AI Model reads the architecture and design documents, it will be effectively prepared to work in the project. No MCP servers are required. The expected output is updated documentation files that align with the actual source code implementation.
 </task_objective>
 
 <detailed_sequence_steps>
@@ -10,30 +10,30 @@ Ensure that all architectural and design patterns and decisions found in the Max
 
 ## 1. Analyze Current Implementation
 
-1. Use the `list_files` tool to examine the overall MaxBot project structure, focusing on the `src/` directory (excluding `src/Cli` as it's obsolete).
+1. Use the `list_files` tool to examine the overall Mogzi project structure, focusing on the `src/` directory (excluding `src/Cli` as it's obsolete).
 
 2. Use the `list_code_definition_names` tool to get an overview of key classes, interfaces, and methods in each major directory:
-   - `src/MaxBot/` - Core domain and services
-   - `src/MaxBot.PawPrints/` - Terminal interface components
-   - `src/Maxbot.TUI/` - Text user interface application
+   - `src/Mogzi/` - Core domain and services
+   - `src/Mogzi.PawPrints/` - Terminal interface components
+   - `src/Mogzi.TUI/` - Text user interface application
 
 3. Use the `read_file` tool to examine key architectural files:
-   - `src/MaxBot/GlobalUsings.cs` - Understanding dependencies and imports
-   - `src/MaxBot/MaxBot.csproj` - Project dependencies and framework version
-   - `src/MaxBot.sln` - Solution structure and project relationships
+   - `src/Mogzi/GlobalUsings.cs` - Understanding dependencies and imports
+   - `src/Mogzi/Mogzi.csproj` - Project dependencies and framework version
+   - `src/Mogzi.sln` - Solution structure and project relationships
 
 4. Analyze the domain layer by reading core domain files:
-   - `src/MaxBot/Domain/MaxbotConfiguration.cs` - Configuration patterns
-   - `src/MaxBot/Domain/ChatHistory.cs` - Data models and structures
-   - `src/MaxBot/Domain/IWorkingDirectoryProvider.cs` - Interface patterns
+   - `src/Mogzi/Domain/MaxbotConfiguration.cs` - Configuration patterns
+   - `src/Mogzi/Domain/ChatHistory.cs` - Data models and structures
+   - `src/Mogzi/Domain/IWorkingDirectoryProvider.cs` - Interface patterns
 
 5. Examine the service layer architecture:
-   - `src/MaxBot/Services/AppService.cs` - Main application service patterns
-   - `src/MaxBot/Services/ChatHistoryService.cs` - Service implementation patterns
-   - `src/MaxBot/ChatClient/ChatClient.cs` - External integration patterns
+   - `src/Mogzi/Services/AppService.cs` - Main application service patterns
+   - `src/Mogzi/Services/ChatHistoryService.cs` - Service implementation patterns
+   - `src/Mogzi/ChatClient/ChatClient.cs` - External integration patterns
 
 6. Analyze the tools architecture:
-   - Use the `list_files` tool to list all files in `src/MaxBot/Tools/`
+   - Use the `list_files` tool to list all files in `src/Mogzi/Tools/`
    - Use the `read_file` tool to examine 2-3 representative tool implementations
    - Document the tool registration and dependency injection patterns
 

@@ -1,4 +1,4 @@
-# MaxBot Project Developer Guidelines
+# Mogzi Project Developer Guidelines
 
 ## References
 
@@ -13,6 +13,6 @@
 
 ## Debugging
 
-- runtime logs are located at `logs located at ~/.max/logs/`
+- runtime logs are located at `logs located at ~/.mogzi/logs/`
 - prefer have the user run there tool and you look at logs and user provide screenshots of output. Rationale: you have trouble obtaining the outputs from the terminal.
 

@@ -1,4 +1,4 @@
-namespace MaxBot.Services;
+namespace Mogzi.Services;
 
 /// <summary>
 /// Implementation of the core application service
@@ -106,6 +106,6 @@ public class AppService(ChatClient chatClient) : IAppService
     /// <returns>The token count</returns>
     public int CalculateTokenMetrics(List<ChatMessage> chatHistory)
     {
-        return MaxBot.Utils.ApiMetricUtils.GetSimplisticTokenCount(chatHistory);
+        return Mogzi.Utils.ApiMetricUtils.GetSimplisticTokenCount(chatHistory);
     }
 }

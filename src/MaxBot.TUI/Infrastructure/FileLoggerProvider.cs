@@ -1,5 +1,5 @@
 
-namespace MaxBot.TUI.Infrastructure;
+namespace Mogzi.TUI.Infrastructure;
 
 /// <summary>
 /// AOT-compatible file logger provider that writes logs to ~/.max/logs with rolling files.

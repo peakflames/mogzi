@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Version>0.13.5-prerelease</Version>
     <OutputType>Exe</OutputType>
-    <AssemblyName>max</AssemblyName>
+    <AssemblyName>mogzi</AssemblyName>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -23,8 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../MaxBot/MaxBot.csproj" />
-    <ProjectReference Include="..\MaxBot.PawPrints\MaxBot.PawPrints.csproj" />
+    <ProjectReference Include="../Mogzi/Mogzi.csproj" />
+    <ProjectReference Include="..\Mogzi.PawPrints\Mogzi.PawPrints.csproj" />
   </ItemGroup>
 
 </Project>

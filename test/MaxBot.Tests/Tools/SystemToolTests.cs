@@ -1,10 +1,10 @@
-using MaxBot.Domain;
-using MaxBot.Tools;
+using Mogzi.Domain;
+using Mogzi.Tools;
 using Xunit;
 using FluentAssertions;
 using System.Xml;
 
-namespace MaxBot.Tests.Tools;
+namespace Mogzi.Tests.Tools;
 
 public class SystemToolTests
 {

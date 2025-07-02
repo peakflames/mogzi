@@ -1,4 +1,4 @@
-namespace MaxBot.Prompts;
+namespace Mogzi.Prompts;
 
 /// <summary>
 /// Contains environment-specific system prompt information

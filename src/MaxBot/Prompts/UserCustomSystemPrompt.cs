@@ -1,4 +1,4 @@
-namespace MaxBot.Prompts;
+namespace Mogzi.Prompts;
 
 /// <summary>
 /// Placeholder for user custom system prompt (future enhancement)

@@ -6,10 +6,10 @@ using System.Security;
 using System.Security.Cryptography;
 using System.Text;
 
-using MaxBot.Domain.Diff;
-using MaxBot.Services.Diff;
+using Mogzi.Domain.Diff;
+using Mogzi.Services.Diff;
 
-namespace MaxBot.Tools;
+namespace Mogzi.Tools;
 
 /// <summary>
 /// Provides tools for applying and generating diff patches.
@@ -17,7 +17,7 @@ namespace MaxBot.Tools;
 /// <remarks>
 /// Initializes a new instance of the <see cref="DiffPatchTools"/> class.
 /// </remarks>
-/// <param name="config">The Maxbot configuration.</param>
+/// <param name="config">The Mogzi configuration.</param>
 /// <param name="llmResponseDetailsCallback">The callback for debug output.</param>
 /// <param name="workingDirectoryProvider">The working directory provider.</param>
 public class DiffPatchTools(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)

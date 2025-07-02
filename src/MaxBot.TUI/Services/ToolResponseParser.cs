@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Services;
+namespace Mogzi.TUI.Services;
 
 /// <summary>
 /// Parses tool responses and extracts information for enhanced display.

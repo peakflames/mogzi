@@ -1,7 +1,7 @@
 
 using System.Text;
 
-namespace MaxBot.Prompts;
+namespace Mogzi.Prompts;
 
 public static partial class Promptinator
 {

@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.App;
+namespace Mogzi.TUI.App;
 
 public sealed class FlexColumnTuiApp : IDisposable
 {
@@ -270,7 +270,7 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         // Strip system environment context from user messages for display
         var displayText = message.Role == ChatRole.User
-            ? MaxBot.Utils.MessageUtils.StripSystemEnvironment(message.Text)
+            ? Mogzi.Utils.MessageUtils.StripSystemEnvironment(message.Text)
             : message.Text;
 
         return new Markup($"[{color}]{prefix}{displayText}[/]");
@@ -881,7 +881,7 @@ public sealed class FlexColumnTuiApp : IDisposable
             _logger?.LogDebug("Generated environment prompt: {EnvPrompt}", envPrompt);
 
             // Create user message with environment context appended (for AI processing)
-            var fullUserMessage = MaxBot.Utils.MessageUtils.AppendSystemEnvironment(input, envPrompt);
+            var fullUserMessage = Mogzi.Utils.MessageUtils.AppendSystemEnvironment(input, envPrompt);
             var userMessage = new ChatMessage(ChatRole.User, fullUserMessage);
             _historyManager.AddUserMessage(userMessage);
 

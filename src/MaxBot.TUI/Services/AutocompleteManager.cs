@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Services;
+namespace Mogzi.TUI.Services;
 
 public class AutocompleteManager(IEnumerable<IAutocompleteProvider> providers, ILogger<AutocompleteManager> logger)
 {

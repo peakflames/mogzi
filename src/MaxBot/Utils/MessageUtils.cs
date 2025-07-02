@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace MaxBot.Utils;
+namespace Mogzi.Utils;
 
 /// <summary>
 /// Utility methods for handling message content and system environment context

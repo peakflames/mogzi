@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\MaxBot\MaxBot.csproj" />
+    <ProjectReference Include="..\..\src\Mogzi\Mogzi.csproj" />
   </ItemGroup>
 
 </Project>

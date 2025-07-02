@@ -1,4 +1,4 @@
-namespace MaxBot.TUI;
+namespace Mogzi.TUI;
 
 /// <summary>
 /// Entry point for the UI application.
@@ -77,11 +77,11 @@ public static class Program
     /// </summary>
     private static void ShowGlobalHelp()
     {
-        AnsiConsole.MarkupLine($"[bold]max[/] [dim]v{GetApplicationVersion()}[/]");
+        AnsiConsole.MarkupLine($"[bold]mogzi[/] [dim]v{GetApplicationVersion()}[/]");
         AnsiConsole.WriteLine();
 
         AnsiConsole.MarkupLine("[bold]USAGE:[/]");
-        AnsiConsole.MarkupLine("    max [[COMMAND]] [[OPTIONS]]");
+        AnsiConsole.MarkupLine("    mogzi [[COMMAND]] [[OPTIONS]]");
         AnsiConsole.WriteLine();
 
         AnsiConsole.MarkupLine("[bold]COMMANDS:[/]");
@@ -99,15 +99,15 @@ public static class Program
         AnsiConsole.WriteLine();
 
         AnsiConsole.MarkupLine("[bold]EXAMPLES:[/]");
-        AnsiConsole.MarkupLine("    max                                          # Start interactive chat (default)");
-        AnsiConsole.MarkupLine("    max chat --verbosity normal                 # Start chat with verbose logging");
-        AnsiConsole.MarkupLine("    max chat --tool-approvals all               # Start chat with all tools enabled");
-        AnsiConsole.MarkupLine("    max run --prompt \"Hello world\"              # Run single prompt");
-        AnsiConsole.MarkupLine("    max run --prompt ./my-prompt.md             # Run prompt from file");
-        AnsiConsole.MarkupLine("    max run -p \"Create a file\" -ta all          # Run with all tools enabled");
+        AnsiConsole.MarkupLine("    mogzi                                          # Start interactive chat (default)");
+        AnsiConsole.MarkupLine("    mogzi chat --verbosity normal                 # Start chat with verbose logging");
+        AnsiConsole.MarkupLine("    mogzi chat --tool-approvals all               # Start chat with all tools enabled");
+        AnsiConsole.MarkupLine("    mogzi run --prompt \"Hello world\"              # Run single prompt");
+        AnsiConsole.MarkupLine("    mogzi run --prompt ./my-prompt.md             # Run prompt from file");
+        AnsiConsole.MarkupLine("    mogzi run -p \"Create a file\" -ta all          # Run with all tools enabled");
         AnsiConsole.WriteLine();
 
-        AnsiConsole.MarkupLine("Use '[cyan]max <command> --help[/]' for more information about a specific command.");
+        AnsiConsole.MarkupLine("Use '[cyan]mogzi <command> --help[/]' for more information about a specific command.");
     }
 
     /// <summary>
@@ -132,10 +132,10 @@ public static class Program
     {
         try
         {
-            var configPath = MaxBot.Utils.ConfigurationLocator.FindConfigPath();
+            var configPath = Mogzi.Utils.ConfigurationLocator.FindConfigPath();
             if (configPath is null)
             {
-                AnsiConsole.MarkupLine("[red]Error: Could not find maxbot.config.json in the current directory or home directory.[/]");
+                AnsiConsole.MarkupLine("[red]Error: Could not find mogzi.config.json in the current directory or home directory.[/]");
                 return;
             }
 
@@ -145,7 +145,7 @@ public static class Program
             var config = configRoot?.MaxbotConfig;
             if (config?.Profiles == null || !config.Profiles.Any())
             {
-                AnsiConsole.MarkupLine("[yellow]No profiles found in maxbot.config.json.[/]");
+                AnsiConsole.MarkupLine("[yellow]No profiles found in mogzi.config.json.[/]");
                 return;
             }
 
@@ -171,7 +171,7 @@ public static class Program
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine("[red]Error loading or parsing maxbot.config.json:[/]");
+            AnsiConsole.MarkupLine("[red]Error loading or parsing mogzi.config.json:[/]");
             AnsiConsole.WriteException(ex);
         }
     }

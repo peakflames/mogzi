@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Services;
+namespace Mogzi.TUI.Services;
 
 public class SlashCommandProvider(SlashCommandProcessor slashCommandProcessor, ILogger<SlashCommandProvider> logger) : IAutocompleteProvider
 {

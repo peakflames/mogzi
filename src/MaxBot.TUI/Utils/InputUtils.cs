@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Utils;
+namespace Mogzi.TUI.Utils;
 
 /// <summary>
 /// Utility methods for input handling and text manipulation.

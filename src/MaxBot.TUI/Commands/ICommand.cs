@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Commands;
+namespace Mogzi.TUI.Commands;
 
 /// <summary>
 /// Interface for command implementations.

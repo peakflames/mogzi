@@ -3,9 +3,9 @@
 
 using System.Text.RegularExpressions;
 
-using MaxBot.Domain.Diff;
+using Mogzi.Domain.Diff;
 
-namespace MaxBot.Services.Diff;
+namespace Mogzi.Services.Diff;
 
 internal class WhitespaceNormalizationStrategy : IFuzzyMatchingStrategy
 {

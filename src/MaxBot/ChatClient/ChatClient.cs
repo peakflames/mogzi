@@ -2,7 +2,7 @@ using FluentResults;
 using System.Text.Json;
 using System.ClientModel.Primitives;
 
-namespace MaxBot;
+namespace Mogzi;
 
 public partial class ChatClient
 {
@@ -111,7 +111,7 @@ public partial class ChatClient
         configFilePath ??= Utils.ConfigurationLocator.FindConfigPath();
         if (configFilePath is null)
         {
-            return Result.Fail("Could not find maxbot.config.json in the current directory or home directory.");
+            return Result.Fail("Could not find mogzi.config.json in the current directory or home directory.");
         }
 
         string jsonContent;

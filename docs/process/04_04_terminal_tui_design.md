@@ -1,8 +1,8 @@
-# MaxBot Terminal Interface & TUI Design
+# Mogzi Terminal Interface & TUI Design
 
 ## Terminal Interface Architecture
 
-MaxBot's Terminal User Interface (TUI) provides a sophisticated, responsive interface for AI-powered development assistance. The design emphasizes real-time interaction, efficient rendering, and seamless integration with the underlying chat and tool systems.
+Mogzi's Terminal User Interface (TUI) provides a sophisticated, responsive interface for AI-powered development assistance. The design emphasizes real-time interaction, efficient rendering, and seamless integration with the underlying chat and tool systems.
 
 ## Core Interface Components
 
@@ -732,4 +732,4 @@ private void ShowThinkingIndicator()
 }
 ```
 
-This terminal interface and TUI design provides MaxBot with a sophisticated, responsive user interface that seamlessly integrates with the autocomplete system, state management, and AI processing capabilities while maintaining excellent performance and user experience.
+This terminal interface and TUI design provides Mogzi with a sophisticated, responsive user interface that seamlessly integrates with the autocomplete system, state management, and AI processing capabilities while maintaining excellent performance and user experience.

@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Extensions;
+namespace Mogzi.TUI.Extensions;
 
 public static class ConsoleExtensions
 {

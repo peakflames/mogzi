@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 
 using FluentAssertions;
-using MaxBot.Domain;
-using MaxBot.Tools;
+using Mogzi.Domain;
+using Mogzi.Tools;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace MaxBot.Tests.Tools;
+namespace Mogzi.Tests.Tools;
 
 public class DiffPatchToolTests : IDisposable
 {

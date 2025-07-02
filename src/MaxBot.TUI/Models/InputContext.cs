@@ -1,4 +1,4 @@
-namespace MaxBot.TUI.Models;
+namespace Mogzi.TUI.Models;
 
 /// <summary>
 /// Represents the state of the input system, including autocomplete functionality.

@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using UglyToad.PdfPig;
 using System.Text;
 
-namespace MaxBot.Tools;
+namespace Mogzi.Tools;
 
 public class ReadPdfFileTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
 {

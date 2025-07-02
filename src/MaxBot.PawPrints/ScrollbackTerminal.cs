@@ -1,4 +1,4 @@
-namespace MaxBot.PawPrints;
+namespace Mogzi.PawPrints;
 
 public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal
 {

@@ -1,12 +1,12 @@
-# MaxBot CLI Architecture
+# Mogzi CLI Architecture
 
 ## Solution Structure
 
 **Project Organization:**
-- **MaxBot** - Core domain, services, and business logic library
-- **MaxBot.TUI** - Text User Interface application (main executable)
-- **MaxBot.PawPrints** - Terminal interface abstraction library
-- **MaxBot.Tests** - Unit and integration tests
+- **Mogzi** - Core domain, services, and business logic library
+- **Mogzi.TUI** - Text User Interface application (main executable)
+- **Mogzi.PawPrints** - Terminal interface abstraction library
+- **Mogzi.Tests** - Unit and integration tests
 
 **Technology Stack:**
 - .NET 9 with C# for cross-platform development and AOT compilation
