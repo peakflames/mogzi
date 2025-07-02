@@ -10,6 +10,7 @@ public sealed class FlexColumnTuiApp : IDisposable
     private readonly AdvancedKeyboardHandler _keyboardHandler;
     private readonly SlashCommandProcessor _slashCommandProcessor;
     private readonly AutocompleteManager _autocompleteManager;
+    private readonly UserSelectionManager _userSelectionManager;
     private readonly IScrollbackTerminal _scrollbackTerminal;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
     private readonly ToolResponseParser _toolResponseParser;
@@ -28,8 +29,8 @@ public sealed class FlexColumnTuiApp : IDisposable
     private DateTime _aiOperationStartTime;
 
     // Tool execution tracking
-    private readonly Dictionary<string, string> _functionCallToToolName = new();
-    private readonly Dictionary<string, string> _functionCallToPreEditContent = new();
+    private readonly Dictionary<string, string> _functionCallToToolName = [];
+    private readonly Dictionary<string, string> _functionCallToPreEditContent = [];
 
     public bool IsRunning { get; private set; } = false;
 
@@ -52,6 +53,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         _keyboardHandler = new AdvancedKeyboardHandler(_serviceProvider.GetService<ILogger<AdvancedKeyboardHandler>>());
         _slashCommandProcessor = new SlashCommandProcessor(AnsiConsole.Console, _serviceProvider.GetService<ILogger<SlashCommandProcessor>>(), _serviceProvider.GetService<ChatClient>());
         _autocompleteManager = serviceProvider.GetRequiredService<AutocompleteManager>();
+        _userSelectionManager = new UserSelectionManager(_serviceProvider, _inputContext);
 
         _keyboardHandler.KeyPressed += OnKeyPressed;
         _keyboardHandler.KeyCombinationPressed += OnKeyCombinationPressed;
@@ -63,6 +65,12 @@ public sealed class FlexColumnTuiApp : IDisposable
             _historyManager.ClearHistory();
             _scrollbackTerminal.Initialize();
             RenderInitialContent();
+        };
+
+        _slashCommandProcessor.InteractiveCommandRequested += command =>
+        {
+            _userSelectionManager.DetectAndActivate(command);
+            _ = _userSelectionManager.UpdateSelectionsAsync();
         };
 
         RegisterKeyBindings();
@@ -195,13 +203,15 @@ public sealed class FlexColumnTuiApp : IDisposable
     {
         var bottomComponent = _currentState switch
         {
-            ChatState.Input when _inputContext.ShowSuggestions => 
+            ChatState.Input when _inputContext.State == InputState.UserSelection =>
+                CreateInputWithUserSelection(_inputContext),
+            ChatState.Input when _inputContext.State == InputState.Autocomplete && _inputContext.ShowSuggestions =>
                 CreateInputWithAutocomplete(_inputContext),
-            ChatState.Input => 
+            ChatState.Input =>
                 CreateFlexInputComponent(_inputContext.CurrentInput),
-            ChatState.Thinking => 
+            ChatState.Thinking =>
                 CreateFlexThinkingComponent(),
-            ChatState.ToolExecution => 
+            ChatState.ToolExecution =>
                 CreateFlexToolExecutionComponent(_toolProgress),
             _ => CreateFlexInputComponent(_inputContext.CurrentInput)
         };
@@ -316,7 +326,7 @@ public sealed class FlexColumnTuiApp : IDisposable
             return inputPanel;
         }
 
-        var suggestionItems = context.Suggestions.Select((suggestion, index) => 
+        var suggestionItems = context.Suggestions.Select((suggestion, index) =>
         {
             var isSelected = index == context.SelectedSuggestionIndex;
             var style = isSelected ? "[blue on white]" : "[dim]";
@@ -334,6 +344,33 @@ public sealed class FlexColumnTuiApp : IDisposable
             .Padding(0, 0);
 
         return new Rows(inputPanel, suggestionsPanel);
+    }
+
+    private IRenderable CreateInputWithUserSelection(InputContext context)
+    {
+        var inputPanel = CreateFlexInputComponent(context.CurrentInput);
+
+        if (context.CompletionItems.Count == 0)
+        {
+            return inputPanel;
+        }
+
+        var selectionItems = context.CompletionItems.Select((item, index) =>
+        {
+            var isSelected = index == context.SelectedSuggestionIndex;
+            var style = isSelected ? "[blue on white]" : "[dim]";
+            var prefix = isSelected ? ">" : " ";
+
+            return new Markup($"{style}{prefix} {item.Text,-12} {item.Description}[/]");
+        }).ToArray();
+
+        var selectionPanel = new Panel(new Rows(selectionItems))
+            .Header("Select an option")
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Green)
+            .Padding(0, 0);
+
+        return new Rows(inputPanel, selectionPanel);
     }
 
     private IRenderable CreateFlexThinkingComponent()
@@ -551,6 +588,35 @@ public sealed class FlexColumnTuiApp : IDisposable
                         CancelAutocomplete();
                         e.Handled = true;
                         return;
+                }
+#pragma warning restore IDE0010 // Add missing cases
+            }
+            else if (_inputContext.State == InputState.UserSelection)
+            {
+#pragma warning disable IDE0010 // Add missing cases
+                switch (e.Key)
+                {
+                    case ConsoleKey.UpArrow:
+                        NavigateUserSelection(up: true);
+                        e.Handled = true;
+                        return;
+
+                    case ConsoleKey.DownArrow:
+                        NavigateUserSelection(up: false);
+                        e.Handled = true;
+                        return;
+
+                    case ConsoleKey.Enter:
+                        await _userSelectionManager.AcceptSelectionAsync();
+                        e.Handled = true;
+                        return;
+
+                    case ConsoleKey.Escape:
+                        _userSelectionManager.Deactivate();
+                        e.Handled = true;
+                        return;
+                    default:
+                        break;
                 }
 #pragma warning restore IDE0010 // Add missing cases
             }
@@ -828,6 +894,12 @@ public sealed class FlexColumnTuiApp : IDisposable
 
             if (_slashCommandProcessor.TryProcessCommand(input, out var commandOutput))
             {
+                if (_inputContext.State == InputState.UserSelection)
+                {
+                    // Command is interactive, so we don't process it as a chat message.
+                    return;
+                }
+
                 if (!string.IsNullOrEmpty(commandOutput))
                 {
                     var commandMessage = new ChatMessage(ChatRole.Assistant, commandOutput);
@@ -921,7 +993,7 @@ public sealed class FlexColumnTuiApp : IDisposable
                 var hasToolResponse = responseUpdate.Text.Contains("<tool_response") || responseUpdate.Text.Contains("</tool_response>");
                 return hasToolResponse;
             }
-            
+
             return false;
         }
 
@@ -1173,6 +1245,27 @@ public sealed class FlexColumnTuiApp : IDisposable
         _inputContext.ClearAutocomplete();
     }
 
+    private void NavigateUserSelection(bool up)
+    {
+        if (_inputContext.CompletionItems.Count == 0)
+        {
+            return;
+        }
+
+        if (up)
+        {
+            _inputContext.SelectedSuggestionIndex =
+                (_inputContext.SelectedSuggestionIndex - 1 + _inputContext.CompletionItems.Count)
+                % _inputContext.CompletionItems.Count;
+        }
+        else
+        {
+            _inputContext.SelectedSuggestionIndex =
+                (_inputContext.SelectedSuggestionIndex + 1)
+                % _inputContext.CompletionItems.Count;
+        }
+    }
+
     private void HandleEscapeKey()
     {
 #pragma warning disable IDE0010 // Add missing cases
@@ -1262,7 +1355,7 @@ public sealed class FlexColumnTuiApp : IDisposable
                 return;
             }
             // Handle XML tool responses in text content
-            else if (!string.IsNullOrEmpty(responseUpdate.Text) && 
+            else if (!string.IsNullOrEmpty(responseUpdate.Text) &&
                      (responseUpdate.Text.Contains("<tool_response") || responseUpdate.Text.Contains("</tool_response>")))
             {
                 result = responseUpdate.Text;

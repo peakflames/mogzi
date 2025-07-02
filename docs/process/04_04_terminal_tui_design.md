@@ -215,6 +215,7 @@ public class FlexColumnTuiApp
     private readonly StateManager _stateManager;
     private readonly HistoryManager _historyManager;
     private readonly AutocompleteManager _autocompleteManager;
+    private readonly UserSelectionManager _userSelectionManager;
     private readonly AdvancedKeyboardHandler _keyboardHandler;
 
     public FlexColumnTuiApp(
@@ -222,7 +223,8 @@ public class FlexColumnTuiApp
         IScrollbackTerminal terminal,
         StateManager stateManager,
         HistoryManager historyManager,
-        AutocompleteManager autocompleteManager)
+        AutocompleteManager autocompleteManager,
+        UserSelectionManager userSelectionManager)
     {
         _appService = appService;
         _terminal = terminal;
@@ -655,6 +657,17 @@ public class TerminalErrorHandler
 ## Integration Points
 
 ### Autocomplete Integration
+
+### User Selection Integration
+
+**Interactive Command Handling:**
+- The `SlashCommandProcessor` raises an `InteractiveCommandRequested` event when a command marked as interactive is entered.
+- `FlexColumnTuiApp` listens for this event and activates the `UserSelectionManager`.
+- The `UserSelectionManager` uses a provider pattern (`IUserSelectionProvider`) to fetch the appropriate options for the command.
+
+**Non-Blocking UI:**
+- The user selection menu is rendered as an overlay within the main dynamic display loop, preventing any blocking of the UI thread.
+- The `InputState` enum is extended with a `UserSelection` state, which allows the `AdvancedKeyboardHandler` to interpret up/down arrow and Enter keys as navigation and selection commands for the active menu.
 
 **Seamless Autocomplete Rendering:**
 ```csharp

@@ -88,5 +88,10 @@ public enum InputState
     /// <summary>
     /// Showing autocomplete suggestions.
     /// </summary>
-    Autocomplete
+    Autocomplete,
+
+    /// <summary>
+    /// Showing user selection options.
+    /// </summary>
+    UserSelection
 }

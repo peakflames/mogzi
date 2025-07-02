@@ -47,6 +47,10 @@ public static class ServiceConfiguration
         _ = services.AddSingleton<IAutocompleteProvider, FilePathProvider>();
         _ = services.AddSingleton<AutocompleteManager>();
 
+        // Add user selection services
+        _ = services.AddSingleton<IUserSelectionProvider, ToolApprovalsProvider>();
+        _ = services.AddSingleton<UserSelectionManager>();
+
         // Add TUI infrastructure components
         _ = services.AddSingleton<FlexColumnTuiApp>();
         _ = services.AddSingleton<IScrollbackTerminal, ScrollbackTerminal>();

@@ -482,6 +482,60 @@ private IRenderable CreateInputWithAutocomplete(InputContext context)
 - **Minimal UI Updates**: Only updates autocomplete UI when suggestions change
 - **Resource Limits**: Built-in limits prevent excessive memory usage or long operations
 
+## User Selection Architecture
+
+**Provider Pattern for Interactive Commands:**
+```csharp
+// Core interface for commands requiring user selection
+public interface IUserSelectionProvider
+{
+    string Command { get; }
+    string Description { get; }
+    Task<List<CompletionItem>> GetSelectionsAsync();
+    Task OnSelectionAsync(string selection);
+}
+
+// Manager for orchestrating the selection process
+public class UserSelectionManager
+{
+    public bool IsSelectionModeActive { get; }
+    public void DetectAndActivate(string input);
+    public async Task UpdateSelectionsAsync();
+    public async Task AcceptSelectionAsync();
+    public void Deactivate();
+}
+```
+
+**User Selection Flow Architecture:**
+```mermaid
+sequenceDiagram
+    participant User
+    participant FlexColumnTuiApp
+    participant SlashCommandProcessor
+    participant UserSelectionManager
+    participant Provider
+
+    User->>FlexColumnTuiApp: Types interactive command (e.g., /tool-approvals)
+    FlexColumnTuiApp->>SlashCommandProcessor: TryProcessCommand()
+    SlashCommandProcessor->>FlexColumnTuiApp: Raises InteractiveCommandRequested event
+    FlexColumnTuiApp->>UserSelectionManager: DetectAndActivate()
+    UserSelectionManager->>Provider: GetSelectionsAsync()
+    Provider-->>UserSelectionManager: List<CompletionItem>
+    UserSelectionManager->>FlexColumnTuiApp: Update UI with selection options
+    
+    alt User navigates and selects
+        User->>FlexColumnTuiApp: Presses Up/Down/Enter
+        FlexColumnTuiApp->>UserSelectionManager: Navigate or AcceptSelectionAsync()
+        UserSelectionManager->>Provider: OnSelectionAsync()
+        Provider-->>UserSelectionManager: Updates state (e.g., config)
+        UserSelectionManager->>FlexColumnTuiApp: Deactivates and returns to normal input
+    end
+```
+
+**Input Context State Management:**
+- The `InputState` enum is extended with a `UserSelection` state to differentiate between normal input, autocomplete, and interactive command selection.
+- The `FlexColumnTuiApp`'s rendering and keyboard handling logic changes based on this state, ensuring that arrow keys navigate the selection list and Enter confirms the choice.
+
 ## State Management Architecture
 
 **Application State:**
