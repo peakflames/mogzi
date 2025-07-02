@@ -22,6 +22,11 @@ public sealed class SlashCommandProcessor
     public event Action? ClearHistoryRequested;
 
     /// <summary>
+    /// Event raised when an interactive command is requested.
+    /// </summary>
+    public event Action<string>? InteractiveCommandRequested;
+
+    /// <summary>
     /// Initializes a new instance of SlashCommandProcessor.
     /// </summary>
     public SlashCommandProcessor(IAnsiConsole console, ILogger<SlashCommandProcessor>? logger = null, ChatClient? chatClient = null)
@@ -54,6 +59,13 @@ public sealed class SlashCommandProcessor
 
         if (_commands.TryGetValue(command, out var cmd))
         {
+            if (cmd.IsInteractive)
+            {
+                InteractiveCommandRequested?.Invoke(command);
+                output = null; // No direct output, handled by TUI
+                return true;
+            }
+
             _logger?.LogDebug("Executing slash command: {Command} with args: {Args}", command, args);
             output = cmd.ExecuteWithOutput?.Invoke(args) ?? "Command executed successfully";
             return true;
@@ -100,6 +112,7 @@ public sealed class SlashCommandProcessor
         _commands["/exit"] = new SlashCommand("/exit", "Exit the application gracefully", RequestExit, GetExitOutput);
         _commands["/quit"] = new SlashCommand("/quit", "Exit the application gracefully (alias for /exit)", RequestExit, GetExitOutput);
         _commands["/status"] = new SlashCommand("/status", "Show current system status and information", ShowStatus, GetStatusOutput);
+        _commands["/tool-approvals"] = new SlashCommand("/tool-approvals", "Change the tool approval mode for the session", _ => { }, null, true);
     }
 
     /// <summary>
@@ -340,4 +353,5 @@ public sealed class SlashCommandProcessor
 /// <param name="Description">A description of what the command does.</param>
 /// <param name="Execute">The action to execute when the command is invoked.</param>
 /// <param name="ExecuteWithOutput">The function to execute when the command is invoked, returning output.</param>
-public sealed record SlashCommand(string Name, string Description, Action<string> Execute, Func<string, string>? ExecuteWithOutput = null);
+/// <param name="IsInteractive">Whether the command requires interactive handling by the TUI.</param>
+public sealed record SlashCommand(string Name, string Description, Action<string> Execute, Func<string, string>? ExecuteWithOutput = null, bool IsInteractive = false);

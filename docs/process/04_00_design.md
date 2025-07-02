@@ -53,6 +53,16 @@ Intelligent, context-aware completion for enhanced user experience:
 
 > **📋 Detailed Documentation**: [Autocomplete System Design](04_01_autocomplete_design.md)
 
+### User Selection System
+Interactive, non-blocking user selection for slash commands:
+
+- **Provider Pattern**: Extensible selection providers for different commands
+- **Event-Driven Activation**: Interactive UI triggered by events from the slash command processor
+- **Integrated UI**: Renders as an overlay within the main TUI loop
+- **State Management**: Coordinated through a dedicated `UserSelectionManager`
+
+> **📋 Detailed Documentation**: [Terminal Interface & TUI Design](04_04_terminal_tui_design.md)
+
 ### Diff/Patch System
 Sophisticated code modification capabilities with intelligent conflict resolution:
 

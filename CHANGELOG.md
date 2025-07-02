@@ -1,5 +1,9 @@
 # Changelog
 
+ [0.13.4] - 2025-07-01
+
+- Add new interactive slash command, `/tool-approvals`, that allows users to change the tool approval mode (`readonly` or `all`) for the current session.
+  
 ## [0.13.3] - 2025-07-01
 
 - Add **--list-profiles** command
