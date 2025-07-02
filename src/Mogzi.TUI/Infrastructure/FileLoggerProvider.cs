@@ -2,7 +2,7 @@
 namespace Mogzi.TUI.Infrastructure;
 
 /// <summary>
-/// AOT-compatible file logger provider that writes logs to ~/.max/logs with rolling files.
+/// AOT-compatible file logger provider that writes logs to ~/.mogzi/logs with rolling files.
 /// </summary>
 public sealed class FileLoggerProvider : ILoggerProvider
 {
@@ -15,9 +15,9 @@ public sealed class FileLoggerProvider : ILoggerProvider
     {
         _minLogLevel = minLogLevel;
 
-        // Create log directory at ~/.max/logs
+        // Create log directory at ~/.mogzi/logs
         var homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        _logDirectory = Path.Combine(homeDirectory, ".max", "logs");
+        _logDirectory = Path.Combine(homeDirectory, ".mogzi", "logs");
 
         try
         {
@@ -25,10 +25,10 @@ public sealed class FileLoggerProvider : ILoggerProvider
         }
         catch (Exception ex)
         {
-            // Fallback to temp directory if we can't create ~/.max/logs
+            // Fallback to temp directory if we can't create ~/.mogzi/logs
             _logDirectory = Path.Combine(Path.GetTempPath(), "mogzi-logs");
             _ = Directory.CreateDirectory(_logDirectory);
-            Console.WriteLine($"Warning: Could not create ~/.max/logs, using {_logDirectory}. Error: {ex.Message}");
+            Console.WriteLine($"Warning: Could not create ~/.mogzi/logs, using {_logDirectory}. Error: {ex.Message}");
         }
     }
 

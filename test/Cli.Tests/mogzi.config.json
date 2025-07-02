@@ -1,5 +1,5 @@
 {
-    "maxbotConfig": {
+    "mogziConfig": {
         "defaultMode": "chat",
         "apiProviders": [
             {

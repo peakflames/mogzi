@@ -6,7 +6,7 @@ namespace Mogzi.Prompts;
 internal static class UserCustomSystemPrompt
 {
 #pragma warning disable IDE0060 // Remove unused parameter
-    public static string GetUserCustomPrompt(MaxbotConfiguration config)
+    public static string GetUserCustomPrompt(ApplicationConfiguration config)
 #pragma warning restore IDE0060 // Remove unused parameter
     {
         // Future enhancement: Allow users to define custom system prompts in configuration

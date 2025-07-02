@@ -7,9 +7,9 @@ using System.Text.RegularExpressions;
 
 namespace Mogzi.Tools;
 
-public class LSTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
+public class LSTool(ApplicationConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
 {
-    private readonly MaxbotConfiguration _config = config;
+    private readonly ApplicationConfiguration _config = config;
     private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = llmResponseDetailsCallback;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
 

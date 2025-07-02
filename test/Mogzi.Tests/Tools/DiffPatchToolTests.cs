@@ -11,7 +11,7 @@ namespace Mogzi.Tests.Tools;
 public class DiffPatchToolTests : IDisposable
 {
     private readonly string _testDirectory;
-    private readonly MaxbotConfiguration _config;
+    private readonly ApplicationConfiguration _config;
     private readonly DiffPatchTools _diffPatchTools;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
 
@@ -20,7 +20,7 @@ public class DiffPatchToolTests : IDisposable
         _testDirectory = Path.Combine(Path.GetTempPath(), "MaxBotDiffPatchToolTests", Guid.NewGuid().ToString());
         Directory.CreateDirectory(_testDirectory);
 
-        _config = new MaxbotConfiguration { ToolApprovals = "all" };
+        _config = new ApplicationConfiguration { ToolApprovals = "all" };
         _workingDirectoryProvider = new MockWorkingDirectoryProvider(_testDirectory);
         _diffPatchTools = new DiffPatchTools(_config, null, _workingDirectoryProvider);
     }
@@ -118,7 +118,7 @@ public class DiffPatchToolTests : IDisposable
     public void ApplyCodePatch_WithReadOnlyMode_ShouldReturnError()
     {
         // Arrange
-        var readOnlyConfig = new MaxbotConfiguration { ToolApprovals = "readonly" };
+        var readOnlyConfig = new ApplicationConfiguration { ToolApprovals = "readonly" };
         var readOnlyTools = new DiffPatchTools(readOnlyConfig, null, _workingDirectoryProvider);
         var testFile = "test.txt";
         var initialContent = "Hello, world!";

@@ -5,9 +5,9 @@ using System.Text;
 
 namespace Mogzi.Tools;
 
-public class SystemTools(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
+public class SystemTools(ApplicationConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
 {
-    private readonly MaxbotConfiguration _config = config;
+    private readonly ApplicationConfiguration _config = config;
     private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = llmResponseDetailsCallback;
 
     public List<AIFunction> GetTools()

@@ -2,18 +2,18 @@ using System.Text.Json.Serialization;
 
 namespace Mogzi.Domain;
 
-[JsonSerializable(typeof(MaxbotConfigurationRoot))]
+[JsonSerializable(typeof(ApplicationConfigurationRoot))]
 public partial class MaxbotConfigurationContext : JsonSerializerContext
 {
 }
 
-public class MaxbotConfigurationRoot
+public class ApplicationConfigurationRoot
 {
-    [JsonPropertyName("maxbotConfig")]
-    public MaxbotConfiguration? MaxbotConfig { get; set; }
+    [JsonPropertyName("mogziConfig")]
+    public ApplicationConfiguration? MaxbotConfig { get; set; }
 }
 
-public class MaxbotConfiguration
+public class ApplicationConfiguration
 {
     [JsonPropertyName("defaultMode")]
     public string DefaultMode { get; set; } = "oneshot";

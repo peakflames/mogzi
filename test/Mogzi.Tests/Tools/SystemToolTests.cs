@@ -9,11 +9,11 @@ namespace Mogzi.Tests.Tools;
 public class SystemToolTests
 {
     private SystemTools _systemTools;
-    private MaxbotConfiguration _config;
+    private ApplicationConfiguration _config;
 
     public SystemToolTests()
     {
-        _config = new MaxbotConfiguration();
+        _config = new ApplicationConfiguration();
         _systemTools = new SystemTools(_config);
     }
 
@@ -94,7 +94,7 @@ public class SystemToolTests
     {
         // Arrange
         var resultText = "Task completed successfully.";
-        var tools = new SystemTools(new MaxbotConfiguration());
+        var tools = new SystemTools(new ApplicationConfiguration());
 
         // Act
         var xmlString = tools.AttemptCompletion(resultText);

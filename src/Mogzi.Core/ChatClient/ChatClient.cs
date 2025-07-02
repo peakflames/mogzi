@@ -7,7 +7,7 @@ namespace Mogzi;
 public partial class ChatClient
 {
     public IChatClient ChatClientMEAI { get; init; }
-    public MaxbotConfiguration Config { get; init; }
+    public ApplicationConfiguration Config { get; init; }
     public Profile ActiveProfile { get; init; }
     public ApiProvider ActiveApiProvider { get; init; }
 
@@ -41,7 +41,7 @@ public partial class ChatClient
     private GrepTool GrepTool { get; init; }
     private ShellTool ShellTool { get; init; }
 
-    private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
+    private ChatClient(IChatClient chatClient, ApplicationConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
     {
         ChatClientMEAI = chatClient;
         Config = config;
@@ -124,7 +124,7 @@ public partial class ChatClient
             return Result.Fail($"Failed to read config file at '{configFilePath}': {ex.Message}");
         }
 
-        MaxbotConfigurationRoot? configRoot;
+        ApplicationConfigurationRoot? configRoot;
         try
         {
             configRoot = JsonSerializer.Deserialize(

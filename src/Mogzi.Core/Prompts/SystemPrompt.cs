@@ -8,7 +8,7 @@ public static partial class Promptinator
     /// <summary>
     /// Generates a modular system prompt based on the model family and configuration
     /// </summary>
-    public static string GetSystemPrompt(string currentDataTime, string userOperatingSystem, string userShell, string username, string hostname, string currentWorkingDirectory, MaxbotConfiguration config, string mode)
+    public static string GetSystemPrompt(string currentDataTime, string userOperatingSystem, string userShell, string username, string hostname, string currentWorkingDirectory, ApplicationConfiguration config, string mode)
     {
         // Ensure we have an absolute path for the working directory
         var absoluteWorkingDirectory = Path.IsPathRooted(currentWorkingDirectory)

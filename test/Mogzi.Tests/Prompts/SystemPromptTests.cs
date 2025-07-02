@@ -49,7 +49,7 @@ public class SystemPromptTests
     public void GetSystemPrompt_ShouldIncludeAbsolutePath_WhenRelativePathProvided()
     {
         // Arrange
-        var config = new MaxbotConfiguration
+        var config = new ApplicationConfiguration
         {
             ToolApprovals = "all",
             Profiles = new List<Profile>
@@ -87,7 +87,7 @@ public class SystemPromptTests
     public void GetSystemPrompt_ShouldContainModelSpecificContent_ForClaudeModel()
     {
         // Arrange
-        var config = new MaxbotConfiguration
+        var config = new ApplicationConfiguration
         {
             ToolApprovals = "all",
             Profiles = new List<Profile>
@@ -122,7 +122,7 @@ public class SystemPromptTests
     public void GetSystemPrompt_ShouldContainModelSpecificContent_ForGeminiModel()
     {
         // Arrange
-        var config = new MaxbotConfiguration
+        var config = new ApplicationConfiguration
         {
             ToolApprovals = "all",
             Profiles = new List<Profile>
@@ -157,7 +157,7 @@ public class SystemPromptTests
     public void GetSystemPrompt_ShouldContainToolUsageInstructions()
     {
         // Arrange
-        var config = new MaxbotConfiguration
+        var config = new ApplicationConfiguration
         {
             ToolApprovals = "all",
             Profiles = new List<Profile>
@@ -193,7 +193,7 @@ public class SystemPromptTests
     public void GetSystemPrompt_ShouldContainEnvironmentInformation()
     {
         // Arrange
-        var config = new MaxbotConfiguration
+        var config = new ApplicationConfiguration
         {
             ToolApprovals = "readonly",
             Profiles = new List<Profile>

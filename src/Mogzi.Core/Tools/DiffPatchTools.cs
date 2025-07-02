@@ -20,9 +20,9 @@ namespace Mogzi.Tools;
 /// <param name="config">The Mogzi configuration.</param>
 /// <param name="llmResponseDetailsCallback">The callback for debug output.</param>
 /// <param name="workingDirectoryProvider">The working directory provider.</param>
-public class DiffPatchTools(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
+public class DiffPatchTools(ApplicationConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
 {
-    private readonly MaxbotConfiguration _config = config;
+    private readonly ApplicationConfiguration _config = config;
     private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback = llmResponseDetailsCallback;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider = workingDirectoryProvider ?? new DefaultWorkingDirectoryProvider();
     private readonly FuzzyPatchApplicator _patchApplicator = new();
