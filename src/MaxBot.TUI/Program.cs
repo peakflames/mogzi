@@ -39,6 +39,12 @@ public static class Program
                     return 0;
                 }
 
+                if (ArgumentParser.HasFlag(parsedArgs, "list-profiles") || ArgumentParser.HasFlag(parsedArgs, "lp"))
+                {
+                    ListProfiles();
+                    return 0;
+                }
+
                 // Default to chat if no command specified
                 commandName = "chat";
             }
@@ -88,6 +94,7 @@ public static class Program
         AnsiConsole.MarkupLine("[bold]GLOBAL OPTIONS:[/]");
         AnsiConsole.MarkupLine("    -h, --help                   Show this help message");
         AnsiConsole.MarkupLine("    -v, --version                Show version information");
+        AnsiConsole.MarkupLine("    -lp, --list-profiles         List all available profiles from the configuration");
         AnsiConsole.MarkupLine("    -ta, --tool-approvals <MODE> Override tool approval mode (readonly, all)");
         AnsiConsole.WriteLine();
 
@@ -118,6 +125,47 @@ public static class Program
         catch
         {
             return "UNKNOWN";
+        }
+    }
+
+    private static void ListProfiles()
+    {
+        try
+        {
+            var jsonContent = File.ReadAllText("maxbot.config.json");
+            var configRoot = JsonSerializer.Deserialize(jsonContent, MaxbotConfigurationContext.Default.MaxbotConfigurationRoot);
+
+            var config = configRoot?.MaxbotConfig;
+            if (config?.Profiles == null || !config.Profiles.Any())
+            {
+                AnsiConsole.MarkupLine("[yellow]No profiles found in maxbot.config.json.[/]");
+                return;
+            }
+
+            var table = new Table()
+                .Title("Available Profiles")
+                .Border(TableBorder.Rounded)
+                .AddColumn("Name")
+                .AddColumn("Model")
+                .AddColumn("Provider")
+                .AddColumn("Default");
+
+            foreach (var profile in config.Profiles)
+            {
+                _ = table.AddRow(
+                    profile.Name ?? "-",
+                    profile.ModelId ?? "-",
+                    profile.ApiProvider ?? "-",
+                    profile.Default ? ":check_mark_button:" : ""
+                );
+            }
+
+            AnsiConsole.Write(table);
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine("[red]Error loading or parsing maxbot.config.json:[red]");
+            AnsiConsole.WriteException(ex);
         }
     }
 }
