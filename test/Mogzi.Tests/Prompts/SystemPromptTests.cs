@@ -114,8 +114,8 @@ public class SystemPromptTests
             "oneshot");
 
         // Assert
-        Assert.Contains("Mogzi, created by Peakflames", systemPrompt);
-        Assert.Contains("Max loves animals and hates emojis", systemPrompt);
+        Assert.Contains("You are Mogzi, a badass Systems and Software Engineer", systemPrompt);
+        Assert.Contains("You are now being connected with an human engineer", systemPrompt);
     }
 
     [Fact]
@@ -149,8 +149,8 @@ public class SystemPromptTests
             "oneshot");
 
         // Assert
-        Assert.Contains("You are Mogzi (Max), an advanced AI assistant created by Peakflames", systemPrompt);
-        Assert.Contains("Stay focused on completing the user's request efficiently", systemPrompt);
+        Assert.Contains("You are Mogzi, an interactive CLI agent", systemPrompt);
+        Assert.Contains("Your core function is efficient and safe assistance", systemPrompt);
     }
 
     [Fact]
@@ -184,8 +184,8 @@ public class SystemPromptTests
             "oneshot");
 
         // Assert
-        Assert.Contains("Tool Use Guidelines", systemPrompt);
-        Assert.Contains("Mandatory Write Verification Protocol", systemPrompt);
+        Assert.Contains("## Tool Use Flow", systemPrompt);
+        Assert.Contains("# EDITING FILES", systemPrompt);
         Assert.Contains("apply_code_patch", systemPrompt);
     }
 
@@ -220,8 +220,8 @@ public class SystemPromptTests
             "oneshot");
 
         // Assert
-        Assert.Contains("User Environment", systemPrompt);
-        Assert.Contains("operating system is Linux", systemPrompt);
+        Assert.Contains("<system_environment>", systemPrompt);
+        Assert.Contains("operating system is", systemPrompt);
         Assert.Contains("shell is bash", systemPrompt);
         Assert.Contains("username is testuser", systemPrompt);
         Assert.Contains("hostname is testhost", systemPrompt);
