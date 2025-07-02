@@ -224,15 +224,15 @@ public sealed class FlexColumnTuiApp : IDisposable
     {
         var contentItems = new List<IRenderable>
         {
-            // Shadow effect style with multi-color letters - "Max" with each letter different color
-            new Markup("[bold blue]███╗   ███╗[/] [bold cyan] █████╗ [/] [bold magenta]██╗  ██╗[/]"),
-            new Markup("[bold blue]████╗ ████║[/] [bold cyan]██╔══██╗[/] [bold magenta]╚██╗██╔╝[/]"),
-            new Markup("[bold blue]██╔████╔██║[/] [bold cyan]███████║[/] [bold magenta] ╚███╔╝ [/]"),
-            new Markup("[bold blue]██║╚██╔╝██║[/] [bold cyan]██╔══██║[/] [bold magenta] ██╔██╗ [/]"),
-            new Markup("[bold blue]██║ ╚═╝ ██║[/] [bold cyan]██║  ██║[/] [bold magenta]██╔╝ ██╗[/]"),
-            new Markup("[bold blue]╚═╝     ╚═╝[/] [bold cyan]╚═╝  ╚═╝[/] [bold magenta]╚═╝  ╚═╝[/]"),
+            // Shadow effect style with multi-color letters - "Mogzi" with each letter different color
+            new Markup("[bold blue]███╗   ███╗[/] [bold cyan] ██████╗ [/] [bold green] ██████╗ [/] [bold yellow]███████╗[/] [bold magenta]██╗[/]"),
+            new Markup("[bold blue]████╗ ████║[/] [bold cyan]██╔═══██╗[/] [bold green]██╔════╝ [/] [bold yellow]╚══███╔╝[/] [bold magenta]██║[/]"),
+            new Markup("[bold blue]██╔████╔██║[/] [bold cyan]██║   ██║[/] [bold green]██║  ███╗[/] [bold yellow]  ███╔╝ [/] [bold magenta]██║[/]"),
+            new Markup("[bold blue]██║╚██╔╝██║[/] [bold cyan]██║   ██║[/] [bold green]██║   ██║[/] [bold yellow] ███╔╝  [/] [bold magenta]██║[/]"),
+            new Markup("[bold blue]██║ ╚═╝ ██║[/] [bold cyan]╚██████╔╝[/] [bold green]╚██████╔╝[/] [bold yellow]███████╗[/] [bold magenta]██║[/]"),
+            new Markup("[bold blue]╚═╝     ╚═╝[/] [bold cyan] ╚═════╝ [/] [bold green] ╚═════╝ [/] [bold yellow]╚══════╝[/] [bold magenta]╚═╝[/]"),
             new Text(""),
-            new Markup("[bold cyan]◢◤◢◤◢◤ Now connected to your Multi-model Autonomous eXpert ◢◤◢◤◢◤[/]"),
+            new Markup("[bold cyan]◢◤◢◤◢◤ Now connected to your Multi-model Autonomous Assistant ◢◤◢◤◢◤[/]"),
             new Text(""),
             new Markup("[dim]Your AI-powered development assistant[/]"),
             new Text(""),
