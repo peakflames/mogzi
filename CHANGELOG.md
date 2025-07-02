@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.13.6] - 2025-07-02
+
+- renamed to Mogzi
+
 ## [0.13.5] - 2025-07-02
 
 - fix bug when running --list-profiles
