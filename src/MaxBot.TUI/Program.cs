@@ -132,7 +132,14 @@ public static class Program
     {
         try
         {
-            var jsonContent = File.ReadAllText("maxbot.config.json");
+            var configPath = MaxBot.Utils.ConfigurationLocator.FindConfigPath();
+            if (configPath is null)
+            {
+                AnsiConsole.MarkupLine("[red]Error: Could not find maxbot.config.json in the current directory or home directory.[/]");
+                return;
+            }
+
+            var jsonContent = File.ReadAllText(configPath);
             var configRoot = JsonSerializer.Deserialize(jsonContent, MaxbotConfigurationContext.Default.MaxbotConfigurationRoot);
 
             var config = configRoot?.MaxbotConfig;
@@ -153,9 +160,9 @@ public static class Program
             foreach (var profile in config.Profiles)
             {
                 _ = table.AddRow(
-                    profile.Name ?? "-",
-                    profile.ModelId ?? "-",
-                    profile.ApiProvider ?? "-",
+                    Markup.Escape(profile.Name ?? "-"),
+                    Markup.Escape(profile.ModelId ?? "-"),
+                    Markup.Escape(profile.ApiProvider ?? "-"),
                     profile.Default ? ":check_mark_button:" : ""
                 );
             }
@@ -164,7 +171,7 @@ public static class Program
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine("[red]Error loading or parsing maxbot.config.json:[red]");
+            AnsiConsole.MarkupLine("[red]Error loading or parsing maxbot.config.json:[/]");
             AnsiConsole.WriteException(ex);
         }
     }

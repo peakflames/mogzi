@@ -99,15 +99,21 @@ public partial class ChatClient
     }
 
 
-    public static Result<ChatClient> Create(string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string, ConsoleColor>? llmResponseDetailsCallback = null, bool debug = false)
+    public static Result<ChatClient> Create(string? configFilePath = null, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string, ConsoleColor>? llmResponseDetailsCallback = null, bool debug = false)
     {
         var result = Create(null, configFilePath, profileName, toolApprovals, mode, llmResponseDetailsCallback, debug);
         return result;
     }
 
 
-    public static Result<ChatClient> Create(IChatClient? chatClient, string configFilePath, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string, ConsoleColor>? llmResponseDetailsCallback = null, bool debug = false)
+    public static Result<ChatClient> Create(IChatClient? chatClient, string? configFilePath = null, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string, ConsoleColor>? llmResponseDetailsCallback = null, bool debug = false)
     {
+        configFilePath ??= Utils.ConfigurationLocator.FindConfigPath();
+        if (configFilePath is null)
+        {
+            return Result.Fail("Could not find maxbot.config.json in the current directory or home directory.");
+        }
+
         string jsonContent;
         try
         {
@@ -115,7 +121,7 @@ public partial class ChatClient
         }
         catch (Exception ex)
         {
-            return Result.Fail($"Failed to read config file: {ex.Message}");
+            return Result.Fail($"Failed to read config file at '{configFilePath}': {ex.Message}");
         }
 
         MaxbotConfigurationRoot? configRoot;
