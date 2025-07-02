@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mogzi", "Mogzi\Mogzi.csproj", "{6758D9E0-5316-4AA2-B054-FC45A00D7AE1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mogzi.Core", "Mogzi.Core\Mogzi.Core.csproj", "{6758D9E0-5316-4AA2-B054-FC45A00D7AE1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mogzi.Tests", "..\test\Mogzi.Tests\Mogzi.Tests.csproj", "{35D308FE-EA85-43B8-AC45-8CD35C0EB3B0}"
 EndProject

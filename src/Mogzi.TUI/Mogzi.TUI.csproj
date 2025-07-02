@@ -23,8 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../Mogzi/Mogzi.csproj" />
-    <ProjectReference Include="..\Mogzi.PawPrints\Mogzi.PawPrints.csproj" />
+    <ProjectReference Include="../Mogzi.Core/Mogzi.Core.csproj" />
+    <ProjectReference Include="../Mogzi.PawPrints/Mogzi.PawPrints.csproj" />
   </ItemGroup>
 
 </Project>

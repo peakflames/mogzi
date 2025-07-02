@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Mogzi\Mogzi.csproj" />
+    <ProjectReference Include="..\..\src\Mogzi.Core\Mogzi.Core.csproj" />
   </ItemGroup>
 
 </Project>
