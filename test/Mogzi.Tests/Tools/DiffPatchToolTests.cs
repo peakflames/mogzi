@@ -17,7 +17,7 @@ public class DiffPatchToolTests : IDisposable
 
     public DiffPatchToolTests()
     {
-        _testDirectory = Path.Combine(Path.GetTempPath(), "MaxBotDiffPatchToolTests", Guid.NewGuid().ToString());
+        _testDirectory = Path.Combine(Path.GetTempPath(), "MogziDiffPatchToolTests", Guid.NewGuid().ToString());
         Directory.CreateDirectory(_testDirectory);
 
         _config = new ApplicationConfiguration { ToolApprovals = "all" };

@@ -41,7 +41,7 @@ Write-Host "Publishing for $rid to $publishDir..."
 dotnet publish (Join-Path $RootDir "src/Cli/Cli.csproj") -r $rid -o $publishDir
 
 # Path to the executable
-$exePath = Join-Path $publishDir "max"
+$exePath = Join-Path $publishDir "mogzi"
 if ($rid -eq "win-x64") {
     $exePath = "$exePath.exe"
 }

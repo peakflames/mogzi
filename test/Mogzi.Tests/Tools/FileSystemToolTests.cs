@@ -20,7 +20,7 @@
 
 //     public FileSystemToolTests()
 //     {
-//         _testDirectory = Path.Combine(Path.GetTempPath(), "MaxBotFileSystemToolTests", Guid.NewGuid().ToString());
+//         _testDirectory = Path.Combine(Path.GetTempPath(), "MogziFileSystemToolTests", Guid.NewGuid().ToString());
 //         Directory.CreateDirectory(_testDirectory);
         
 //         _config = new ApplicationConfiguration { ToolApprovals = "auto" };
@@ -309,7 +309,7 @@
 //     public void ReadFile_OutsideWorkingDirectory_ShouldReturnXmlError()
 //     {
 //         // Arrange
-//         var outsideDir = Path.Combine(Path.GetTempPath(), "MaxBotFileSystemToolTests_Outside", Guid.NewGuid().ToString());
+//         var outsideDir = Path.Combine(Path.GetTempPath(), "MogziFileSystemToolTests_Outside", Guid.NewGuid().ToString());
 //         Directory.CreateDirectory(outsideDir);
 //         var outsideFile = Path.Combine(outsideDir, "outside_file.txt");
 //         File.WriteAllText(outsideFile, "test");
@@ -329,7 +329,7 @@
 //     public void WriteFile_OutsideWorkingDirectory_ShouldReturnError()
 //     {
 //         // Arrange
-//         var outsideDir = Path.Combine(Path.GetTempPath(), "MaxBotFileSystemToolTests_Outside", Guid.NewGuid().ToString());
+//         var outsideDir = Path.Combine(Path.GetTempPath(), "MogziFileSystemToolTests_Outside", Guid.NewGuid().ToString());
 //         Directory.CreateDirectory(outsideDir);
 //         var outsideFile = Path.Combine(outsideDir, "outside_write_test.txt");
 
@@ -348,7 +348,7 @@
 //     public void ReplaceInFile_OutsideWorkingDirectory_ShouldReturnError()
 //     {
 //         // Arrange
-//         var outsideDir = Path.Combine(Path.GetTempPath(), "MaxBotFileSystemToolTests_Outside", Guid.NewGuid().ToString());
+//         var outsideDir = Path.Combine(Path.GetTempPath(), "MogziFileSystemToolTests_Outside", Guid.NewGuid().ToString());
 //         Directory.CreateDirectory(outsideDir);
 //         var outsideFile = Path.Combine(outsideDir, "outside_replace_test.txt");
 //         File.WriteAllText(outsideFile, "test");
