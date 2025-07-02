@@ -1,8 +1,8 @@
-# MaxBot Autocomplete System Design
+# Mogzi Autocomplete System Design
 
 ## Overview
 
-The MaxBot autocomplete system provides intelligent, context-aware completion for file paths and slash commands within the terminal interface. This document details the design decisions, implementation patterns, and user experience considerations that make the autocomplete system both powerful and intuitive.
+The Mogzi autocomplete system provides intelligent, context-aware completion for file paths and slash commands within the terminal interface. This document details the design decisions, implementation patterns, and user experience considerations that make the autocomplete system both powerful and intuitive.
 
 ## Design Philosophy
 
@@ -21,9 +21,9 @@ The MaxBot autocomplete system provides intelligent, context-aware completion fo
 ```
 User types: "Please read @src/Max"
 Autocomplete shows:
-> MaxBot.TUI/           Directory
-  MaxBot.PawPrints/     Directory  
-  MaxBot/               Directory
+> Mogzi.TUI/           Directory
+  Mogzi.PawPrints/     Directory  
+  Mogzi/               Directory
 ```
 
 **Slash Command Completion (/):**
@@ -42,9 +42,9 @@ Autocomplete shows:
 │ > Please read @src/Max▋                     │
 └─────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────┐
-│ > MaxBot.TUI/           Directory           │
-│   MaxBot.PawPrints/     Directory           │
-│   MaxBot/               Directory           │
+│ > Mogzi.TUI/           Directory           │
+│   Mogzi.PawPrints/     Directory           │
+│   Mogzi/               Directory           │
 └─────────────────────────────────────────────┘
 ```
 
@@ -642,4 +642,4 @@ public class VariableProvider : IAutocompleteProvider
 }
 ```
 
-This design document provides a comprehensive overview of the MaxBot autocomplete system, covering all aspects from user experience to technical implementation details. The design emphasizes performance, security, and extensibility while maintaining a clean and intuitive user interface.
+This design document provides a comprehensive overview of the Mogzi autocomplete system, covering all aspects from user experience to technical implementation details. The design emphasizes performance, security, and extensibility while maintaining a clean and intuitive user interface.

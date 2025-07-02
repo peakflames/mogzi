@@ -1,4 +1,4 @@
-# MaxBot Diff/Patch System Design
+# Mogzi Diff/Patch System Design
 
 ## Core Components
 
@@ -113,4 +113,4 @@ public class AppliedHunk
 }
 ```
 
-This diff/patch system enables reliable code modifications with intelligent conflict resolution and comprehensive validation for MaxBot's AI-assisted development capabilities.
+This diff/patch system enables reliable code modifications with intelligent conflict resolution and comprehensive validation for Mogzi's AI-assisted development capabilities.

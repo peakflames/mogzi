@@ -23,14 +23,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="maxbot.config.json">
+    <Content Include="mogzi.config.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Cli\Cli.csproj" />
-    <ProjectReference Include="..\..\src\MaxBot\MaxBot.csproj" />
+    <ProjectReference Include="..\..\src\Mogzi.Core\Mogzi.Core.csproj" />
   </ItemGroup>
 
 </Project>

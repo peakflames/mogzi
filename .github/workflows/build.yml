@@ -26,8 +26,8 @@ on:
         default: 'Development Build'
 
 env:
-  PROJECT_PATH: src/MaxBot.TUI/MaxBot.TUI.csproj
-  PROJECT_NAME: max
+  PROJECT_PATH: src/Mogzi.TUI/Mogzi.TUI.csproj
+  PROJECT_NAME: mogzi
   DOTNET_VERSION: '9.0.x'
 
 jobs:

@@ -1,4 +1,4 @@
-# MaxBot CLI Concept of Operations
+# Mogzi CLI Concept of Operations
 
 ## Essential User Features
 
@@ -28,7 +28,7 @@
 - Session statistics tracking
 
 **Customization:**
-- Configuration via maxbot.config.json
+- Configuration via mogzi.config.json
 - Flexible working directory management
 - Logging and debug capabilities
 

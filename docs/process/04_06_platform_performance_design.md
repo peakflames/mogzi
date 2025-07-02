@@ -1,4 +1,4 @@
-# MaxBot Cross-Platform & Performance Design
+# Mogzi Cross-Platform & Performance Design
 
 ## Cross-Platform Support
 
@@ -77,4 +77,4 @@ public async Task<string> ReadFileAsync(string path)
 - **System Information**: Environment data cached during initialization
 - **Tool Instance Reuse**: Tools instantiated once and reused
 
-This design ensures MaxBot runs efficiently across Windows, macOS, and Linux while maintaining optimal performance through careful resource management and platform-specific optimizations.
+This design ensures Mogzi runs efficiently across Windows, macOS, and Linux while maintaining optimal performance through careful resource management and platform-specific optimizations.

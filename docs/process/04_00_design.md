@@ -1,10 +1,10 @@
-# MaxBot CLI Design Overview
+# Mogzi CLI Design Overview
 
-This document provides a high-level overview of MaxBot's design architecture. For detailed implementation specifics, refer to the specialized design appendices.
+This document provides a high-level overview of Mogzi's design architecture. For detailed implementation specifics, refer to the specialized design appendices.
 
 ## Design Philosophy
 
-MaxBot follows modern .NET design patterns emphasizing:
+Mogzi follows modern .NET design patterns emphasizing:
 - **Security-First**: All operations validated within working directory boundaries
 - **Async-First**: Non-blocking operations throughout the application
 - **Dependency Injection**: Clean separation of concerns and testability
@@ -24,7 +24,7 @@ The service layer provides the primary application logic through clean abstracti
 > **📋 Detailed Documentation**: [Service Layer & Domain Design](04_02_service_domain_design.md)
 
 ### Tool System
-MaxBot's tool system enables AI function calling through a comprehensive set of secure, validated tools:
+Mogzi's tool system enables AI function calling through a comprehensive set of secure, validated tools:
 
 - **Base Tool Pattern**: Consistent implementation across all tools
 - **Security Implementation**: Working directory validation and approval system
@@ -74,7 +74,7 @@ Sophisticated code modification capabilities with intelligent conflict resolutio
 > **📋 Detailed Documentation**: [Diff/Patch System Design](04_05_diff_patch_design.md)
 
 ### Cross-Platform & Performance
-MaxBot is designed for optimal performance across all supported platforms:
+Mogzi is designed for optimal performance across all supported platforms:
 
 - **Platform Detection**: Automatic shell and command selection
 - **AOT Compilation**: Native compilation support for improved startup
@@ -106,7 +106,7 @@ Dynamic, model-specific prompt generation system:
 ## System Prompt Design
 
 **Dynamic Prompt Generation:**
-MaxBot uses a computed property system for real-time prompt generation:
+Mogzi uses a computed property system for real-time prompt generation:
 
 ```csharp
 public string SystemPrompt => Promptinator.GetSystemPrompt(
@@ -158,7 +158,7 @@ public string SystemPrompt => Promptinator.GetSystemPrompt(
 
 **Hierarchical Configuration:**
 ```csharp
-public class MaxbotConfiguration
+public class ApplicationConfiguration
 {
     public string DefaultMode { get; set; } = "oneshot";
     public List<ApiProvider> ApiProviders { get; set; } = [];
@@ -174,4 +174,4 @@ public class MaxbotConfiguration
 - **Security Controls**: Tool approval system integration
 - **Environment Integration**: Debug mode and operational settings
 
-This design provides MaxBot with a robust, secure, and performant foundation for AI-assisted development while maintaining clean architecture principles and excellent user experience.
+This design provides Mogzi with a robust, secure, and performant foundation for AI-assisted development while maintaining clean architecture principles and excellent user experience.
