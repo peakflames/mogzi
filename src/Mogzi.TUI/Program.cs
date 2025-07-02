@@ -140,7 +140,7 @@ public static class Program
             }
 
             var jsonContent = File.ReadAllText(configPath);
-            var configRoot = JsonSerializer.Deserialize(jsonContent, MaxbotConfigurationContext.Default.MaxbotConfigurationRoot);
+            var configRoot = JsonSerializer.Deserialize(jsonContent, MaxbotConfigurationContext.Default.ApplicationConfigurationRoot);
 
             var config = configRoot?.MaxbotConfig;
             if (config?.Profiles == null || !config.Profiles.Any())
