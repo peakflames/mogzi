@@ -1,6 +1,6 @@
 # MAX
 
-[![MAX CI](https://github.com/peakflames/maxbot/actions/workflows/build.yml/badge.svg)](https://github.com/peakflames/maxbot/actions/workflows/build.yml)
+[![Mogzi CI](https://github.com/peakflames/mogzi/actions/workflows/build.yml/badge.svg)](https://github.com/peakflames/mogzi/actions/workflows/build.yml)
 
 ![MAX Screenshot](./docs/assets/max_screenshot.png)
 
@@ -51,7 +51,7 @@ Before running the application, ensure you have:
 
    - Download loads mogzi.exe and moves it to your WindowsApp directory
    ```sh
-   Start-BitsTransfer -Source https://github.com/peakflames/maxbot/releases/latest/download/mogzi-win-x64.exe -Destination mogzi.exe; move -Force mogzi.exe $env:USERPROFILE\\AppData\\Local\\Microsoft\\WindowsApps
+   Start-BitsTransfer -Source https://github.com/peakflames/mogzi/releases/latest/download/mogzi-win-x64.exe -Destination mogzi.exe; move -Force mogzi.exe $env:USERPROFILE\\AppData\\Local\\Microsoft\\WindowsApps
    ```
 
     For MacOS (sudo):
@@ -59,7 +59,7 @@ Before running the application, ensure you have:
     - Download loads mogzi and moves it to your `/usr/local/bin`
   
     ```sh
-    sudo curl -L -o mogzi https://github.com/peakflames/maxbot/releases/latest/download/mogzi-osx-x64 && sudo chmod +x mogzi && sudo mv -f mogzi /usr/local/bin
+    sudo curl -L -o mogzi https://github.com/peakflames/mogzi/releases/latest/download/mogzi-osx-x64 && sudo chmod +x mogzi && sudo mv -f mogzi /usr/local/bin
     ```
 
     For Linux (sudo)
@@ -67,10 +67,10 @@ Before running the application, ensure you have:
     - Download loads mogzi and moves it to your `/usr/local/bin`
 
     ```sh
-    sudo curl -L -o mogzi https://github.com/peakflames/maxbot/releases/latest/download/mogzi-linux-x64 && sudo chmod +x mogzi && sudo mv -f mogzi /usr/local/bin
+    sudo curl -L -o mogzi https://github.com/peakflames/mogzi/releases/latest/download/mogzi-linux-x64 && sudo chmod +x mogzi && sudo mv -f mogzi /usr/local/bin
     ```
 
-2. In your home directory, create a configuration file (`maxbot.config.json`) with your API provider details:
+2. In your home directory, create a configuration file (`mogzi.config.json`) with your API provider details:
 
    ```json
    {
@@ -140,11 +140,11 @@ The application uses a JSON configuration file with the following structure:
 
 ### Tool Approval 🔒
 
-Mogzi includes a tool approval feature to provide control over file system operations. This setting can be configured in your `maxbot.config.json` file or overridden at runtime with a command-line argument.
+Mogzi includes a tool approval feature to provide control over file system operations. This setting can be configured in your `mogzi.config.json` file or overridden at runtime with a command-line argument.
 
 **Configuration:**
 
-To set the default tool approval mode, add the `tool_approvals` property to your `maxbot.config.json`:
+To set the default tool approval mode, add the `tool_approvals` property to your `mogzi.config.json`:
 
 ```json
 {

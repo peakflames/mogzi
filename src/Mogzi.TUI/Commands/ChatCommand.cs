@@ -98,7 +98,7 @@ public sealed class ChatCommand : ICommand
         }
 
         var config = ArgumentParser.GetString(parsedArgs, "config");
-        if (!string.IsNullOrEmpty(config) && config != "maxbot.config.json")
+        if (!string.IsNullOrEmpty(config) && config != "mogzi.config.json")
         {
             args.Add("--config");
             args.Add(config);

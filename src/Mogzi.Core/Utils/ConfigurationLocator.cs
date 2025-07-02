@@ -5,7 +5,7 @@ namespace Mogzi.Utils;
 /// </summary>
 public static class ConfigurationLocator
 {
-    private const string ConfigFileName = "maxbot.config.json";
+    private const string ConfigFileName = "mogzi.config.json";
 
     /// <summary>
     /// Finds the path to the configuration file by checking the current directory

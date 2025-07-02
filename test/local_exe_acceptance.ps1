@@ -47,7 +47,7 @@ if ($rid -eq "win-x64") {
 }
 
 # Check or create the config file
-$configPath = Join-Path $publishDir "maxbot.config.json"
+$configPath = Join-Path $publishDir "mogzi.config.json"
 if (-not (Test-Path $configPath)) {
     Write-Host "Creating dummy config file."
     $configContent = @"

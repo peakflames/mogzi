@@ -109,7 +109,7 @@ public static void ConfigureServices(IServiceCollection services)
     
     // Create ChatClient with error handling
     var chatClientResult = ChatClient.Create(
-        "maxbot.config.json",
+        "mogzi.config.json",
         null, // Use default profile
         null,
         "chat",

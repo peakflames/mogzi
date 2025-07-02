@@ -9,7 +9,7 @@ Thank you for your interest in contributing to Mogzi! This document provides gui
 1. Clone the repository
 
    ```bash
-   git clone https://github.com/peakflames/maxbot.git
+   git clone https://github.com/peakflames/mogzi.git
    cd mogzi
    ```
 

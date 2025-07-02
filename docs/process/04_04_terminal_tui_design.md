@@ -187,7 +187,7 @@ private static void ConfigureServices(IServiceCollection services, string[] args
     services.AddSingleton<IAnsiConsole>(AnsiConsole.Console);
     services.AddSingleton<IWorkingDirectoryProvider, DefaultWorkingDirectoryProvider>();
     
-    var chatClientResult = ChatClient.Create("maxbot.config.json", null, null, "chat", (details, color) => {}, false);
+    var chatClientResult = ChatClient.Create("mogzi.config.json", null, null, "chat", (details, color) => {}, false);
     if (chatClientResult.IsSuccess)
         services.AddSingleton(chatClientResult.Value);
     

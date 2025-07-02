@@ -190,7 +190,7 @@ public partial class ChatClient
                         Endpoint = new(baseUrl),
                         RetryPolicy = new ClientRetryPolicy(3),
                         NetworkTimeout = TimeSpan.FromSeconds(600),
-                        UserAgentApplicationId = "maxbot"
+                        UserAgentApplicationId = "mogzi"
                     }
                 )
                 .GetChatClient(modelId)

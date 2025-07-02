@@ -26,7 +26,7 @@ public sealed class FileLoggerProvider : ILoggerProvider
         catch (Exception ex)
         {
             // Fallback to temp directory if we can't create ~/.max/logs
-            _logDirectory = Path.Combine(Path.GetTempPath(), "maxbot-logs");
+            _logDirectory = Path.Combine(Path.GetTempPath(), "mogzi-logs");
             _ = Directory.CreateDirectory(_logDirectory);
             Console.WriteLine($"Warning: Could not create ~/.max/logs, using {_logDirectory}. Error: {ex.Message}");
         }
@@ -128,7 +128,7 @@ public sealed class FileLogger(string categoryName, string logDirectory, LogLeve
             _currentWriter?.Dispose();
 
             _currentLogDate = today;
-            var logFileName = $"maxbot-{today:yyyy-MM-dd}.log";
+            var logFileName = $"mogzi-{today:yyyy-MM-dd}.log";
             _currentLogFile = Path.Combine(_logDirectory, logFileName);
 
             _currentWriter = new StreamWriter(_currentLogFile, append: true)
@@ -146,14 +146,14 @@ public sealed class FileLogger(string categoryName, string logDirectory, LogLeve
         try
         {
             var cutoffDate = DateTime.Today.AddDays(-30);
-            var logFiles = Directory.GetFiles(_logDirectory, "maxbot-*.log");
+            var logFiles = Directory.GetFiles(_logDirectory, "mogzi-*.log");
 
             foreach (var logFile in logFiles)
             {
                 var fileName = Path.GetFileNameWithoutExtension(logFile);
-                if (fileName.StartsWith("maxbot-") && fileName.Length >= 17) // "maxbot-yyyy-MM-dd"
+                if (fileName.StartsWith("mogzi-") && fileName.Length >= 17) // "mogzi-yyyy-MM-dd"
                 {
-                    var dateString = fileName[7..]; // Remove "maxbot-" prefix
+                    var dateString = fileName[7..]; // Remove "mogzi-" prefix
                     if (DateTime.TryParseExact(dateString, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var fileDate))
                     {
                         if (fileDate < cutoffDate)

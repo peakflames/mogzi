@@ -36,7 +36,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
         var testChatClient = new TestChatClient("Hello, world!");
-        var clientResult = ChatClient.Create(testChatClient, "maxbot.config.json");
+        var clientResult = ChatClient.Create(testChatClient, "mogzi.config.json");
         clientResult.IsFailed.Should().Be(false);
 
         // Act
@@ -58,7 +58,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
         var testChatClient = new TestChatClient("Hello, world!");
-        var clientResult = ChatClient.Create(testChatClient, "maxbot.config.json");
+        var clientResult = ChatClient.Create(testChatClient, "mogzi.config.json");
         clientResult.IsFailed.Should().Be(false);
 
         // Act
@@ -80,7 +80,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
         var testChatClient = new TestChatClient("Piped input summarized.");
-        var clientResult = ChatClient.Create(testChatClient, "maxbot.config.json", null, "oneshot");
+        var clientResult = ChatClient.Create(testChatClient, "mogzi.config.json", null, "oneshot");
         clientResult.IsFailed.Should().Be(false);
 
         // Act
@@ -112,7 +112,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
 
-        var clientResult = ChatClient.Create("maxbot.config.json", profileName, null, "oneshot", (message, color) => ConsoleRenderer.ConsoleWriteLLMResponseDetails(message, color));
+        var clientResult = ChatClient.Create("mogzi.config.json", profileName, null, "oneshot", (message, color) => ConsoleRenderer.ConsoleWriteLLMResponseDetails(message, color));
         clientResult.IsFailed.Should().Be(false);
 
         // Act
@@ -146,7 +146,7 @@ public class BlackBoxTests
         var output = new StringWriter();
         Console.SetOut(output);
 
-        var clientResult = ChatClient.Create("maxbot.config.json", profileName, null, "oneshot", (message, color) => ConsoleRenderer.ConsoleWriteLLMResponseDetails(message, color));
+        var clientResult = ChatClient.Create("mogzi.config.json", profileName, null, "oneshot", (message, color) => ConsoleRenderer.ConsoleWriteLLMResponseDetails(message, color));
         clientResult.IsFailed.Should().Be(false);
 
         // Act

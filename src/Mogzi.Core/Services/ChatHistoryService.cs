@@ -16,7 +16,7 @@ public class ChatHistoryService
     {
         // Create the base directory in the user's profile
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        _basePath = Path.Combine(userProfile, ".maxbot", "chats");
+        _basePath = Path.Combine(userProfile, ".mogzi", "chats");
 
         // Create the directory if it doesn't exist
         _ = Directory.CreateDirectory(_basePath);
