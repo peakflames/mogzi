@@ -49,14 +49,14 @@ Before running the application, ensure you have:
 
    For Windows:
 
-   - Download loads mogzi.exe and moves it to your WindowsApp directory
+   - Download mogzi.exe and moves it to your WindowsApp directory
    ```sh
    Start-BitsTransfer -Source https://github.com/peakflames/mogzi/releases/latest/download/mogzi-win-x64.exe -Destination mogzi.exe; move -Force mogzi.exe $env:USERPROFILE\\AppData\\Local\\Microsoft\\WindowsApps
    ```
 
     For MacOS (sudo):
 
-    - Download loads mogzi and moves it to your `/usr/local/bin`
+    - Download mogzi and moves it to your `/usr/local/bin`
   
     ```sh
     sudo curl -L -o mogzi https://github.com/peakflames/mogzi/releases/latest/download/mogzi-osx-x64 && sudo chmod +x mogzi && sudo mv -f mogzi /usr/local/bin
@@ -64,7 +64,7 @@ Before running the application, ensure you have:
 
     For Linux (sudo)
 
-    - Download loads mogzi and moves it to your `/usr/local/bin`
+    - Download mogzi and moves it to your `/usr/local/bin`
 
     ```sh
     sudo curl -L -o mogzi https://github.com/peakflames/mogzi/releases/latest/download/mogzi-linux-x64 && sudo chmod +x mogzi && sudo mv -f mogzi /usr/local/bin
