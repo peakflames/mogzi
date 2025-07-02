@@ -12,11 +12,11 @@ Mogzi's tool system provides AI function calling capabilities through a comprehe
 ```csharp
 public class ReadTextFileTool
 {
-    private readonly MaxbotConfiguration _config;
+    private readonly ApplicationConfiguration _config;
     private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
 
-    public ReadTextFileTool(MaxbotConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
+    public ReadTextFileTool(ApplicationConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
     {
         _config = config;
         _llmResponseDetailsCallback = llmResponseDetailsCallback;

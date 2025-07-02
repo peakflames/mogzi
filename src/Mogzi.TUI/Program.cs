@@ -142,7 +142,7 @@ public static class Program
             var jsonContent = File.ReadAllText(configPath);
             var configRoot = JsonSerializer.Deserialize(jsonContent, ApplicationConfigurationContext.Default.ApplicationConfigurationRoot);
 
-            var config = configRoot?.MaxbotConfig;
+            var config = configRoot?.RootConfig;
             if (config?.Profiles == null || !config.Profiles.Any())
             {
                 AnsiConsole.MarkupLine("[yellow]No profiles found in mogzi.config.json.[/]");

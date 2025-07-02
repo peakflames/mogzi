@@ -176,15 +176,15 @@ public class AppService : IAppService
 **Configuration Management:**
 ```csharp
 // JSON serialization with source generation for AOT compatibility
-[JsonSerializable(typeof(MaxbotConfigurationRoot))]
-public partial class MaxbotConfigurationContext : JsonSerializerContext
+[JsonSerializable(typeof(ApplicationConfigurationRoot))]
+public partial class ApplicationConfigurationContext : JsonSerializerContext
 
 // Hierarchical configuration structure
-MaxbotConfigurationRoot -> MaxbotConfiguration -> ApiProvider[], Profile[]
+ApplicationConfigurationRoot -> ApplicationConfiguration -> ApiProvider[], Profile[]
 ```
 
 **Domain Entities:**
-- **MaxbotConfiguration**: Central configuration with API providers, profiles, and tool approvals
+- **ApplicationConfiguration**: Central configuration with API providers, profiles, and tool approvals
 - **ApiProvider**: External service configuration (OpenAI, custom endpoints)
 - **Profile**: User-specific model and provider combinations
 - **ChatHistory**: Message persistence and session management
@@ -202,7 +202,7 @@ MaxbotConfigurationRoot -> MaxbotConfiguration -> ApiProvider[], Profile[]
 // Individual tool classes with AIFunction factory pattern
 public class ReadTextFileTool
 {
-    private readonly MaxbotConfiguration _config;
+    private readonly ApplicationConfiguration _config;
     private readonly Action<string, ConsoleColor>? _llmResponseDetailsCallback;
     private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
 
@@ -259,7 +259,7 @@ if (requiresApproval && _config.ToolApprovals.Equals("readonly", StringCompariso
 ```
 
 **Tool Implementation Pattern:**
-- **Constructor Injection**: MaxbotConfiguration, callback delegates, and IWorkingDirectoryProvider
+- **Constructor Injection**: ApplicationConfiguration, callback delegates, and IWorkingDirectoryProvider
 - **Parameter Validation**: ValidateParameters() method with comprehensive input checking
 - **Security Boundaries**: IsPathInWorkingDirectory() and HasReadPermission() validation
 - **Structured Responses**: XML-formatted responses with status, error handling, and metadata

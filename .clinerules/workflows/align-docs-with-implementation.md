@@ -23,7 +23,7 @@ Ensure that all architectural and design patterns and decisions found in the Mog
    - `src/Mogzi.sln` - Solution structure and project relationships
 
 4. Analyze the domain layer by reading core domain files:
-   - `src/Mogzi/Domain/MaxbotConfiguration.cs` - Configuration patterns
+   - `src/Mogzi/Domain/ApplicationConfiguration.cs` - Configuration patterns
    - `src/Mogzi/Domain/ChatHistory.cs` - Data models and structures
    - `src/Mogzi/Domain/IWorkingDirectoryProvider.cs` - Interface patterns
 

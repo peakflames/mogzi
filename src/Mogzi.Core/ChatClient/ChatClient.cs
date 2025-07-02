@@ -136,26 +136,26 @@ public partial class ChatClient
             return Result.Fail($"Failed to parse config file: {ex.Message}");
         }
 
-        var maxbotConfig = configRoot?.MaxbotConfig;
-        if (maxbotConfig is null)
+        var rootConfig = configRoot?.RootConfig;
+        if (rootConfig is null)
         {
-            return Result.Fail($"While reading the config '{configFilePath}', was not able to find the 'maxbotConfig' section.");
+            return Result.Fail($"While reading the config '{configFilePath}', was not able to find the 'mogziConfig' section.");
         }
 
         if (!string.IsNullOrEmpty(toolApprovals))
         {
-            maxbotConfig.ToolApprovals = toolApprovals;
+            rootConfig.ToolApprovals = toolApprovals;
         }
 
         // Set debug flag if specified
-        maxbotConfig.Debug = debug;
+        rootConfig.Debug = debug;
 
 
         // Find the specified profile, or default profile, or first profile
         Profile? profile;
         if (!string.IsNullOrEmpty(profileName))
         {
-            profile = maxbotConfig.Profiles.FirstOrDefault(p => p.Name == profileName);
+            profile = rootConfig.Profiles.FirstOrDefault(p => p.Name == profileName);
             if (profile is null)
             {
                 return Result.Fail($"Profile '{profileName}' not found in configuration.");
@@ -163,7 +163,7 @@ public partial class ChatClient
         }
         else
         {
-            profile = maxbotConfig.Profiles.FirstOrDefault(p => p.Default) ?? maxbotConfig.Profiles.FirstOrDefault();
+            profile = rootConfig.Profiles.FirstOrDefault(p => p.Default) ?? rootConfig.Profiles.FirstOrDefault();
             if (profile is null)
             {
                 return Result.Fail($"No profiles found in the configuration.");
@@ -171,7 +171,7 @@ public partial class ChatClient
         }
 
         // Find the corresponding API provider
-        var apiProvider = maxbotConfig.ApiProviders.FirstOrDefault(p => p.Name == profile.ApiProvider);
+        var apiProvider = rootConfig.ApiProviders.FirstOrDefault(p => p.Name == profile.ApiProvider);
         if (apiProvider is null)
         {
             return Result.Fail($"API provider '{profile.ApiProvider}' specified in profile '{profile.Name}' not found.");
@@ -204,7 +204,7 @@ public partial class ChatClient
         }
 
 
-        return new ChatClient(chatClient, maxbotConfig, profile, apiProvider, mode ?? "oneshot", llmResponseDetailsCallback);
+        return new ChatClient(chatClient, rootConfig, profile, apiProvider, mode ?? "oneshot", llmResponseDetailsCallback);
     }
 
 }

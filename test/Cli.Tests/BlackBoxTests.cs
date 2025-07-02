@@ -205,7 +205,7 @@ public class BlackBoxTests
         // Create a config file with an invalid API key
         var invalidConfig = """
         {
-            "maxbotConfig": {
+            "mogziConfig": {
                 "apiProviders": [ { "name": "TestProvider", "type": "OpenAI-Compatible", "apiKey": "invalid-key", "baseUrl": "https://api.openai.com/v1" } ],
                 "profiles": [ { "default": true, "name": "Default", "apiProvider": "TestProvider", "modelId": "gpt-3.5-turbo" } ]
             }

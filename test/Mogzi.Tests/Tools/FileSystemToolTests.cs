@@ -14,7 +14,7 @@
 // public class FileSystemToolTests : IDisposable
 // {
 //     private readonly string _testDirectory;
-//     private readonly MaxbotConfiguration _config;
+//     private readonly ApplicationConfiguration _config;
 //     private readonly FileSystemTools _fileSystemTools;
 //     private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
 
@@ -23,7 +23,7 @@
 //         _testDirectory = Path.Combine(Path.GetTempPath(), "MaxBotFileSystemToolTests", Guid.NewGuid().ToString());
 //         Directory.CreateDirectory(_testDirectory);
         
-//         _config = new MaxbotConfiguration { ToolApprovals = "auto" };
+//         _config = new ApplicationConfiguration { ToolApprovals = "auto" };
 //         _workingDirectoryProvider = new MockWorkingDirectoryProvider(_testDirectory);
 //         _fileSystemTools = new FileSystemTools(_config, null, _workingDirectoryProvider);
 //     }

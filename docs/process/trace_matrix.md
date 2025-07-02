@@ -62,7 +62,7 @@
 
 | TOR ID | Requirement | Tool Specifications | Implementation Components | Test Cases | Verification Status |
 |--------|-------------|-------------------|--------------------------|------------|-------------------|
-| TOR-7.1 | Approval for destructive ops | [All file tools](05_ai_tool_op_requirements.md), [execute_command_tool_spec.md](tools/execute_command_tool_spec.md) | `MaxbotConfiguration.ToolApprovals`, `CliArgParser`, `Mogzi.Tools.SystemTools.ExecuteCommand`, `Mogzi.Tools.FileSystemTools` | `test/Cli.Tests/CliArgParserTests.cs`, `test/Mogzi.Tests/Tools/SystemToolTests.cs`, `test/Cli.Tests/BlackBoxTests.cs` | ✅ Verified |
+| TOR-7.1 | Approval for destructive ops | [All file tools](05_ai_tool_op_requirements.md), [execute_command_tool_spec.md](tools/execute_command_tool_spec.md) | `ApplicationConfiguration.ToolApprovals`, `CliArgParser`, `Mogzi.Tools.SystemTools.ExecuteCommand`, `Mogzi.Tools.FileSystemTools` | `test/Cli.Tests/CliArgParserTests.cs`, `test/Mogzi.Tests/Tools/SystemToolTests.cs`, `test/Cli.Tests/BlackBoxTests.cs` | ✅ Verified |
 | TOR-7.2 | Working directory constraints | [All file tools](05_ai_tool_op_requirements.md) | FileSystemTools.IsPathInWorkingDirectory() with path validation | test/Mogzi.Tests/Tools/FileSystemToolTests.cs | ✅ Verified |
 | TOR-7.3 | Input/output validation | [All tool specs](05_ai_tool_op_requirements.md) | Partially implemented via error handling and input validation | test/Mogzi.Tests/Tools/FileSystemToolTests.cs, test/Mogzi.Tests/Tools/SystemToolTests.cs | 🟡 Partially Verified |
 

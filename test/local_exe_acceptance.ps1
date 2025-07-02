@@ -52,7 +52,7 @@ if (-not (Test-Path $configPath)) {
     Write-Host "Creating dummy config file."
     $configContent = @"
 {
-    "maxbotConfig": {
+    "mogziConfig": {
         "apiProviders": [
             {
                 "name": "RequestyAI",
@@ -76,7 +76,7 @@ if (-not (Test-Path $configPath)) {
 }
 
 $config = Get-Content $configPath | ConvertFrom-Json
-if ($config.maxbotConfig.apiProviders[0].apiKey -eq "your-api-key-here") {
+if ($config.mogziConfig.apiProviders[0].apiKey -eq "your-api-key-here") {
     Write-Error "API key in $configPath is a placeholder. Please update it with a valid key before running the acceptance tests."
     exit 1
 }

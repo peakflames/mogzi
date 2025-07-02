@@ -158,7 +158,7 @@ public string SystemPrompt => Promptinator.GetSystemPrompt(
 
 **Hierarchical Configuration:**
 ```csharp
-public class MaxbotConfiguration
+public class ApplicationConfiguration
 {
     public string DefaultMode { get; set; } = "oneshot";
     public List<ApiProvider> ApiProviders { get; set; } = [];

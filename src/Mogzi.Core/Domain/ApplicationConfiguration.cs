@@ -10,7 +10,7 @@ public partial class ApplicationConfigurationContext : JsonSerializerContext
 public class ApplicationConfigurationRoot
 {
     [JsonPropertyName("mogziConfig")]
-    public ApplicationConfiguration? MaxbotConfig { get; set; }
+    public ApplicationConfiguration? RootConfig { get; set; }
 }
 
 public class ApplicationConfiguration

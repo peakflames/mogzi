@@ -133,7 +133,7 @@ public class ChatHistoryService
 
 **Core Configuration Model:**
 ```csharp
-public class MaxbotConfiguration
+public class ApplicationConfiguration
 {
     public string DefaultMode { get; set; } = "oneshot";
     public List<ApiProvider> ApiProviders { get; set; } = [];
@@ -169,7 +169,7 @@ public class Profile
 
 **AOT-Compatible Serialization:**
 ```csharp
-[JsonSerializable(typeof(MaxbotConfiguration))]
+[JsonSerializable(typeof(ApplicationConfiguration))]
 [JsonSerializable(typeof(List<ApiProvider>))]
 [JsonSerializable(typeof(List<Profile>))]
 [JsonSerializable(typeof(List<ChatMessage>))]
@@ -238,7 +238,7 @@ public static Result<ChatClient> Create(
 **Configuration Validation:**
 ```csharp
 private static Result<(Profile profile, ApiProvider provider)> ValidateConfiguration(
-    MaxbotConfiguration config, 
+    ApplicationConfiguration config, 
     string? profileName)
 {
     // Find the profile to use
@@ -317,7 +317,7 @@ public string SystemPrompt => Promptinator.GetSystemPrompt(
 
 **Initialization Process:**
 ```csharp
-private ChatClient(IChatClient chatClient, MaxbotConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
+private ChatClient(IChatClient chatClient, ApplicationConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
 {
     ChatClientMEAI = chatClient;
     Config = config;
