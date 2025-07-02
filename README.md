@@ -1,10 +1,10 @@
-# MAX
+# Mogzi
 
 [![Mogzi CI](https://github.com/peakflames/mogzi/actions/workflows/build.yml/badge.svg)](https://github.com/peakflames/mogzi/actions/workflows/build.yml)
 
-![MAX Screenshot](./docs/assets/max_screenshot.png)
+![Mogzi Screenshot](./docs/assets/mogzi_screenshot.png)
 
-A Multi-model Autonomous eXpert (Max) right in your terminal or CI/CD pipeline and open to multiple API providers and AI models
+A Multi-model autonomous assistant right in your terminal or CI/CD pipeline and open to multiple API providers and AI models
 
 Perform engineering research, full coding tasks, and multiple workflow with either natural language or shell scripts 👈
 
@@ -74,7 +74,7 @@ Before running the application, ensure you have:
 
    ```json
    {
-       "maxbotConfig": {
+       "mogziConfig": {
            "apiProviders": [
                {
                     "name": "MyCompanyProvider",
@@ -148,7 +148,7 @@ To set the default tool approval mode, add the `tool_approvals` property to your
 
 ```json
 {
-    "maxbotConfig": {
+    "mogziConfig": {
         "tool_approvals": "all",
         "apiProviders": [ ... ],
         "profiles": [ ... ]
