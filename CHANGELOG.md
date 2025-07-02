@@ -2,7 +2,7 @@
 
 ## [0.13.5] - 2025-07-02
 
-- TBD
+- fix bug when running --list-profiles
 
 ## [0.13.4] - 2025-07-01
 
