@@ -25,7 +25,7 @@ public static class ServiceConfiguration
 
         // Create ChatClient - this will be configured per command based on settings
         var chatClientResult = ChatClient.Create(
-            configPath ?? "maxbot.config.json",
+            configPath, // Let Create handle finding the default path
             profileName, // Use specified profile or default
             toolApprovals, // Use specified tool approvals override
             "chat",

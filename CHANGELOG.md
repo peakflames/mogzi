@@ -3,6 +3,7 @@
 ## [0.13.5] - 2025-07-02
 
 - fix bug when running --list-profiles
+- Implement configuration fallback to home directory
 
 ## [0.13.4] - 2025-07-01
 

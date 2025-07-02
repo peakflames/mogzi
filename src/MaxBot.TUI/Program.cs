@@ -132,7 +132,14 @@ public static class Program
     {
         try
         {
-            var jsonContent = File.ReadAllText("maxbot.config.json");
+            var configPath = MaxBot.Utils.ConfigurationLocator.FindConfigPath();
+            if (configPath is null)
+            {
+                AnsiConsole.MarkupLine("[red]Error: Could not find maxbot.config.json in the current directory or home directory.[/]");
+                return;
+            }
+
+            var jsonContent = File.ReadAllText(configPath);
             var configRoot = JsonSerializer.Deserialize(jsonContent, MaxbotConfigurationContext.Default.MaxbotConfigurationRoot);
 
             var config = configRoot?.MaxbotConfig;
