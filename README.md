@@ -171,10 +171,9 @@ mogzi "Create a new file" -ta all
 
 ## Contributing 🤝
 
-Contributions are welcome! Please read the [developer guidelines](.clinerules/developer_guidelines.md) for more information on how to build the project and run tests.
+To contribute to the project, start with our [Contributing Guide](CONTRIBUTING.md) to learn the basics. You can also join our [Discord]([[https://discord.gg/cline](https://discord.gg/tHMYPCyY)] to chat with other contributors in the `#contributors` channel.
 
 [![Discord](https://img.shields.io/discord/1390332197788975185?label=Join%20Discord&logo=discord&logoColor=white)](https://discord.gg/tHMYPCyY)
-
 
 ## Available Assistant Tools 🛠️
 
