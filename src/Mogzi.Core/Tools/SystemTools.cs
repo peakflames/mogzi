@@ -106,12 +106,11 @@ public class SystemTools(ApplicationConfiguration config, Action<string, Console
     public string AttemptCompletion(
         [Description("The final result description - should be comprehensive and final")] string result)
     {
-        _llmResponseDetailsCallback?.Invoke($"\n\n🎉 TASK COMPLETED 🎉\n\n{result}\n\n", ConsoleColor.Green);
-
         var response = new StringBuilder();
         _ = response.AppendLine("<tool_response tool_name=\"attempt_completion\" >");
         _ = response.AppendLine($"    <result status=\"SUCCESS\"  />");
-        _ = response.AppendLine($"    <notes>Your message is now displayed to the User. DO NOT REPEAT as the User will see duplication of text</notes>");
+        _ = response.AppendLine($"    <completion_message>{result}</completion_message>");
+        _ = response.AppendLine($"    <notes>Task completed successfully. The completion message is displayed to the user.</notes>");
         _ = response.AppendLine("</tool_response>");
         return response.ToString();
     }

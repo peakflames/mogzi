@@ -22,6 +22,12 @@ public static class ToolExecutionDisplay
         UnifiedDiff? diff = null,
         string? result = null)
     {
+        // Handle attempt_completion tool specially
+        if (toolName.Equals("attempt_completion", StringComparison.OrdinalIgnoreCase))
+        {
+            return CreateCompletionDisplay(result ?? "Task completed successfully.");
+        }
+
         var components = new List<IRenderable>();
 
         // Create clean tool status line
@@ -300,5 +306,25 @@ public static class ToolExecutionDisplay
             ToolExecutionStatus.Confirming => "blue",
             _ => "white"
         };
+    }
+
+    /// <summary>
+    /// Creates a prominent display for task completion messages.
+    /// </summary>
+    private static IRenderable CreateCompletionDisplay(string completionMessage)
+    {
+        var components = new List<IRenderable>
+        {
+            new Markup(""),
+            new Markup(":check_mark_button: [bold green]Task Completed[/]"),
+            new Markup(""),
+            new Markup($"[green]{completionMessage.EscapeMarkup()}[/]"),
+            new Markup("")
+        };
+
+        return new Panel(new Rows(components))
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Green)
+            .Padding(1, 0);
     }
 }

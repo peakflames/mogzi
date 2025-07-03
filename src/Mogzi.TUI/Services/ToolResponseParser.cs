@@ -124,22 +124,39 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
                 }
             }
 
-            // Extract notes for summary
-            var notesNode = root.SelectSingleNode("notes");
-            if (notesNode != null)
+            // Handle attempt_completion tool specially
+            if (info.ToolName.Equals("attempt_completion", StringComparison.OrdinalIgnoreCase))
             {
-                var notes = notesNode.InnerText?.Trim();
-                if (!string.IsNullOrEmpty(notes))
+                var completionMessageNode = root.SelectSingleNode("completion_message");
+                if (completionMessageNode != null)
                 {
-                    info.Summary = notes;
-
-                    // Extract first line as description if not already set
-                    if (string.IsNullOrEmpty(info.Description))
+                    var completionMessage = completionMessageNode.InnerText?.Trim();
+                    if (!string.IsNullOrEmpty(completionMessage))
                     {
-                        var firstLine = notes.Split('\n').FirstOrDefault()?.Trim();
-                        if (!string.IsNullOrEmpty(firstLine))
+                        info.Summary = completionMessage;
+                        info.Description = "Task Completed";
+                    }
+                }
+            }
+            else
+            {
+                // Extract notes for summary for other tools
+                var notesNode = root.SelectSingleNode("notes");
+                if (notesNode != null)
+                {
+                    var notes = notesNode.InnerText?.Trim();
+                    if (!string.IsNullOrEmpty(notes))
+                    {
+                        info.Summary = notes;
+
+                        // Extract first line as description if not already set
+                        if (string.IsNullOrEmpty(info.Description))
                         {
-                            info.Description = firstLine;
+                            var firstLine = notes.Split('\n').FirstOrDefault()?.Trim();
+                            if (!string.IsNullOrEmpty(firstLine))
+                            {
+                                info.Description = firstLine;
+                            }
                         }
                     }
                 }
