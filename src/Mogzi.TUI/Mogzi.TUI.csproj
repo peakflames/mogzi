@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Version>0.13.7-prerelease</Version>
+    <Version>0.13.8-prerelease</Version>
     <OutputType>Exe</OutputType>
     <AssemblyName>mogzi</AssemblyName>
     <TargetFramework>net9.0</TargetFramework>

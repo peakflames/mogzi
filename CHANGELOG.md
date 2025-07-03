@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.13.8] - IN PROG
+
+
 ## [0.13.7] - 2025-07-03
 
 - instruct mogzi to prefer to use the `replace_in_file` tool over the git-style edit tools until we can build more confidence in them
