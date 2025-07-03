@@ -169,6 +169,11 @@ mogzi "Create a new file" -ta all
 *   `readonly`: (Default) Mogzi will ask for your permission before performing any write operations (e.g., creating or modifying files).
 *   `all`: Mogzi is pre-approved to perform any file system operation without asking for confirmation.
 
+## Contributing 🤝
+
+Contributions are welcome! Please read the [developer guidelines](.clinerules/developer_guidelines.md) for more information on how to build the project and run tests.
+
+[![Discord](https://img.shields.io/discord/1390332197788975185?label=Join%20Discord&logo=discord&logoColor=white)](https://discord.gg/tHMYPCyY)
 
 
 ## Available Assistant Tools 🛠️
@@ -215,10 +220,6 @@ Mogzi is equipped with a powerful set of tools to interact with your local syste
 ### Upcoming Tools
 - `list_code_definition_names` - Extract code structure and definitions
 - `mcp_tools` - Model Context Protocol support for external integrations
-
-## Contributing 🤝
-
-Contributions are welcome! Please read the [developer guidelines](.clinerules/developer_guidelines.md) for more information on how to build the project and run tests.
 
 ## Copyright ©️
 
