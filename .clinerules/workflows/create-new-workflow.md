@@ -19,7 +19,7 @@ Guide the user through the process of creating a new standardized Cline workflow
 
 ## 2. Define Task Objective
 
-1. Use the `ask_followup_question` command to ask the USER for the primary objective of the workflow.
+1. Use the `ask_followup_question` command to ask the USER for the primary objective of the workflow. Remind the user to provide breadcrubs of the inputs to be used, the output to be generated, and a generalization of the processing to formulate the outputs.
    
 2. Use the `ask_followup_question` command to ask the USER if know what MCP servers will be required at this point by providing of a list of Cline's active MCP server names.
    
@@ -29,7 +29,7 @@ Guide the user through the process of creating a new standardized Cline workflow
 
 ## 3. Outline Major Steps
 
-1. Use the `ask_followup_question` command to ask the USER to list the major steps in the workflow (3-7 steps recommended) and they will have a oppurtunity provide more details later.
+1. Use the `ask_followup_question` command to ask the USER to list the major steps in the workflow (3-7 steps recommended) and they will have a oppurtunity provide more details later or let Cline determine this for them
    
 2. For each major step, determine the following:
    - Required tools or resources
