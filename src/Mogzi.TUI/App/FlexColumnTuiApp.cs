@@ -4,33 +4,13 @@ public sealed class FlexColumnTuiApp : IDisposable
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<FlexColumnTuiApp> _logger;
-    private readonly IAppService _appService;
-    private readonly HistoryManager _historyManager;
+    private readonly ITuiStateManager _stateManager;
+    private readonly ITuiContext _tuiContext;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly AdvancedKeyboardHandler _keyboardHandler;
-    private readonly SlashCommandProcessor _slashCommandProcessor;
-    private readonly AutocompleteManager _autocompleteManager;
-    private readonly UserSelectionManager _userSelectionManager;
     private readonly IScrollbackTerminal _scrollbackTerminal;
-    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
-    private readonly ToolResponseParser _toolResponseParser;
+    private readonly HistoryManager _historyManager;
     private bool _isDisposed = false;
-
-    // Chat state
-    private ChatState _currentState = ChatState.Input;
-    private readonly InputContext _inputContext = new();
-    private string _toolProgress = string.Empty;
-    private string _currentToolName = string.Empty;
-    private readonly List<string> _commandHistory = [];
-    private int _commandHistoryIndex = -1;
-
-    // AI operation management
-    private CancellationTokenSource? _aiOperationCts;
-    private DateTime _aiOperationStartTime;
-
-    // Tool execution tracking
-    private readonly Dictionary<string, string> _functionCallToToolName = [];
-    private readonly Dictionary<string, string> _functionCallToPreEditContent = [];
 
     public bool IsRunning { get; private set; } = false;
 
@@ -42,36 +22,18 @@ public sealed class FlexColumnTuiApp : IDisposable
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = serviceProvider.GetRequiredService<ILogger<FlexColumnTuiApp>>();
-        _appService = serviceProvider.GetRequiredService<IAppService>();
-        _historyManager = serviceProvider.GetRequiredService<HistoryManager>();
+        _stateManager = serviceProvider.GetRequiredService<ITuiStateManager>();
+        _tuiContext = serviceProvider.GetRequiredService<ITuiContext>();
         _scrollbackTerminal = serviceProvider.GetRequiredService<IScrollbackTerminal>();
-        _workingDirectoryProvider = serviceProvider.GetRequiredService<IWorkingDirectoryProvider>();
-        _toolResponseParser = serviceProvider.GetRequiredService<ToolResponseParser>();
+        _historyManager = serviceProvider.GetRequiredService<HistoryManager>();
 
         _cancellationTokenSource = new CancellationTokenSource();
 
         _keyboardHandler = new AdvancedKeyboardHandler(_serviceProvider.GetService<ILogger<AdvancedKeyboardHandler>>());
-        _slashCommandProcessor = new SlashCommandProcessor(AnsiConsole.Console, _serviceProvider.GetService<ILogger<SlashCommandProcessor>>(), _serviceProvider.GetService<ChatClient>());
-        _autocompleteManager = serviceProvider.GetRequiredService<AutocompleteManager>();
-        _userSelectionManager = new UserSelectionManager(_serviceProvider, _inputContext);
 
         _keyboardHandler.KeyPressed += OnKeyPressed;
         _keyboardHandler.KeyCombinationPressed += OnKeyCombinationPressed;
         _keyboardHandler.CharacterTyped += OnCharacterTyped;
-
-        _slashCommandProcessor.ExitRequested += () => _cancellationTokenSource.Cancel();
-        _slashCommandProcessor.ClearHistoryRequested += () =>
-        {
-            _historyManager.ClearHistory();
-            _scrollbackTerminal.Initialize();
-            RenderInitialContent();
-        };
-
-        _slashCommandProcessor.InteractiveCommandRequested += command =>
-        {
-            _userSelectionManager.DetectAndActivate(command);
-            _ = _userSelectionManager.UpdateSelectionsAsync();
-        };
 
         RegisterKeyBindings();
 
@@ -123,14 +85,26 @@ public sealed class FlexColumnTuiApp : IDisposable
     }
 
 #pragma warning disable IDE0060 // Remove unused parameter
-    private void Initialize(string[] args)
+    private async void Initialize(string[] args)
 #pragma warning restore IDE0060 // Remove unused parameter
     {
         _logger.LogDebug("Initializing FlexColumn TUI application");
         _scrollbackTerminal.Initialize();
+
+        // Initialize state manager with state factories
+        RegisterStateFactories();
+        await _stateManager.InitializeAsync(_tuiContext);
+
         LoadCommandHistory();
         RenderInitialContent();
         _logger.LogDebug("FlexColumn TUI application initialized");
+    }
+
+    private void RegisterStateFactories()
+    {
+        _stateManager.RegisterState(ChatState.Input, _serviceProvider.GetRequiredService<InputTuiState>);
+        _stateManager.RegisterState(ChatState.Thinking, _serviceProvider.GetRequiredService<ThinkingTuiState>);
+        _stateManager.RegisterState(ChatState.ToolExecution, _serviceProvider.GetRequiredService<ToolExecutionTuiState>);
     }
 
     private void RenderInitialContent()
@@ -201,22 +175,7 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private IRenderable RenderDynamicContent()
     {
-        var bottomComponent = _currentState switch
-        {
-            ChatState.Input when _inputContext.State == InputState.UserSelection =>
-                CreateInputWithUserSelection(_inputContext),
-            ChatState.Input when _inputContext.State == InputState.Autocomplete && _inputContext.ShowSuggestions =>
-                CreateInputWithAutocomplete(_inputContext),
-            ChatState.Input =>
-                CreateFlexInputComponent(_inputContext.CurrentInput),
-            ChatState.Thinking =>
-                CreateFlexThinkingComponent(),
-            ChatState.ToolExecution =>
-                CreateFlexToolExecutionComponent(_toolProgress),
-            _ => CreateFlexInputComponent(_inputContext.CurrentInput)
-        };
-
-        return new Rows(new Text(""), bottomComponent, new Text(""), CreateFlexFooterComponent());
+        return _stateManager.RenderDynamicContent();
     }
 
 
@@ -292,227 +251,6 @@ public sealed class FlexColumnTuiApp : IDisposable
         }
     }
 
-    private IRenderable CreateFlexInputComponent(string currentInput)
-    {
-        var prompt = "[blue]>[/] ";
-        var cursor = "[blink]▋[/]";
-
-        string content;
-        if (string.IsNullOrEmpty(currentInput))
-        {
-            content = $"{prompt}{cursor}[dim]Type your message or /help[/]";
-        }
-        else
-        {
-            // Insert cursor at the correct position
-            var beforeCursor = currentInput[.._inputContext.CursorPosition];
-            var afterCursor = currentInput[_inputContext.CursorPosition..];
-            content = $"{prompt}{beforeCursor}{cursor}{afterCursor}";
-        }
-
-        return new Panel(content)
-            .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Grey23)
-            .Padding(1, 0, 1, 0)
-            .Expand();
-    }
-
-    private IRenderable CreateInputWithAutocomplete(InputContext context)
-    {
-        var inputPanel = CreateFlexInputComponent(context.CurrentInput);
-
-        if (!context.ShowSuggestions || context.Suggestions.Count == 0)
-        {
-            return inputPanel;
-        }
-
-        var suggestionItems = context.Suggestions.Select((suggestion, index) =>
-        {
-            var isSelected = index == context.SelectedSuggestionIndex;
-            var style = isSelected ? "[blue on white]" : "[dim]";
-            var prefix = isSelected ? ">" : " ";
-
-            var description = _slashCommandProcessor.GetAllCommands()
-                .GetValueOrDefault(suggestion, "");
-
-            return new Markup($"{style}{prefix} {suggestion,-12} {description}[/]");
-        }).ToArray();
-
-        var suggestionsPanel = new Panel(new Rows(suggestionItems))
-            .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Blue)
-            .Padding(0, 0);
-
-        return new Rows(inputPanel, suggestionsPanel);
-    }
-
-    private IRenderable CreateInputWithUserSelection(InputContext context)
-    {
-        var inputPanel = CreateFlexInputComponent(context.CurrentInput);
-
-        if (context.CompletionItems.Count == 0)
-        {
-            return inputPanel;
-        }
-
-        var selectionItems = context.CompletionItems.Select((item, index) =>
-        {
-            var isSelected = index == context.SelectedSuggestionIndex;
-            var style = isSelected ? "[blue on white]" : "[dim]";
-            var prefix = isSelected ? ">" : " ";
-
-            return new Markup($"{style}{prefix} {item.Text,-12} {item.Description}[/]");
-        }).ToArray();
-
-        var selectionPanel = new Panel(new Rows(selectionItems))
-            .Header("Select an option")
-            .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Green)
-            .Padding(0, 0);
-
-        return new Rows(inputPanel, selectionPanel);
-    }
-
-    private IRenderable CreateFlexThinkingComponent()
-    {
-        var animationFrame = DateTime.Now.Millisecond / 250 % 4;
-        var leadingAnimation = animationFrame switch
-        {
-            0 => "   ",
-            1 => ".  ",
-            2 => ".. ",
-            3 => "...",
-            _ => "   "
-        };
-
-        // Calculate duration since AI operation started
-        var duration = (int)(DateTime.Now - _aiOperationStartTime).TotalSeconds;
-        var durationText = duration > 0 ? $"{duration}s" : "0s";
-
-        return new Panel(new Markup($"[orange3]{leadingAnimation}[/] [dim]Thinking (esc to cancel, {durationText})[/]"))
-            .NoBorder();
-    }
-
-    private IRenderable CreateFlexToolExecutionComponent(string progress)
-    {
-        var animationFrame = DateTime.Now.Millisecond / 250 % 4;
-        var leadingAnimation = animationFrame switch
-        {
-            0 => "   ",
-            1 => ".  ",
-            2 => ".. ",
-            3 => "...",
-            _ => "   "
-        };
-
-        // Provide meaningful progress text
-        var progressText = string.IsNullOrWhiteSpace(progress)
-            ? (!string.IsNullOrWhiteSpace(_currentToolName)
-                ? $"Executing {_currentToolName}..."
-                : "Executing tool...")
-            : progress;
-
-        return new Panel(new Markup($"[yellow]{leadingAnimation}[/] [dim]{progressText}[/]"))
-            .NoBorder();
-    }
-
-    private IRenderable CreateFlexFooterComponent()
-    {
-        var currentDir = GetDisplayPath(_workingDirectoryProvider.GetCurrentDirectory());
-        var modelInfo = GetModelDisplayInfo();
-        var tokenInfo = GetTokenUsageInfo();
-        var content = $"[skyblue2]{currentDir}[/]  [rosybrown]{modelInfo}[/] [dim]({tokenInfo})[/]";
-        return new Panel(new Markup(content))
-            .NoBorder();
-    }
-
-    private string GetTokenUsageInfo()
-    {
-        try
-        {
-            var chatHistory = _historyManager.GetCurrentChatHistory();
-            var tokenCount = _appService.CalculateTokenMetrics(chatHistory);
-
-            // Estimate context window size based on model (this could be made configurable)
-            var contextWindowSize = EstimateContextWindowSize();
-            var percentageUsed = Math.Min(100.0, tokenCount * 100.0 / contextWindowSize);
-            var percentageLeft = 100.0 - percentageUsed;
-
-            return $"{tokenCount:N0} tokens, {percentageLeft:F2}% context left";
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Error calculating token usage");
-            return "token calculation unavailable";
-        }
-    }
-
-    private int EstimateContextWindowSize()
-    {
-        try
-        {
-            var modelId = _appService.ChatClient.ActiveProfile.ModelId.ToLowerInvariant();
-
-            // Common model context window sizes
-            return modelId switch
-            {
-                var m when m.Contains("gpt-4.1") => 1047576, // GPT-4.1 models
-                var m when m.Contains("gpt-4") => 128000,  // GPT-4 Turbo models
-                var m when m.Contains("gpt-3.5-") => 16385, // GPT-3.5 Turbo models
-                var m when m.Contains("o3") => 200000, // o3 models
-                var m when m.Contains("o4") => 200000, // o4 models
-                var m when m.Contains("gemini-2.5") => 1048576, // Gemini 2.5 Flash models
-                var m when m.Contains("gemini-1.5") => 1048576, // Gemini 1.5 Pro models
-                var m when m.Contains("claude") => 200000, // Claude models
-                _ => 128000 // Default fallback
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Error estimating context window size");
-            return 128000; // Safe default
-        }
-    }
-
-    private string GetModelDisplayInfo()
-    {
-        try
-        {
-            var chatClient = _appService.ChatClient;
-            var provider = chatClient.ActiveApiProvider.Name;
-            var model = chatClient.ActiveProfile.ModelId;
-
-            // Format like "provider/model" or just "model" if provider is empty
-            if (!string.IsNullOrEmpty(provider))
-            {
-                return $"{provider}:{model}";
-            }
-            return model;
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Error getting model display info");
-            return "unknown-model";
-        }
-    }
-
-    private string GetDisplayPath(string fullPath)
-    {
-        try
-        {
-            var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            if (fullPath.StartsWith(homeDir))
-            {
-                return "~" + fullPath[homeDir.Length..].Replace('\\', '/');
-            }
-            return fullPath.Replace('\\', '/');
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Error formatting display path for {Path}", fullPath);
-            return fullPath;
-        }
-    }
 
     private void RegisterKeyBindings()
     {
@@ -562,121 +300,7 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         try
         {
-            // Handle autocomplete navigation first
-            if (_inputContext.State == InputState.Autocomplete && _inputContext.ShowSuggestions)
-            {
-#pragma warning disable IDE0010 // Add missing cases
-                switch (e.Key)
-                {
-                    case ConsoleKey.UpArrow:
-                        NavigateAutocomplete(up: true);
-                        e.Handled = true;
-                        return;
-
-                    case ConsoleKey.DownArrow:
-                        NavigateAutocomplete(up: false);
-                        e.Handled = true;
-                        return;
-
-                    case ConsoleKey.Tab:
-                    case ConsoleKey.Enter:
-                        AcceptAutocompleteSuggestion();
-                        e.Handled = true;
-                        return;
-
-                    case ConsoleKey.Escape:
-                        CancelAutocomplete();
-                        e.Handled = true;
-                        return;
-                }
-#pragma warning restore IDE0010 // Add missing cases
-            }
-            else if (_inputContext.State == InputState.UserSelection)
-            {
-#pragma warning disable IDE0010 // Add missing cases
-                switch (e.Key)
-                {
-                    case ConsoleKey.UpArrow:
-                        NavigateUserSelection(up: true);
-                        e.Handled = true;
-                        return;
-
-                    case ConsoleKey.DownArrow:
-                        NavigateUserSelection(up: false);
-                        e.Handled = true;
-                        return;
-
-                    case ConsoleKey.Enter:
-                        await _userSelectionManager.AcceptSelectionAsync();
-                        e.Handled = true;
-                        return;
-
-                    case ConsoleKey.Escape:
-                        _userSelectionManager.Deactivate();
-                        e.Handled = true;
-                        return;
-                    default:
-                        break;
-                }
-#pragma warning restore IDE0010 // Add missing cases
-            }
-
-#pragma warning disable IDE0010 // Add missing cases
-            switch (e.Key)
-            {
-                case ConsoleKey.Enter:
-                    await SubmitCurrentInput();
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.UpArrow:
-                    NavigateCommandHistory(up: true);
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.DownArrow:
-                    NavigateCommandHistory(up: false);
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.LeftArrow:
-                    MoveCursorLeft();
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.RightArrow:
-                    MoveCursorRight();
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.Home:
-                    MoveCursorToStart();
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.End:
-                    MoveCursorToEnd();
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.Backspace:
-                    DeleteCharacterBefore();
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.Delete:
-                    DeleteCharacterAfter();
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.Escape:
-                    HandleEscapeKey();
-                    e.Handled = true;
-                    break;
-                default:
-                    break;
-            }
-#pragma warning restore IDE0010 // Add missing cases
+            await _stateManager.HandleKeyPressAsync(e);
         }
         catch (Exception ex)
         {
@@ -712,15 +336,12 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         try
         {
-            InsertCharacter(e.Character);
-            e.Handled = true;
+            await _stateManager.HandleCharacterTypedAsync(e);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling character typed: {Character}", e.Character);
         }
-
-        await Task.CompletedTask;
     }
 
     private async Task ShutdownAsync()
@@ -752,7 +373,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         _cancellationTokenSource.Cancel();
         _keyboardHandler?.Dispose();
         _cancellationTokenSource?.Dispose();
-        _aiOperationCts?.Dispose();
+        _tuiContext.AiOperationCts?.Dispose();
 
         Started = null;
         Stopped = null;
@@ -774,10 +395,10 @@ public sealed class FlexColumnTuiApp : IDisposable
                 .Where(text => !string.IsNullOrWhiteSpace(text))
                 .ToList();
 
-            _commandHistory.Clear();
-            _commandHistory.AddRange(userMessages);
+            _tuiContext.CommandHistory.Clear();
+            _tuiContext.CommandHistory.AddRange(userMessages);
 
-            _logger?.LogDebug("Loaded {Count} commands from history", _commandHistory.Count);
+            _logger?.LogDebug("Loaded {Count} commands from history", _tuiContext.CommandHistory.Count);
         }
         catch (Exception ex)
         {
@@ -787,52 +408,55 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private void NavigateCommandHistory(bool up)
     {
-        if (_commandHistory.Count == 0)
+        if (_tuiContext.CommandHistory.Count == 0)
         {
             return;
         }
 
+        var inputContext = _tuiContext.InputContext;
+
         if (up)
         {
-            if (_commandHistoryIndex == -1)
+            if (_tuiContext.CommandHistoryIndex == -1)
             {
-                _commandHistoryIndex = _commandHistory.Count - 1;
-                _inputContext.CurrentInput = _commandHistory[_commandHistoryIndex];
+                _tuiContext.CommandHistoryIndex = _tuiContext.CommandHistory.Count - 1;
+                inputContext.CurrentInput = _tuiContext.CommandHistory[_tuiContext.CommandHistoryIndex];
             }
-            else if (_commandHistoryIndex > 0)
+            else if (_tuiContext.CommandHistoryIndex > 0)
             {
-                _commandHistoryIndex--;
-                _inputContext.CurrentInput = _commandHistory[_commandHistoryIndex];
+                _tuiContext.CommandHistoryIndex--;
+                inputContext.CurrentInput = _tuiContext.CommandHistory[_tuiContext.CommandHistoryIndex];
             }
         }
         else
         {
-            if (_commandHistoryIndex >= 0 && _commandHistoryIndex < _commandHistory.Count - 1)
+            if (_tuiContext.CommandHistoryIndex >= 0 && _tuiContext.CommandHistoryIndex < _tuiContext.CommandHistory.Count - 1)
             {
-                _commandHistoryIndex++;
-                _inputContext.CurrentInput = _commandHistory[_commandHistoryIndex];
+                _tuiContext.CommandHistoryIndex++;
+                inputContext.CurrentInput = _tuiContext.CommandHistory[_tuiContext.CommandHistoryIndex];
             }
-            else if (_commandHistoryIndex == _commandHistory.Count - 1)
+            else if (_tuiContext.CommandHistoryIndex == _tuiContext.CommandHistory.Count - 1)
             {
-                _commandHistoryIndex = -1;
-                _inputContext.CurrentInput = string.Empty;
+                _tuiContext.CommandHistoryIndex = -1;
+                inputContext.CurrentInput = string.Empty;
             }
         }
 
-        _inputContext.CursorPosition = _inputContext.CurrentInput.Length;
-        UpdateAutocompleteState();
+        inputContext.CursorPosition = inputContext.CurrentInput.Length;
     }
 
     private async Task SubmitCurrentInput()
     {
-        if (string.IsNullOrWhiteSpace(_inputContext.CurrentInput) || _currentState != ChatState.Input)
+        var inputContext = _tuiContext.InputContext;
+        if (string.IsNullOrWhiteSpace(inputContext.CurrentInput) || _stateManager.CurrentStateType != ChatState.Input)
         {
             return;
         }
 
-        var inputToSubmit = _inputContext.CurrentInput;
+        var inputToSubmit = inputContext.CurrentInput;
         AddToCommandHistory(inputToSubmit);
-        ClearCurrentInput();
+        inputContext.Clear();
+        _tuiContext.CommandHistoryIndex = -1;
 
         await ProcessUserInput(inputToSubmit);
     }
@@ -844,19 +468,19 @@ public sealed class FlexColumnTuiApp : IDisposable
             return;
         }
 
-        if (_commandHistory.Contains(command))
+        if (_tuiContext.CommandHistory.Contains(command))
         {
             return;
         }
 
-        _commandHistory.Add(command);
+        _tuiContext.CommandHistory.Add(command);
 
-        if (_commandHistory.Count > 100)
+        if (_tuiContext.CommandHistory.Count > 100)
         {
-            _commandHistory.RemoveAt(0);
+            _tuiContext.CommandHistory.RemoveAt(0);
         }
 
-        _commandHistoryIndex = -1;
+        _tuiContext.CommandHistoryIndex = -1;
     }
 
     private async Task ProcessUserInput(string input)
@@ -866,16 +490,20 @@ public sealed class FlexColumnTuiApp : IDisposable
             // Add spacing before user message
             _scrollbackTerminal.WriteStatic(new Markup(""));
 
+            var appService = _tuiContext.AppService;
+            var workingDirectoryProvider = _tuiContext.WorkingDirectoryProvider;
+            var slashCommandProcessor = _tuiContext.SlashCommandProcessor;
+
             // Get current environment context
             var envPrompt = EnvSystemPrompt.GetEnvPrompt(
                 DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-                _appService.ChatClient.OperatingSystem.ToString(),
-                _appService.ChatClient.DefaultShell,
-                _appService.ChatClient.Username,
-                _appService.ChatClient.Hostname,
-                _workingDirectoryProvider.GetCurrentDirectory(),
+                appService.ChatClient.OperatingSystem.ToString(),
+                appService.ChatClient.DefaultShell,
+                appService.ChatClient.Username,
+                appService.ChatClient.Hostname,
+                workingDirectoryProvider.GetCurrentDirectory(),
                 "chat", // mode - could be made configurable
-                _appService.ChatClient.Config.ToolApprovals
+                appService.ChatClient.Config.ToolApprovals
             );
 
             _logger?.LogDebug("Generated environment prompt: {EnvPrompt}", envPrompt);
@@ -892,9 +520,9 @@ public sealed class FlexColumnTuiApp : IDisposable
             var displayMessage = new ChatMessage(ChatRole.User, input);
             _scrollbackTerminal.WriteStatic(RenderMessage(displayMessage));
 
-            if (_slashCommandProcessor.TryProcessCommand(input, out var commandOutput))
+            if (slashCommandProcessor.TryProcessCommand(input, out var commandOutput))
             {
-                if (_inputContext.State == InputState.UserSelection)
+                if (_tuiContext.InputContext.State == InputState.UserSelection)
                 {
                     // Command is interactive, so we don't process it as a chat message.
                     return;
@@ -910,14 +538,14 @@ public sealed class FlexColumnTuiApp : IDisposable
             }
 
             // Create new cancellation token for this AI operation
-            _aiOperationCts?.Dispose();
-            _aiOperationCts = new CancellationTokenSource();
-            _aiOperationStartTime = DateTime.Now;
+            _tuiContext.AiOperationCts?.Dispose();
+            _tuiContext.AiOperationCts = new CancellationTokenSource();
+            _tuiContext.AiOperationStartTime = DateTime.Now;
 
-            _currentState = ChatState.Thinking;
+            await _tuiContext.RequestStateTransitionAsync(ChatState.Thinking);
 
             var chatHistory = _historyManager.GetCurrentChatHistory();
-            var responseStream = _appService.ProcessChatMessageAsync(chatHistory, _aiOperationCts.Token);
+            var responseStream = appService.ProcessChatMessageAsync(chatHistory, _tuiContext.AiOperationCts.Token);
 
             var assistantMessage = new ChatMessage(ChatRole.Assistant, "");
             _historyManager.AddAssistantMessage(assistantMessage);
@@ -937,7 +565,7 @@ public sealed class FlexColumnTuiApp : IDisposable
 
                 if (IsToolExecutionUpdate(responseUpdate))
                 {
-                    _currentState = ChatState.ToolExecution;
+                    await _tuiContext.RequestStateTransitionAsync(ChatState.ToolExecution);
 
                     // Extract tool name first
                     ExtractToolNameFromUpdate(responseUpdate);
@@ -945,15 +573,15 @@ public sealed class FlexColumnTuiApp : IDisposable
                     // Set progress text based on available information
                     if (!string.IsNullOrWhiteSpace(responseUpdate.Text))
                     {
-                        _toolProgress = responseUpdate.Text;
+                        _tuiContext.ToolProgress = responseUpdate.Text;
                     }
-                    else if (!string.IsNullOrWhiteSpace(_currentToolName))
+                    else if (!string.IsNullOrWhiteSpace(_tuiContext.CurrentToolName))
                     {
-                        _toolProgress = $"Executing {_currentToolName}...";
-                        _scrollbackTerminal.WriteStatic(new Markup($"[green]•[/] [dim]{_toolProgress}[/]"));
+                        _tuiContext.ToolProgress = $"Executing {_tuiContext.CurrentToolName}...";
+                        _scrollbackTerminal.WriteStatic(new Markup($"[green]•[/] [dim]{_tuiContext.ToolProgress}[/]"));
                     }
 
-                    _logger?.LogInformation($"ChatMsg[Tool, '{_toolProgress}'");
+                    _logger?.LogInformation($"ChatMsg[Tool, '{_tuiContext.ToolProgress}'");
 
                     // Handle tool result display
                     await HandleToolExecutionResult(responseUpdate);
@@ -963,7 +591,7 @@ public sealed class FlexColumnTuiApp : IDisposable
             _logger?.LogInformation($"ChatMsg[Assistant, '{assistantMessage.Text}'");
             _scrollbackTerminal.WriteStatic(RenderMessage(assistantMessage));
         }
-        catch (OperationCanceledException) when (_aiOperationCts?.Token.IsCancellationRequested == true)
+        catch (OperationCanceledException) when (_tuiContext.AiOperationCts?.Token.IsCancellationRequested == true)
         {
             // AI operation was cancelled by user - this is handled by InterruptAiOperation()
             _logger?.LogDebug("AI operation was cancelled by user");
@@ -977,9 +605,9 @@ public sealed class FlexColumnTuiApp : IDisposable
         }
         finally
         {
-            _currentState = ChatState.Input;
-            _toolProgress = string.Empty;
-            _currentToolName = string.Empty;
+            await _tuiContext.RequestStateTransitionAsync(ChatState.Input);
+            _tuiContext.ToolProgress = string.Empty;
+            _tuiContext.CurrentToolName = string.Empty;
         }
     }
 
@@ -1030,16 +658,16 @@ public sealed class FlexColumnTuiApp : IDisposable
             if (functionCall.Arguments != null && functionCall.Arguments.Count > 0)
             {
                 var keyValue = GetKeyArgumentValue(toolName, functionCall.Arguments);
-                _currentToolName = !string.IsNullOrEmpty(keyValue) ? $"{toolName} → {keyValue}" : toolName;
+                _tuiContext.CurrentToolName = !string.IsNullOrEmpty(keyValue) ? $"{toolName} → {keyValue}" : toolName;
             }
             else
             {
-                _currentToolName = toolName;
+                _tuiContext.CurrentToolName = toolName;
             }
         }
         else
         {
-            _currentToolName = string.Empty;
+            _tuiContext.CurrentToolName = string.Empty;
         }
     }
 
@@ -1103,217 +731,6 @@ public sealed class FlexColumnTuiApp : IDisposable
         return string.Empty;
     }
 
-    private void InsertCharacter(char character)
-    {
-        if (_currentState != ChatState.Input)
-        {
-            return;
-        }
-
-        _inputContext.CursorPosition = Math.Max(0, Math.Min(_inputContext.CursorPosition, _inputContext.CurrentInput.Length));
-        _inputContext.CurrentInput = _inputContext.CurrentInput.Insert(_inputContext.CursorPosition, character.ToString());
-        _inputContext.CursorPosition++;
-        _commandHistoryIndex = -1;
-        UpdateAutocompleteState();
-    }
-
-    private void DeleteCharacterBefore()
-    {
-        if (_currentState != ChatState.Input || _inputContext.CurrentInput.Length == 0)
-        {
-            return;
-        }
-
-        _inputContext.CursorPosition = Math.Max(0, Math.Min(_inputContext.CursorPosition, _inputContext.CurrentInput.Length));
-
-        if (_inputContext.CursorPosition > 0)
-        {
-            _inputContext.CurrentInput = _inputContext.CurrentInput.Remove(_inputContext.CursorPosition - 1, 1);
-            _inputContext.CursorPosition--;
-        }
-
-        _commandHistoryIndex = -1;
-        UpdateAutocompleteState();
-    }
-
-    private void DeleteCharacterAfter()
-    {
-        if (_currentState != ChatState.Input || _inputContext.CurrentInput.Length == 0)
-        {
-            return;
-        }
-
-        _inputContext.CursorPosition = Math.Max(0, Math.Min(_inputContext.CursorPosition, _inputContext.CurrentInput.Length));
-
-        if (_inputContext.CursorPosition < _inputContext.CurrentInput.Length)
-        {
-            _inputContext.CurrentInput = _inputContext.CurrentInput.Remove(_inputContext.CursorPosition, 1);
-        }
-
-        _commandHistoryIndex = -1;
-        UpdateAutocompleteState();
-    }
-
-    private void MoveCursorLeft()
-    {
-        if (_inputContext.CursorPosition > 0)
-        {
-            _inputContext.CursorPosition--;
-            UpdateAutocompleteState();
-        }
-    }
-
-    private void MoveCursorRight()
-    {
-        if (_inputContext.CursorPosition < _inputContext.CurrentInput.Length)
-        {
-            _inputContext.CursorPosition++;
-            UpdateAutocompleteState();
-        }
-    }
-
-    private void MoveCursorToStart()
-    {
-        _inputContext.CursorPosition = 0;
-        UpdateAutocompleteState();
-    }
-
-    private void MoveCursorToEnd()
-    {
-        _inputContext.CursorPosition = _inputContext.CurrentInput.Length;
-        UpdateAutocompleteState();
-    }
-
-    private void ClearCurrentInput()
-    {
-        _inputContext.Clear();
-        _commandHistoryIndex = -1;
-    }
-
-    private async void UpdateAutocompleteState()
-    {
-        try
-        {
-            // Detect which provider should be triggered
-            var provider = _autocompleteManager.DetectTrigger(_inputContext.CurrentInput, _inputContext.CursorPosition);
-
-            if (provider != null)
-            {
-                _inputContext.ActiveProvider = provider;
-                await _autocompleteManager.UpdateSuggestionsAsync(_inputContext);
-            }
-            else
-            {
-                _inputContext.ClearAutocomplete();
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating autocomplete state");
-            _inputContext.ClearAutocomplete();
-        }
-    }
-
-    private void NavigateAutocomplete(bool up)
-    {
-        if (!_inputContext.ShowSuggestions || _inputContext.Suggestions.Count == 0)
-        {
-            return;
-        }
-
-        if (up)
-        {
-            _inputContext.SelectedSuggestionIndex =
-                (_inputContext.SelectedSuggestionIndex - 1 + _inputContext.Suggestions.Count)
-                % _inputContext.Suggestions.Count;
-        }
-        else
-        {
-            _inputContext.SelectedSuggestionIndex =
-                (_inputContext.SelectedSuggestionIndex + 1)
-                % _inputContext.Suggestions.Count;
-        }
-    }
-
-    private void AcceptAutocompleteSuggestion()
-    {
-        _autocompleteManager.AcceptSuggestion(_inputContext);
-    }
-
-    private void CancelAutocomplete()
-    {
-        _inputContext.ClearAutocomplete();
-    }
-
-    private void NavigateUserSelection(bool up)
-    {
-        if (_inputContext.CompletionItems.Count == 0)
-        {
-            return;
-        }
-
-        if (up)
-        {
-            _inputContext.SelectedSuggestionIndex =
-                (_inputContext.SelectedSuggestionIndex - 1 + _inputContext.CompletionItems.Count)
-                % _inputContext.CompletionItems.Count;
-        }
-        else
-        {
-            _inputContext.SelectedSuggestionIndex =
-                (_inputContext.SelectedSuggestionIndex + 1)
-                % _inputContext.CompletionItems.Count;
-        }
-    }
-
-    private void HandleEscapeKey()
-    {
-#pragma warning disable IDE0010 // Add missing cases
-        switch (_currentState)
-        {
-            case ChatState.Input:
-                // Clear current input when in input state
-                ClearCurrentInput();
-                break;
-
-            case ChatState.Thinking:
-            case ChatState.ToolExecution:
-                // Interrupt AI operation and return to input
-                InterruptAiOperation();
-                break;
-        }
-#pragma warning restore IDE0010 // Add missing cases
-    }
-
-    private void InterruptAiOperation()
-    {
-        try
-        {
-            // Cancel the AI operation
-            _aiOperationCts?.Cancel();
-
-            // Set state back to input
-            _currentState = ChatState.Input;
-
-            // Clear any progress indicators
-            _toolProgress = string.Empty;
-            _currentToolName = string.Empty;
-
-            // Display interruption message without assistant prefix
-            _scrollbackTerminal.WriteStatic(new Markup("⚠ Request cancelled."));
-            _scrollbackTerminal.WriteStatic(new Markup(""));
-
-            // Add to history as assistant message for context
-            var interruptMessage = new ChatMessage(ChatRole.Assistant, "⚠ Request cancelled.");
-            _historyManager.AddAssistantMessage(interruptMessage);
-
-            _logger?.LogInformation("AI operation interrupted by user (Escape key)");
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error interrupting AI operation");
-        }
-    }
 
     private async Task HandleToolExecutionResult(ChatResponseUpdate responseUpdate)
     {
@@ -1332,7 +749,7 @@ public sealed class FlexColumnTuiApp : IDisposable
             if (functionCall != null)
             {
                 // Store the mapping of call ID to tool name for later use
-                _functionCallToToolName[functionCall.CallId] = functionCall.Name;
+                _tuiContext.FunctionCallToToolName[functionCall.CallId] = functionCall.Name;
 
                 // For EditTool, capture the pre-edit content (Gemini CLI approach)
                 await CapturePreEditContentForEditTool(functionCall);
@@ -1344,7 +761,7 @@ public sealed class FlexColumnTuiApp : IDisposable
             if (functionResult != null)
             {
                 // Get the tool name from our stored mapping
-                _ = _functionCallToToolName.TryGetValue(functionResult.CallId, out toolName);
+                _ = _tuiContext.FunctionCallToToolName.TryGetValue(functionResult.CallId, out toolName);
                 toolName ??= "Unknown Tool";
 
                 result = functionResult.Result?.ToString() ?? "";
@@ -1377,7 +794,7 @@ public sealed class FlexColumnTuiApp : IDisposable
             if (!string.IsNullOrEmpty(result) && !string.IsNullOrEmpty(toolName))
             {
                 // Parse the tool response for enhanced display
-                var toolInfo = _toolResponseParser.ParseToolResponse(toolName, result);
+                var toolInfo = _tuiContext.ToolResponseParser.ParseToolResponse(toolName, result);
 
                 // Handle different tool types appropriately
                 UnifiedDiff? diff = null;
@@ -1403,7 +820,7 @@ public sealed class FlexColumnTuiApp : IDisposable
                             // For EditTool, use the captured pre-edit content (Gemini CLI approach)
                             if (IsEditTool(normalizedToolName) && functionResult != null)
                             {
-                                if (_functionCallToPreEditContent.TryGetValue(functionResult.CallId, out var preEditContent))
+                                if (_tuiContext.FunctionCallToPreEditContent.TryGetValue(functionResult.CallId, out var preEditContent))
                                 {
                                     originalContent = preEditContent;
                                 }
@@ -1442,7 +859,7 @@ public sealed class FlexColumnTuiApp : IDisposable
                             UnifiedDiffGenerator.SetLogger(_logger);
 
                             // Generate diff using the tool response parser
-                            diff = _toolResponseParser.ExtractFileDiff(
+                            diff = _tuiContext.ToolResponseParser.ExtractFileDiff(
                                 toolInfo.ToolName,
                                 result,
                                 originalContent,
@@ -1554,7 +971,7 @@ public sealed class FlexColumnTuiApp : IDisposable
                         try
                         {
                             var preEditContent = await File.ReadAllTextAsync(filePath);
-                            _functionCallToPreEditContent[functionCall.CallId] = preEditContent;
+                            _tuiContext.FunctionCallToPreEditContent[functionCall.CallId] = preEditContent;
                             _logger?.LogDebug("Captured pre-edit content, length: {Length}", preEditContent.Length);
                         }
                         catch (Exception ex)
@@ -1565,7 +982,7 @@ public sealed class FlexColumnTuiApp : IDisposable
                     else
                     {
                         _logger?.LogDebug("File does not exist, storing empty pre-edit content: {FilePath}", filePath);
-                        _functionCallToPreEditContent[functionCall.CallId] = string.Empty;
+                        _tuiContext.FunctionCallToPreEditContent[functionCall.CallId] = string.Empty;
                     }
                 }
                 else

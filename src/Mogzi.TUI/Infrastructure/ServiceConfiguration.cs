@@ -55,5 +55,42 @@ public static class ServiceConfiguration
         _ = services.AddSingleton<FlexColumnTuiApp>();
         _ = services.AddSingleton<IScrollbackTerminal, ScrollbackTerminal>();
         _ = services.AddSingleton<ToolResponseParser>();
+
+        // Add state management components
+        _ = services.AddSingleton<ITuiStateManager, TuiStateManager>();
+        _ = services.AddSingleton<InputContext>();
+        _ = services.AddSingleton<ITuiContext>(serviceProvider =>
+        {
+            var inputContext = serviceProvider.GetRequiredService<InputContext>();
+            var logger = serviceProvider.GetRequiredService<ILogger<TuiContext>>();
+            var scrollbackTerminal = serviceProvider.GetRequiredService<IScrollbackTerminal>();
+            var historyManager = serviceProvider.GetRequiredService<HistoryManager>();
+            var autocompleteManager = serviceProvider.GetRequiredService<AutocompleteManager>();
+            var userSelectionManager = serviceProvider.GetRequiredService<UserSelectionManager>();
+            var slashCommandProcessor = serviceProvider.GetRequiredService<SlashCommandProcessor>();
+            var workingDirectoryProvider = serviceProvider.GetRequiredService<IWorkingDirectoryProvider>();
+            var toolResponseParser = serviceProvider.GetRequiredService<ToolResponseParser>();
+            var appService = serviceProvider.GetRequiredService<IAppService>();
+            var stateManager = serviceProvider.GetRequiredService<ITuiStateManager>();
+
+            return new TuiContext(
+                inputContext,
+                serviceProvider,
+                logger,
+                scrollbackTerminal,
+                historyManager,
+                autocompleteManager,
+                userSelectionManager,
+                slashCommandProcessor,
+                workingDirectoryProvider,
+                toolResponseParser,
+                appService,
+                stateManager);
+        });
+
+        // Register state implementations
+        _ = services.AddTransient<InputTuiState>();
+        _ = services.AddTransient<ThinkingTuiState>();
+        _ = services.AddTransient<ToolExecutionTuiState>();
     }
 }
