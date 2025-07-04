@@ -38,7 +38,8 @@ Sophisticated TUI providing real-time interaction with AI assistance:
 
 - **IScrollbackTerminal**: Core terminal abstraction for content management
 - **FlexColumnTuiApp**: Main application with dependency injection
-- **State Management**: Centralized application state with event-driven updates
+- **State Pattern**: Dedicated state classes (InputTuiState, ThinkingTuiState, ToolExecutionTuiState)
+- **Component Architecture**: Modular UI components with mediator coordination
 - **Input Handling**: Advanced keyboard processing with autocomplete integration
 
 > **📋 Detailed Documentation**: [Terminal Interface & TUI Design](04_04_terminal_tui_design.md)
@@ -146,6 +147,9 @@ public string SystemPrompt => Promptinator.GetSystemPrompt(
 - **Factory Pattern**: ChatClient creation with comprehensive validation
 - **Repository Pattern**: ChatHistoryService for session persistence
 - **Strategy Pattern**: Fuzzy matching strategies and working directory providers
+- **State Pattern**: Application state management with dedicated state classes
+- **Component Pattern**: Modular UI components with lifecycle management
+- **Mediator Pattern**: Coordinated component communication
 - **Observer Pattern**: State management with event-driven updates
 - **Provider Pattern**: Extensible autocomplete and tool systems
 
@@ -175,3 +179,103 @@ public class ApplicationConfiguration
 - **Environment Integration**: Debug mode and operational settings
 
 This design provides Mogzi with a robust, secure, and performant foundation for AI-assisted development while maintaining clean architecture principles and excellent user experience.
+
+## State Management Architecture
+
+**State Pattern Implementation:**
+```csharp
+public interface ITuiState
+{
+    string Name { get; }
+    IRenderable RenderDynamicContent(ITuiContext context);
+    Task HandleKeyPressAsync(ITuiContext context, KeyPressEventArgs e);
+    Task HandleCharacterTypedAsync(ITuiContext context, CharacterTypedEventArgs e);
+    Task OnEnterAsync(ITuiContext context, ITuiState? previousState);
+    Task OnExitAsync(ITuiContext context, ITuiState? nextState);
+}
+```
+
+**State Manager Coordination:**
+```csharp
+public interface ITuiStateManager
+{
+    ITuiState? CurrentState { get; }
+    ChatState CurrentStateType { get; }
+    Task TransitionToStateAsync(ChatState newStateType);
+    Task HandleKeyPressAsync(KeyPressEventArgs e);
+    Task HandleCharacterTypedAsync(CharacterTypedEventArgs e);
+    void RegisterState(ChatState stateType, Func<ITuiState> stateFactory);
+}
+```
+
+**Key Features:**
+- **State Isolation**: Each application state (Input, Thinking, ToolExecution) handled by a separate class
+- **Lifecycle Management**: OnEnterAsync/OnExitAsync methods for state setup and teardown
+- **Input Delegation**: Keyboard events delegated to the current active state
+- **Dynamic Rendering**: Each state provides its own rendering logic
+- **Factory Registration**: States registered with factory functions for lazy instantiation
+
+**State Transition Flow:**
+- InputTuiState → ThinkingTuiState (when user submits input)
+- ThinkingTuiState → ToolExecutionTuiState (when tool call detected)
+- ToolExecutionTuiState → ThinkingTuiState (when tool execution completes)
+- ThinkingTuiState → InputTuiState (when AI response completes)
+- Any State → InputTuiState (on cancellation)
+
+## Component Architecture
+
+**Component System Design:**
+```csharp
+public interface ITuiComponent
+{
+    string Name { get; }
+    bool IsVisible { get; set; }
+    IRenderable Render(IRenderContext context);
+    Task<bool> HandleInputAsync(IRenderContext context, object inputEvent);
+    Task InitializeAsync(IRenderContext context);
+    Task DisposeAsync();
+}
+```
+
+**Component Manager:**
+```csharp
+public interface ITuiComponentManager
+{
+    IReadOnlyDictionary<string, ITuiComponent> Components { get; }
+    ITuiLayout? CurrentLayout { get; set; }
+    void RegisterComponent(ITuiComponent component);
+    IRenderable RenderLayout(IRenderContext context);
+    Task<bool> BroadcastInputAsync(object inputEvent, IRenderContext context);
+    void UpdateComponentVisibility(ChatState currentState, IRenderContext context);
+}
+```
+
+**Mediator Pattern:**
+```csharp
+public interface ITuiMediator
+{
+    string Name { get; }
+    Task HandleUserInputAsync(string input, ITuiContext context);
+    Task HandleKeyPressAsync(KeyPressEventArgs e, ITuiContext context);
+    Task HandleCharacterTypedAsync(CharacterTypedEventArgs e, ITuiContext context);
+    Task HandleStateChangeAsync(ChatState newState, ChatState previousState, ITuiContext context);
+    Task HandleToolExecutionAsync(string toolName, string progress, ITuiContext context);
+    Task NotifyComponentAsync(string componentName, object eventData, ITuiContext context);
+}
+```
+
+**Key Features:**
+- **Component Modularity**: Each UI element is a self-contained component
+- **Lifecycle Management**: Components have initialization and disposal phases
+- **Layout System**: Flexible component arrangement through layout interfaces
+- **Mediator Coordination**: Reduced coupling through centralized communication
+- **Event Broadcasting**: Input events distributed to relevant components
+- **State-Based Visibility**: Component visibility managed based on application state
+
+**Core Components:**
+- InputPanel: User input field with cursor positioning
+- AutocompletePanel: Suggestion display with keyboard navigation
+- UserSelectionPanel: Interactive selection lists for commands
+- FooterPanel: Status information (directory, model, token usage)
+- WelcomePanel: Application welcome screen and branding
+- ProgressPanel: AI processing and tool execution progress

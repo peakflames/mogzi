@@ -1,735 +1,209 @@
-# Mogzi Terminal Interface & TUI Design
+# Mogzi Terminal User Interface (TUI) Design
 
-## Terminal Interface Architecture
+## 1. Core Philosophy
 
-Mogzi's Terminal User Interface (TUI) provides a sophisticated, responsive interface for AI-powered development assistance. The design emphasizes real-time interaction, efficient rendering, and seamless integration with the underlying chat and tool systems.
+The Mogzi TUI has been refactored from a monolithic architecture to a modern, component-based design. This new architecture emphasizes modularity, reusability, and maintainability. By breaking the UI into independent, reusable components, we can manage complexity, improve testability, and enable more flexible layouts.
 
-## Core Interface Components
+The core principles of this design are:
+- **Componentization**: The UI is composed of distinct, self-contained components (e.g., `InputPanel`, `FooterPanel`).
+- **Centralized Management**: A `TuiComponentManager` handles the lifecycle and registration of all components.
+- **Decoupled Communication**: The **Mediator pattern** (`FlexColumnMediator`) facilitates communication between components, preventing direct dependencies.
+- **Flexible Layouts**: A `FlexColumnLayout` system composes components into a final view, allowing for adaptable UI structures.
+- **State-Driven UI**: Component visibility and behavior are driven by the application's state (`ChatState`).
 
-### IScrollbackTerminal Interface
+## 2. Component-Based Architecture
 
-**Primary Interface Definition:**
-```csharp
-public interface IScrollbackTerminal
-{
-    void Initialize();
-    void WriteStatic(IRenderable content, bool isUpdatable = false);
-    Task StartDynamicDisplayAsync(Func<IRenderable> dynamicContentProvider, CancellationToken cancellationToken);
-    void Shutdown();
-}
-```
+The TUI is built around a set of core interfaces that define the component system.
 
-**Design Principles:**
-- **Content Separation**: Clear distinction between static, updatable, and dynamic content
-- **Async Operations**: Non-blocking dynamic content updates
-- **Resource Management**: Proper initialization and cleanup lifecycle
-- **Thread Safety**: Safe concurrent access from multiple components
+### 2.1. Key Interfaces
 
-### ScrollbackTerminal Implementation
+-   **`ITuiComponent`**: The base interface for all UI components. It defines the contract for rendering, input handling, and lifecycle management.
+-   **`ITuiComponentManager`**: Responsible for registering, managing, and rendering all UI components. It acts as the central hub for the component system.
+-   **`ITuiMediator`**: Defines the contract for coordinating interactions between components, ensuring they remain decoupled.
+-   **`ITuiLayout`**: Defines how components are arranged and composed into a single `IRenderable` view.
+-   **`IRenderContext`**: Provides components with access to shared services, application state, and rendering utilities.
 
-**Core Implementation Structure:**
-```csharp
-public class ScrollbackTerminal : IScrollbackTerminal
-{
-    private readonly IAnsiConsole _console;
-    private readonly object _lock = new();
-    private readonly List<IRenderable> _staticContent = [];
-    private readonly List<IRenderable> _updatableContent = [];
+### 2.2. Architectural Diagram
+
+The following diagram illustrates the relationships between the key architectural interfaces:
+
+```mermaid
+classDiagram
+    class ITuiComponent {
+        +string Name
+        +bool IsVisible
+        +Render(IRenderContext) IRenderable
+        +HandleInputAsync(IRenderContext, object) Task~bool~
+        +InitializeAsync(IRenderContext) Task
+        +DisposeAsync() Task
+    }
     
-    private int _staticContentLineCount = 0;
-    private int _updatableContentLineCount = 0;
-    private int _dynamicContentLineCount = 0;
-    private bool _isInitialized = false;
-    private bool _isDynamicMode = false;
-
-    public ScrollbackTerminal(IAnsiConsole console)
-    {
-        _console = console;
+    class ITuiComponentManager {
+        +Components IReadOnlyDictionary~string, ITuiComponent~
+        +CurrentLayout ITuiLayout
+        +RegisterComponent(ITuiComponent) void
+        +RenderLayout(IRenderContext) IRenderable
+        +BroadcastInputAsync(object, IRenderContext) Task~bool~
+        +UpdateComponentVisibility(ChatState, IRenderContext) void
     }
-}
-```
-
-**Key Features:**
-- **Thread Safety**: Lock-based synchronization for concurrent access
-- **Content Management**: Separate tracking of static, updatable, and dynamic content
-- **Cursor Management**: Hide/show cursor during operations
-- **Content Clearing**: Efficient ANSI escape sequences for content updates
-- **Line Counting**: Accurate line counting for proper cursor positioning
-
-## Content Management System
-
-### Static Content Handling
-
-**Static Content Operations:**
-```csharp
-public void WriteStatic(IRenderable content, bool isUpdatable = false)
-{
-    lock (_lock)
-    {
-        if (_isDynamicMode)
-        {
-            throw new InvalidOperationException("Cannot write static content while in dynamic mode");
-        }
-
-        if (isUpdatable)
-        {
-            _updatableContent.Add(content);
-            _updatableContentLineCount += CountLines(content);
-        }
-        else
-        {
-            _staticContent.Add(content);
-            _staticContentLineCount += CountLines(content);
-        }
-
-        _console.Write(content);
-    }
-}
-```
-
-### Dynamic Content Updates
-
-**Real-Time Content Rendering:**
-```csharp
-public async Task StartDynamicDisplayAsync(Func<IRenderable> dynamicContentProvider, CancellationToken cancellationToken)
-{
-    lock (_lock)
-    {
-        if (_isDynamicMode)
-        {
-            throw new InvalidOperationException("Already in dynamic mode");
-        }
-        
-        _isDynamicMode = true;
-        _console.Cursor.Hide();
-    }
-
-    try
-    {
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            var content = dynamicContentProvider();
-            UpdateDynamic(content);
-            
-            await Task.Delay(50, cancellationToken); // 20 FPS update rate
-        }
-    }
-    finally
-    {
-        lock (_lock)
-        {
-            _isDynamicMode = false;
-            _console.Cursor.Show();
-        }
-    }
-}
-
-private void UpdateDynamic(IRenderable content)
-{
-    lock (_lock)
-    {
-        ClearDynamicContent();
-        
-        // Measure content for line counting
-        var lineCount = CountLines(content);
-        _dynamicContentLineCount = lineCount;
-        
-        _console.Write(content);
-    }
-}
-```
-
-### Content Clearing Strategy
-
-**Efficient Content Removal:**
-```csharp
-private void ClearDynamicContent()
-{
-    if (_dynamicContentLineCount > 0)
-    {
-        // Move cursor up to the beginning of dynamic content
-        _console.Write($"\u001b[{_dynamicContentLineCount}A");
-        
-        // Clear from cursor to end of screen
-        _console.Write("\u001b[0J");
-        
-        _dynamicContentLineCount = 0;
-    }
-}
-
-private void ClearUpdatableContent()
-{
-    if (_updatableContentLineCount > 0)
-    {
-        // Move cursor up and clear updatable content
-        _console.Write($"\u001b[{_updatableContentLineCount}A");
-        _console.Write("\u001b[0J");
-        
-        _updatableContentLineCount = 0;
-        _updatableContent.Clear();
-    }
-}
-```
-
-## TUI Application Design
-
-### Dependency Injection Setup
-
-**Service Configuration:**
-```csharp
-private static void ConfigureServices(IServiceCollection services, string[] args)
-{
-    services.AddLogging(builder => {
-        builder.AddConsole();
-        builder.SetMinimumLevel(LogLevel.Information);
-    });
     
-    services.AddSingleton<IAnsiConsole>(AnsiConsole.Console);
-    services.AddSingleton<IWorkingDirectoryProvider, DefaultWorkingDirectoryProvider>();
+    class ITuiMediator {
+        +Name string
+        +HandleUserInputAsync(string, ITuiContext) Task
+        +HandleKeyPressAsync(KeyPressEventArgs, ITuiContext) Task
+        +HandleCharacterTypedAsync(CharacterTypedEventArgs, ITuiContext) Task
+        +HandleStateChangeAsync(ChatState, ChatState, ITuiContext) Task
+        +NotifyComponentAsync(string, object, ITuiContext) Task
+    }
     
-    var chatClientResult = ChatClient.Create("mogzi.config.json", null, null, "chat", (details, color) => {}, false);
-    if (chatClientResult.IsSuccess)
-        services.AddSingleton(chatClientResult.Value);
+    class ITuiLayout {
+        +Name string
+        +GetRequiredComponents() IEnumerable~string~
+        +Compose(IReadOnlyDictionary~string, ITuiComponent~, IRenderContext) IRenderable
+        +ValidateComponents(IReadOnlyDictionary~string, ITuiComponent~) bool
+    }
     
-    services.AddSingleton<IAppService, AppService>();
-    services.AddSingleton<HistoryManager>();
-    services.AddSingleton<StateManager>();
+    class InputPanel {
+        +Render(IRenderContext) IRenderable
+        +HandleInputAsync(IRenderContext, object) Task~bool~
+    }
+    
+    class AutocompletePanel {
+        +Render(IRenderContext) IRenderable
+        +HandleInputAsync(IRenderContext, object) Task~bool~
+    }
+    
+    class ProgressPanel {
+        +Render(IRenderContext) IRenderable
+        +HandleInputAsync(IRenderContext, object) Task~bool~
+    }
+    
+    class FooterPanel {
+        +Render(IRenderContext) IRenderable
+        +HandleInputAsync(IRenderContext, object) Task~bool~
+    }
+    
+    ITuiComponentManager --* ITuiComponent : manages
+    ITuiComponentManager --* ITuiLayout : uses
+    ITuiMediator --o ITuiComponent : coordinates
+    InputPanel ..|> ITuiComponent : implements
+    AutocompletePanel ..|> ITuiComponent : implements
+    ProgressPanel ..|> ITuiComponent : implements
+    FooterPanel ..|> ITuiComponent : implements
+```
+
+### 2.3. Component Flow and Lifecycle
+
+The `TuiComponentManager` orchestrates the flow of data and user input through the component system.
+
+```mermaid
+sequenceDiagram
+    participant App as FlexColumnTuiApp
+    participant Manager as TuiComponentManager
+    participant Mediator as FlexColumnMediator
+    participant Layout as FlexColumnLayout
+    participant Component as ITuiComponent
+    
+    App->>Manager: RegisterComponent(component)
+    Manager->>Mediator: RegisterComponent(component)
+    
+    App->>Manager: RenderLayout(context)
+    Manager->>Layout: Compose(components, context)
+    Layout->>Component: Render(context)
+    Component-->>Layout: IRenderable
+    Layout-->>Manager: IRenderable
+    Manager-->>App: IRenderable
+    
+    App->>Manager: BroadcastInputAsync(inputEvent, context)
+    Manager->>Component: HandleInputAsync(context, inputEvent)
+    Component-->>Manager: bool (handled)
+    
+    App->>Mediator: HandleStateChangeAsync(newState, oldState, context)
+    Mediator->>Manager: UpdateComponentVisibility(newState, context)
+    Manager->>Component: IsVisible = true/false
+```
+
+-   **Initialization**: Components are registered with the `TuiComponentManager` at startup.
+-   **Rendering**: The manager delegates rendering to the current `ITuiLayout`, which composes the visible components into a single `IRenderable` object for Spectre.Console.
+-   **Input Handling**: Input events are broadcast to all visible components. A component can "handle" an event to stop its propagation.
+-   **State Changes**: When the application state changes, the mediator notifies the manager to update the visibility of components accordingly.
+
+## 3. Core UI Components
+
+The TUI is composed of several specialized components, each with a distinct responsibility.
+
+-   **`WelcomePanel`**: Displays the initial welcome message, branding, and version information. Visible only at startup.
+-   **`InputPanel`**: Manages the main user input area, including text entry, cursor movement, and history navigation.
+-   **`AutocompletePanel`**: Displays autocomplete suggestions below the input panel. It handles suggestion navigation and selection.
+-   **`UserSelectionPanel`**: Shows interactive options for slash commands, allowing the user to make a selection.
+-   **`ProgressPanel`**: Renders animated progress indicators and status messages during AI processing or tool execution.
+-   **`FooterPanel`**: Displays persistent status information at the bottom of the screen, such as the current working directory, AI model, and token usage.
+
+## 4. State Management and UI Updates
+
+The visibility and behavior of UI components are driven by the application's state, which is represented by the `ChatState` enum (`Input`, `Thinking`, `ToolExecution`).
+
+The `TuiComponentManager` is responsible for mapping the application state to component visibility.
+
+```csharp
+// In TuiComponentManager.cs
+public void UpdateComponentVisibility(ChatState currentState, IRenderContext context)
+{
+    foreach (var component in _components.Values)
+    {
+        component.IsVisible = component.Name switch
+        {
+            "Welcome" => currentState == ChatState.Input && context.InputContext.IsFirstRender,
+            "Input" => currentState == ChatState.Input,
+            "Autocomplete" => currentState == ChatState.Input && context.InputContext.HasSuggestions,
+            "UserSelection" => currentState == ChatState.Input && context.UserSelectionManager.IsActive,
+            "Progress" => currentState == ChatState.Thinking || currentState == ChatState.ToolExecution,
+            "Footer" => true, // Always visible
+            _ => component.IsVisible
+        };
+    }
+}
+```
+
+When the state transitions (e.g., from `Input` to `Thinking`), the `FlexColumnMediator` calls this method to ensure only the relevant components are visible and rendered.
+
+## 5. Layout and Rendering
+
+The `FlexColumnLayout` is the primary layout system. It arranges visible components into a vertical column, consuming the full terminal window. It uses Spectre.Console's `Rows` and `Columns` to structure the final output.
+
+The rendering process is as follows:
+1.  The main application requests a renderable from the `TuiComponentManager`.
+2.  The manager gets the `IRenderable` for each visible component by calling its `Render()` method.
+3.  It passes the dictionary of components to the `FlexColumnLayout`.
+4.  The layout class arranges the renderables into a structured `Rows` object.
+5.  This final `IRenderable` is returned to the application to be drawn by Spectre.Console.
+
+## 6. Dependency Injection
+
+All components, managers, and mediators are registered with the dependency injection container at startup. This ensures that services are properly instantiated and dependencies are resolved automatically.
+
+```csharp
+// In ServiceConfiguration.cs
+private static void ConfigureServices(IServiceCollection services)
+{
+    // ... other services
+
+    // TUI Components
+    services.AddSingleton<ITuiComponent, WelcomePanel>();
+    services.AddSingleton<ITuiComponent, InputPanel>();
+    services.AddSingleton<ITuiComponent, AutocompletePanel>();
+    services.AddSingleton<ITuiComponent, UserSelectionPanel>();
+    services.AddSingleton<ITuiComponent, ProgressPanel>();
+    services.AddSingleton<ITuiComponent, FooterPanel>();
+
+    // TUI Management
+    services.AddSingleton<ITuiLayout, FlexColumnLayout>();
+    services.AddSingleton<ITuiMediator, FlexColumnMediator>();
+    services.AddSingleton<ITuiComponentManager, TuiComponentManager>();
+
+    // Main TUI Application
     services.AddSingleton<FlexColumnTuiApp>();
-    services.AddSingleton<IScrollbackTerminal, ScrollbackTerminal>();
-    
-    // Autocomplete services
-    services.AddSingleton<AutocompleteManager>();
-    services.AddSingleton<IAutocompleteProvider, FilePathProvider>();
-    services.AddSingleton<IAutocompleteProvider, SlashCommandProvider>();
 }
 ```
 
-### FlexColumnTuiApp Architecture
-
-**Main Application Structure:**
-```csharp
-public class FlexColumnTuiApp
-{
-    private readonly IAppService _appService;
-    private readonly IScrollbackTerminal _terminal;
-    private readonly StateManager _stateManager;
-    private readonly HistoryManager _historyManager;
-    private readonly AutocompleteManager _autocompleteManager;
-    private readonly UserSelectionManager _userSelectionManager;
-    private readonly AdvancedKeyboardHandler _keyboardHandler;
-
-    public FlexColumnTuiApp(
-        IAppService appService,
-        IScrollbackTerminal terminal,
-        StateManager stateManager,
-        HistoryManager historyManager,
-        AutocompleteManager autocompleteManager,
-        UserSelectionManager userSelectionManager)
-    {
-        _appService = appService;
-        _terminal = terminal;
-        _stateManager = stateManager;
-        _historyManager = historyManager;
-        _autocompleteManager = autocompleteManager;
-        _keyboardHandler = new AdvancedKeyboardHandler(_autocompleteManager);
-    }
-}
-```
-
-### Application Lifecycle
-
-**Startup and Execution Flow:**
-```csharp
-public async Task RunAsync(CancellationToken cancellationToken = default)
-{
-    try
-    {
-        _terminal.Initialize();
-        
-        // Display welcome message
-        DisplayWelcomeMessage();
-        
-        // Main application loop
-        await MainLoopAsync(cancellationToken);
-    }
-    catch (OperationCanceledException)
-    {
-        // Graceful shutdown
-    }
-    catch (Exception ex)
-    {
-        DisplayError($"Application error: {ex.Message}");
-    }
-    finally
-    {
-        _terminal.Shutdown();
-    }
-}
-
-private async Task MainLoopAsync(CancellationToken cancellationToken)
-{
-    while (!cancellationToken.IsCancellationRequested)
-    {
-        try
-        {
-            // Handle user input
-            var inputResult = await HandleUserInputAsync(cancellationToken);
-            
-            if (inputResult.ShouldExit)
-                break;
-                
-            if (!string.IsNullOrWhiteSpace(inputResult.Input))
-            {
-                await ProcessUserMessageAsync(inputResult.Input, cancellationToken);
-            }
-        }
-        catch (Exception ex)
-        {
-            DisplayError($"Error processing input: {ex.Message}");
-        }
-    }
-}
-```
-
-## State Management Design
-
-### ChatState Enumeration
-
-**Application State Definition:**
-```csharp
-public enum ChatState
-{
-    Input,          // Ready for user input
-    Thinking,       // AI processing request
-    ToolExecution   // Tool execution in progress
-}
-```
-
-### StateManager Implementation
-
-**Centralized State Control:**
-```csharp
-public class StateManager
-{
-    private ChatState _currentState = ChatState.Input;
-    private readonly object _stateLock = new();
-    
-    public event EventHandler<ChatState>? StateChanged;
-
-    public ChatState CurrentState
-    {
-        get
-        {
-            lock (_stateLock)
-            {
-                return _currentState;
-            }
-        }
-    }
-
-    public void SetState(ChatState newState)
-    {
-        lock (_stateLock)
-        {
-            if (_currentState != newState)
-            {
-                var oldState = _currentState;
-                _currentState = newState;
-                
-                StateChanged?.Invoke(this, newState);
-            }
-        }
-    }
-
-    public bool TryTransition(ChatState from, ChatState to)
-    {
-        lock (_stateLock)
-        {
-            if (_currentState == from)
-            {
-                _currentState = to;
-                StateChanged?.Invoke(this, to);
-                return true;
-            }
-            return false;
-        }
-    }
-}
-```
-
-### HistoryManager Design
-
-**Session Management:**
-```csharp
-public class HistoryManager
-{
-    private readonly IAppService _appService;
-    private List<ChatMessage> _currentHistory = [];
-    private string? _currentSessionId;
-
-    public HistoryManager(IAppService appService)
-    {
-        _appService = appService;
-    }
-
-    public async Task<bool> LoadSessionAsync(string sessionId)
-    {
-        try
-        {
-            var history = await _appService.LoadChatSessionAsync(sessionId, _appService.SystemPrompt);
-            if (history != null)
-            {
-                _currentHistory = history;
-                _currentSessionId = sessionId;
-                return true;
-            }
-            return false;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    public string CreateNewSession()
-    {
-        _currentSessionId = _appService.CreateChatSession();
-        _currentHistory = [new ChatMessage(ChatRole.System, _appService.SystemPrompt)];
-        return _currentSessionId;
-    }
-
-    public async Task SaveCurrentSessionAsync()
-    {
-        if (_currentSessionId != null && _currentHistory.Count > 1)
-        {
-            var sessionPath = Path.Combine(_appService.GetChatSessionsBasePath(), _currentSessionId, "chat_history.json");
-            await _appService.SaveChatHistoryAsync(sessionPath, _currentHistory);
-        }
-    }
-}
-```
-
-## Input Handling System
-
-### AdvancedKeyboardHandler
-
-**Keyboard Event Processing:**
-```csharp
-public class AdvancedKeyboardHandler
-{
-    private readonly AutocompleteManager _autocompleteManager;
-    private readonly InputContext _inputContext;
-
-    public AdvancedKeyboardHandler(AutocompleteManager autocompleteManager)
-    {
-        _autocompleteManager = autocompleteManager;
-        _inputContext = new InputContext();
-    }
-
-    public async Task<InputResult> HandleInputAsync(CancellationToken cancellationToken)
-    {
-        var input = new StringBuilder();
-        var cursorPosition = 0;
-
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            var keyInfo = Console.ReadKey(true);
-            
-            // Handle autocomplete navigation first
-            if (_inputContext.HasSuggestions && HandleAutocompleteNavigation(keyInfo))
-            {
-                continue;
-            }
-
-            switch (keyInfo.Key)
-            {
-                case ConsoleKey.Enter:
-                    if (_inputContext.HasSuggestions && _inputContext.SelectedSuggestionIndex >= 0)
-                    {
-                        // Accept autocomplete suggestion
-                        _autocompleteManager.AcceptSuggestion(_inputContext);
-                        input.Clear();
-                        input.Append(_inputContext.Input);
-                        cursorPosition = _inputContext.CursorPosition;
-                        continue;
-                    }
-                    return new InputResult { Input = input.ToString(), ShouldExit = false };
-
-                case ConsoleKey.Escape:
-                    if (_inputContext.HasSuggestions)
-                    {
-                        // Clear autocomplete suggestions
-                        _inputContext.ClearSuggestions();
-                        continue;
-                    }
-                    return new InputResult { Input = string.Empty, ShouldExit = true };
-
-                case ConsoleKey.Backspace:
-                    if (cursorPosition > 0)
-                    {
-                        input.Remove(cursorPosition - 1, 1);
-                        cursorPosition--;
-                        await UpdateAutocompleteAsync(input.ToString(), cursorPosition);
-                    }
-                    break;
-
-                case ConsoleKey.Delete:
-                    if (cursorPosition < input.Length)
-                    {
-                        input.Remove(cursorPosition, 1);
-                        await UpdateAutocompleteAsync(input.ToString(), cursorPosition);
-                    }
-                    break;
-
-                default:
-                    if (!char.IsControl(keyInfo.KeyChar))
-                    {
-                        input.Insert(cursorPosition, keyInfo.KeyChar);
-                        cursorPosition++;
-                        await UpdateAutocompleteAsync(input.ToString(), cursorPosition);
-                    }
-                    break;
-            }
-
-            // Update display
-            UpdateInputDisplay(input.ToString(), cursorPosition);
-        }
-
-        return new InputResult { Input = string.Empty, ShouldExit = true };
-    }
-
-    private async Task UpdateAutocompleteAsync(string input, int cursorPosition)
-    {
-        _inputContext.Input = input;
-        _inputContext.CursorPosition = cursorPosition;
-        
-        await _autocompleteManager.UpdateSuggestionsAsync(_inputContext);
-    }
-}
-```
-
-## Rendering System
-
-### Content Composition
-
-**Composite Rendering Pattern:**
-```csharp
-public class ContentRenderer
-{
-    private readonly IScrollbackTerminal _terminal;
-    private readonly StateManager _stateManager;
-
-    public void RenderChatMessage(ChatMessage message)
-    {
-        var panel = new Panel(new Markup(message.Content))
-        {
-            Header = new PanelHeader($"[bold]{message.Role}[/]"),
-            Border = BoxBorder.Rounded,
-            BorderStyle = GetStyleForRole(message.Role)
-        };
-
-        _terminal.WriteStatic(panel);
-    }
-
-    public void RenderInputPrompt(string input, int cursorPosition, List<CompletionItem>? suggestions = null)
-    {
-        var promptContent = new Rows(
-            new Text($"> {input}"),
-            RenderCursor(cursorPosition),
-            RenderSuggestions(suggestions)
-        );
-
-        _terminal.WriteStatic(promptContent, isUpdatable: true);
-    }
-
-    private IRenderable RenderSuggestions(List<CompletionItem>? suggestions)
-    {
-        if (suggestions == null || suggestions.Count == 0)
-            return new Text(string.Empty);
-
-        var suggestionRows = suggestions.Select((item, index) =>
-        {
-            var style = index == 0 ? "[bold yellow]" : "[dim]";
-            return new Text($"{style}{item.DisplayText}[/] - {item.Description}");
-        });
-
-        return new Rows(suggestionRows);
-    }
-
-    private Style GetStyleForRole(ChatRole role)
-    {
-        return role switch
-        {
-            ChatRole.User => Style.Parse("blue"),
-            ChatRole.Assistant => Style.Parse("green"),
-            ChatRole.System => Style.Parse("yellow"),
-            _ => Style.Parse("white")
-        };
-    }
-}
-```
-
-### Performance Optimizations
-
-**Efficient Rendering Strategies:**
-```csharp
-private int CountLines(IRenderable content)
-{
-    // Use a measuring console to count lines without rendering
-    var writer = new StringWriter();
-    var measuringConsole = AnsiConsole.Create(new AnsiConsoleSettings 
-    { 
-        Out = new AnsiConsoleOutput(writer), 
-        ColorSystem = ColorSystemSupport.NoColors 
-    });
-    
-    measuringConsole.Write(content);
-    var output = writer.ToString();
-    
-    // Count actual line breaks
-    var lines = output.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-    return Math.Max(1, lines.Length);
-}
-
-private void OptimizedContentUpdate(IRenderable newContent)
-{
-    // Only update if content has actually changed
-    var newHash = GetContentHash(newContent);
-    if (newHash != _lastContentHash)
-    {
-        UpdateDynamic(newContent);
-        _lastContentHash = newHash;
-    }
-}
-```
-
-## Error Handling and Recovery
-
-### Terminal Error Management
-
-**Graceful Error Handling:**
-```csharp
-public class TerminalErrorHandler
-{
-    private readonly IScrollbackTerminal _terminal;
-    private readonly ILogger _logger;
-
-    public void HandleTerminalError(Exception ex, string context)
-    {
-        try
-        {
-            var errorPanel = new Panel(new Text($"[red]Error in {context}: {ex.Message}[/]"))
-            {
-                Header = new PanelHeader("[red bold]Error[/]"),
-                Border = BoxBorder.Heavy,
-                BorderStyle = Style.Parse("red")
-            };
-
-            _terminal.WriteStatic(errorPanel);
-            _logger.LogError(ex, "Terminal error in context: {Context}", context);
-        }
-        catch
-        {
-            // Fallback to console output if terminal is corrupted
-            Console.WriteLine($"FATAL ERROR: {ex.Message}");
-        }
-    }
-
-    public void HandleRecovery()
-    {
-        try
-        {
-            // Attempt to reset terminal state
-            Console.Clear();
-            Console.CursorVisible = true;
-            
-            _terminal.Initialize();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to recover terminal: {ex.Message}");
-            Environment.Exit(1);
-        }
-    }
-}
-```
-
-## Integration Points
-
-### Autocomplete Integration
-
-### User Selection Integration
-
-**Interactive Command Handling:**
-- The `SlashCommandProcessor` raises an `InteractiveCommandRequested` event when a command marked as interactive is entered.
-- `FlexColumnTuiApp` listens for this event and activates the `UserSelectionManager`.
-- The `UserSelectionManager` uses a provider pattern (`IUserSelectionProvider`) to fetch the appropriate options for the command.
-
-**Non-Blocking UI:**
-- The user selection menu is rendered as an overlay within the main dynamic display loop, preventing any blocking of the UI thread.
-- The `InputState` enum is extended with a `UserSelection` state, which allows the `AdvancedKeyboardHandler` to interpret up/down arrow and Enter keys as navigation and selection commands for the active menu.
-
-**Seamless Autocomplete Rendering:**
-```csharp
-public void RenderAutocompleteOverlay(InputContext context)
-{
-    if (!context.HasSuggestions)
-        return;
-
-    var suggestions = context.Suggestions.Take(5).Select((item, index) =>
-    {
-        var prefix = index == context.SelectedSuggestionIndex ? "► " : "  ";
-        var style = index == context.SelectedSuggestionIndex ? "[yellow bold]" : "[dim]";
-        
-        return new Text($"{prefix}{style}{item.DisplayText}[/] - {item.Description}");
-    });
-
-    var overlay = new Panel(new Rows(suggestions))
-    {
-        Header = new PanelHeader("[blue]Suggestions[/]"),
-        Border = BoxBorder.Rounded,
-        BorderStyle = Style.Parse("blue")
-    };
-
-    _terminal.WriteStatic(overlay, isUpdatable: true);
-}
-```
-
-### State-Driven UI Updates
-
-**Reactive UI Based on Application State:**
-```csharp
-private void OnStateChanged(object? sender, ChatState newState)
-{
-    switch (newState)
-    {
-        case ChatState.Input:
-            ShowInputPrompt();
-            break;
-            
-        case ChatState.Thinking:
-            ShowThinkingIndicator();
-            break;
-            
-        case ChatState.ToolExecution:
-            ShowToolExecutionIndicator();
-            break;
-    }
-}
-
-private void ShowThinkingIndicator()
-{
-    var spinner = new Spinner(Spinner.Known.Dots)
-    {
-        Style = Style.Parse("yellow")
-    };
-    
-    _terminal.StartDynamicDisplayAsync(() => 
-        new Columns(
-            new Text("[yellow]AI is thinking...[/]"),
-            spinner
-        ), CancellationToken.None);
-}
-```
-
-This terminal interface and TUI design provides Mogzi with a sophisticated, responsive user interface that seamlessly integrates with the autocomplete system, state management, and AI processing capabilities while maintaining excellent performance and user experience.
+This modular and decoupled design provides a robust foundation for the Mogzi TUI, enabling future extensions and features to be added with minimal friction.
