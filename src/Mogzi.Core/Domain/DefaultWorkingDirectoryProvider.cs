@@ -7,7 +7,7 @@ public class DefaultWorkingDirectoryProvider : IWorkingDirectoryProvider
         var currentDirectory = Directory.GetCurrentDirectory();
         // Ensure we always return an absolute path
         return Path.IsPathRooted(currentDirectory)
-            ? currentDirectory 
+            ? currentDirectory
             : Path.GetFullPath(currentDirectory);
     }
 }

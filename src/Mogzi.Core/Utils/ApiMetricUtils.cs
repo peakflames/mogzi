@@ -4,18 +4,18 @@ public static class ApiMetricUtils
 {
     public static int GetSimplisticTokenCount(IEnumerable<ChatMessage> messages)
     {
-        const int TokensPerMessage = 3;
-        const int TokensPerRole = 1;
-        const int BaseTokens = 3;
+        const int tokensPerMessage = 3;
+        const int tokensPerRole = 1;
+        const int baseTokens = 3;
         var disallowedSpecial = new HashSet<string>();
 
-        var tokenCount = BaseTokens;
+        var tokenCount = baseTokens;
 
         var encoding = SharpToken.GptEncoding.GetEncoding("cl100k_base");
         foreach (var message in messages)
         {
-            tokenCount += TokensPerMessage;
-            tokenCount += TokensPerRole;
+            tokenCount += tokensPerMessage;
+            tokenCount += tokensPerRole;
 
             // Count tokens from message text (legacy support)
             if (!string.IsNullOrEmpty(message.Text))
