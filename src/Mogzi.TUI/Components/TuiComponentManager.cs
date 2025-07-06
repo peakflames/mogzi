@@ -187,9 +187,9 @@ public class TuiComponentManager(ILogger<TuiComponentManager> logger) : ITuiComp
                 SetComponentVisibility("AutocompletePanel", inputContext.State == InputState.Autocomplete && inputContext.ShowSuggestions);
                 SetComponentVisibility("UserSelectionPanel", inputContext.State == InputState.UserSelection);
 
-                // Show welcome panel if no chat history
-                var chatHistory = context.TuiContext.HistoryManager.GetCurrentChatHistory();
-                SetComponentVisibility("WelcomePanel", !chatHistory.Any());
+                // Welcome panel is now rendered to static area in FlexColumnTuiApp.RenderInitialContent()
+                // so we don't show it in dynamic area to prevent duplication
+                SetComponentVisibility("WelcomePanel", false);
                 break;
 
             case ChatState.Thinking:

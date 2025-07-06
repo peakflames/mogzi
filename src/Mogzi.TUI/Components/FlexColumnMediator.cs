@@ -262,7 +262,7 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
                     // Extract tool name and handle tool execution
                     ExtractToolNameFromUpdate(context, responseUpdate);
 
-                    // Set progress text based on available information
+                    // Set progress text for dynamic display (shown in ToolExecutionTuiState)
                     if (!string.IsNullOrWhiteSpace(responseUpdate.Text))
                     {
                         context.ToolProgress = responseUpdate.Text;
@@ -270,19 +270,22 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
                     else if (!string.IsNullOrWhiteSpace(context.CurrentToolName))
                     {
                         context.ToolProgress = $"Executing {context.CurrentToolName}...";
-                        context.ScrollbackTerminal.WriteStatic(new Markup($"[green]•[/] [dim]{context.ToolProgress}[/]"));
+                        // Don't write progress to static area - it will be shown in dynamic area by ToolExecutionTuiState
                     }
 
                     _logger?.LogInformation($"ChatMsg[Tool, '{context.ToolProgress}'");
 
-                    // Handle tool result display
+                    // Handle tool result display (this writes final results to static area)
                     await HandleToolExecutionResult(context, responseUpdate);
                 }
             }
 
             context.ScrollbackTerminal.WriteStatic(new Markup(""));
             _logger?.LogInformation($"ChatMsg[Assistant, '{assistantMessage.Text}'");
+            _logger?.LogTrace("=== WRITING FINAL NON-UPDATABLE ASSISTANT MESSAGE ===");
+            _logger?.LogTrace("Final assistant message content: {Content}", assistantMessage.Text);
             context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(assistantMessage));
+            _logger?.LogTrace("=== FINAL NON-UPDATABLE ASSISTANT MESSAGE WRITTEN ===");
         }
         catch (OperationCanceledException) when (context.AiOperationCts?.Token.IsCancellationRequested == true)
         {

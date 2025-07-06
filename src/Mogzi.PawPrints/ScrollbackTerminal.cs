@@ -26,8 +26,14 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal, IDi
 
         lock (_lock)
         {
+            // Clear dynamic content before writing static content to prevent interference
             ClearDynamicContent();
-            ClearUpdatableContent();
+
+            // Only clear updatable content if this is not an updatable write
+            if (!isUpdatable)
+            {
+                ClearUpdatableContent();
+            }
 
             var writer = new StringWriter();
             var measuringConsole = AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(writer), ColorSystem = ColorSystemSupport.NoColors });
@@ -37,6 +43,8 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal, IDi
 
             if (isUpdatable)
             {
+                // For updatable content, clear the previous version first
+                ClearUpdatableContent();
                 _updatableContentLineCount = lineCount;
             }
 
