@@ -55,98 +55,20 @@ This combination is ideal for TUI applications because:
 - Components can be composed into different layouts
 - No performance regressions
 
-### [Phase 3: Rendering Strategy and Performance Optimization](implement_phase_3.md) (2-3 weeks)
-**Goal**: Optimize rendering and introduce strategy pattern for different contexts
+### [Phase 3: Migrate Remaining]
+**Goal**: Achieve functional parity with the legacy application implementation
 
 **Key Deliverables:**
-- `IRenderingStrategy`, `IRenderCache`, `IAnimationEngine` interfaces
-- Multiple rendering strategies for different contexts
-- Render caching system with dirty tracking
-- Enhanced animation system with performance optimization
-- Performance monitoring and metrics collection
+- To be determined (HELP)
 
 **Success Metrics:**
-- 20-30% improvement in rendering performance
-- 15-25% reduction in memory usage
-- >80% cache hit ratio
-- Smooth animations at 30+ FPS
-- 30-50% reduction in GC pressure
-
-### [Phase 4: Advanced Features and Polish](implement_phase_4.md) (2-3 weeks)
-**Goal**: Add advanced features and polish the architecture
-
-**Key Deliverables:**
-- `ITuiPlugin`, `ITuiTheme`, `IConfigurationManager` interfaces
-- Plugin architecture with security framework
-- Theme system with built-in themes
-- Advanced configuration system
-- Multi-pane layout system
-- Comprehensive documentation and help system
-
-**Success Metrics:**
-- Production-ready plugin system
-- Runtime theme switching
-- Comprehensive configuration system
-- Advanced UI features working correctly
-- Complete documentation and help system
-
-## Expected Benefits
-
-### Immediate (Phase 1-2)
-- **Reduced Complexity**: 60-70% reduction in FlexColumnTuiApp size
-- **Better Testability**: Individual components can be unit tested
-- **Improved Maintainability**: Clear separation of concerns
-
-### Medium-term (Phase 3-4)
-- **Performance Improvements**: 20-30% reduction in rendering overhead
-- **Enhanced Extensibility**: Easy to add new UI components and states
-- **Better User Experience**: Smoother animations and interactions
-
-### Long-term
-- **Plugin Ecosystem**: Third-party UI extensions
-- **Theme Marketplace**: Community-contributed themes
-- **Advanced Features**: Multi-pane layouts, custom widgets, etc.
-
-## Implementation Guidelines
-
-### Dependency Injection Strategy
-```csharp
-// Service registration for new architecture
-services.AddSingleton<ITuiStateManager, TuiStateManager>();
-services.AddSingleton<ITuiMediator, FlexColumnMediator>();
-services.AddSingleton<ITuiComponentManager, TuiComponentManager>();
-services.AddSingleton<IRenderingEngine, SpectreTuiRenderingEngine>();
-
-// Register states
-services.AddTransient<ITuiState, InputTuiState>();
-services.AddTransient<ITuiState, ThinkingTuiState>();
-services.AddTransient<ITuiState, ToolExecutionTuiState>();
-
-// Register components
-services.AddTransient<ITuiComponent, InputPanel>();
-services.AddTransient<ITuiComponent, AutocompletePanel>();
-services.AddTransient<ITuiComponent, ProgressPanel>();
-services.AddTransient<ITuiComponent, FooterPanel>();
-```
-
-### Testing Strategy
-- **Unit Tests**: Each component and state in isolation
-- **Integration Tests**: State transitions and component interactions
-- **UI Tests**: End-to-end user interaction scenarios
-- **Performance Tests**: Rendering performance and memory usage
-
-### Migration Strategy
-- **Backward Compatibility**: Maintain existing public APIs during transition
-- **Feature Flags**: Enable/disable new architecture components
-- **Gradual Migration**: Migrate one state/component at a time
-- **Rollback Plan**: Ability to revert to original implementation
-
-## Risk Mitigation
-- **Incremental Approach**: Each phase delivers working software
-- **Comprehensive Testing**: Maintain test coverage throughout refactoring
-- **Performance Monitoring**: Continuous performance regression testing
-- **User Feedback**: Beta testing with power users during each phase
-
+- Implementation Strictly adheres to the target architecture and design
+- No dead code
+- All Legacy TUI App features are have a standalone Acceptance Test (black box style, no mocking)
+- All Acceptance Tests pass
+- All Manual adhoc tests pass
+- User is 100% satisfied with application behavior when running via `dotnet run`
+  
 ## Progress Tracking
 
 Each phase document contains:
@@ -169,38 +91,6 @@ Each phase document contains:
 4. **Begin Implementation**: Follow the detailed work items in Phase 1
 5. **Track Progress**: Update the progress section as work is completed
 
-## Architecture Diagrams
 
-### Current Architecture (Before Refactoring)
-```
-FlexColumnTuiApp (Monolithic)
-├── State Management (switch statements)
-├── Input Handling (large methods)
-├── Rendering Logic (multiple methods)
-├── Component Logic (embedded)
-└── Event Handling (complex)
-```
-
-### Target Architecture (After Refactoring)
-```
-FlexColumnTuiApp (Coordinator)
-├── TuiStateManager
-│   ├── InputTuiState
-│   ├── ThinkingTuiState
-│   └── ToolExecutionTuiState
-├── FlexColumnMediator
-│   ├── Component Communication
-│   ├── Event Coordination
-│   └── Workflow Management
-├── TuiComponentManager
-│   ├── InputPanel
-│   ├── AutocompletePanel
-│   ├── ProgressPanel
-│   └── FooterPanel
-└── RenderingEngine
-    ├── Rendering Strategies
-    ├── Performance Optimization
-    └── Animation System
-```
 
 This phased approach ensures that the refactoring delivers value incrementally while maintaining the stability and functionality that makes Mogzi effective.

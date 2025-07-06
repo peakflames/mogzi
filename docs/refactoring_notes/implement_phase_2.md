@@ -250,3 +250,10 @@ graph TD
     C --> I[WelcomePanel]
     B --> J[TuiStateManager]
     C --> K[FlexColumnLayout]
+```
+
+
+## APPENDIX - Lesson Learned
+
+After the above work was declared completed, The user attempted to simply run the tool and discovered that it was functionally inoperable. No input to the keyboard was being reflected to the screen. And the. State management. Was being held up by a null pointer, but we didn't know the last part until we had it add extensive new. Black box style testing to. Identify those issues. What was learned is how inadequate. Mocking and unit based tests truly are and that the best a functional coverage can be achieved by only performing black box style acceptance tests. Moreover. The team lead was emphatic that once and. Issue was discovered. We span a small amount of time. Researching the root cause in the source code. Then do not fix it, but go add a test that. Fails due to that root cause issue. Then we pro ceed with. Fixing the code and passing the test per Test Driven Development. This is the. Golden rule that must be adhered to for all future development.
+
