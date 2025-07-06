@@ -1,12 +1,14 @@
 # Mogzi
 
-[![Mogzi CI](https://github.com/peakflames/mogzi/actions/workflows/build.yml/badge.svg)](https://github.com/peakflames/mogzi/actions/workflows/build.yml)
+[![Mogzi CI](https://github.com/peakflames/mogzi/actions/workflows/build.yml/badge.svg)](https://github.com/peakflames/mogzi/actions/workflows/build.yml) ![Alpha]( https://img.shields.io/badge/Status-Alpha-red)
 
 ![Mogzi Screenshot](./docs/assets/mogzi_screenshot.png)
 
 A Multi-model autonomous assistant right in your terminal or CI/CD pipeline and open to multiple API providers and AI models
 
 Perform engineering research, full coding tasks, and multiple workflow with either natural language or shell scripts 👈
+
+_Please note that this project is still in the alpha stage and being actively developed. We welcome various conteribution from the community._
 
 ## Features ✨
 
