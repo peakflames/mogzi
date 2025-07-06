@@ -31,7 +31,7 @@ Mogzi's tool system enables AI function calling through a comprehensive set of s
 - **Tool Categories**: File operations, system interactions, diff/patch operations
 - **Response Format**: Structured XML responses with comprehensive error handling
 
-> **📋 Detailed Documentation**: [Tool Implementation Design](04_03_tool_implementation_design.md)
+> **📋 Detailed Documentation**: [Tool Implementation Design](04_03_ai_tool_implementation_design.md)
 
 ### Terminal User Interface
 Sophisticated TUI providing real-time interaction with AI assistance:
@@ -42,7 +42,7 @@ Sophisticated TUI providing real-time interaction with AI assistance:
 - **Component Architecture**: Modular UI components with mediator coordination
 - **Input Handling**: Advanced keyboard processing with autocomplete integration
 
-> **📋 Detailed Documentation**: [Terminal Interface & TUI Design](04_04_terminal_tui_design.md)
+> **📋 Detailed Documentation**: [Terminal Interface & TUI Design](04_05_terminal_tui_design.md)
 
 ### Autocomplete System
 Intelligent, context-aware completion for enhanced user experience:
@@ -62,7 +62,7 @@ Interactive, non-blocking user selection for slash commands:
 - **Integrated UI**: Renders as an overlay within the main TUI loop
 - **State Management**: Coordinated through a dedicated `UserSelectionManager`
 
-> **📋 Detailed Documentation**: [Terminal Interface & TUI Design](04_04_terminal_tui_design.md)
+> **📋 Detailed Documentation**: [Terminal Interface & TUI Design](04_05_terminal_tui_design.md)
 
 ### Diff/Patch System
 Sophisticated code modification capabilities with intelligent conflict resolution:
@@ -72,7 +72,7 @@ Sophisticated code modification capabilities with intelligent conflict resolutio
 - **Conflict Resolution**: Comprehensive error handling and recovery
 - **Tool Integration**: AI-accessible diff generation and application
 
-> **📋 Detailed Documentation**: [Diff/Patch System Design](04_05_diff_patch_design.md)
+> **📋 Detailed Documentation**: [Diff/Patch System Design](04_04_ai_tool_diff_patch_design.md)
 
 ### Cross-Platform & Performance
 Mogzi is designed for optimal performance across all supported platforms:
@@ -82,7 +82,7 @@ Mogzi is designed for optimal performance across all supported platforms:
 - **Memory Efficiency**: Streaming responses and efficient resource management
 - **Async Operations**: Non-blocking I/O throughout the application
 
-> **📋 Detailed Documentation**: [Cross-Platform & Performance Design](04_06_platform_performance_design.md)
+> **📋 Detailed Documentation**: [Platform Performance Design](04_07_platform_performance_design.md)
 
 ### Tool Execution Flow
 Comprehensive workflow management for AI tool interactions:
@@ -92,7 +92,7 @@ Comprehensive workflow management for AI tool interactions:
 - **Response Processing**: Structured XML parsing and error handling
 - **State Management**: Tool execution tracking and session persistence
 
-> **📋 Detailed Documentation**: [Tool Execution Flow Design](04_07_tool_execution_flow_design.md)
+> **📋 Detailed Documentation**: [Terminal TUI Tool Execution Flow Design](04_06_terminial_tui_tool_exe_flow_design.md)
 
 ### Modular System Prompt Architecture
 Dynamic, model-specific prompt generation system:

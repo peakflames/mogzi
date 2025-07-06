@@ -41,40 +41,56 @@ graph TD
     O --> P[Display to User]
 ```
 
-### Detailed Tool Execution Flow
+### Detailed Tool Execution Flow with Message Boundary Detection
 
 ```mermaid
 sequenceDiagram
     participant User
     participant TuiApp as FlexColumnTuiApp
+    participant Mediator as FlexColumnMediator
     participant AppSvc as AppService
     participant AI as AI Model
+    participant History as HistoryManager
     participant Parser as ToolResponseParser
     participant DiffGen as UnifiedDiffGenerator
     participant Display as ToolExecutionDisplay
     participant Terminal as ScrollbackTerminal
 
     User->>TuiApp: Submit Input
-    TuiApp->>AppSvc: ProcessChatMessageAsync()
+    TuiApp->>Mediator: HandleUserInputAsync()
+    Mediator->>AppSvc: ProcessChatMessageAsync()
     AppSvc->>AI: Send Chat Request
     
-    loop Streaming Response
+    loop Streaming Response with Message Boundary Detection
         AI->>AppSvc: ChatResponseUpdate
-        AppSvc->>TuiApp: Response Stream
+        AppSvc->>Mediator: Response Stream
+        
+        Note over Mediator: Message Boundary Detection System
+        Mediator->>Mediator: DetermineContentType(responseUpdate)
+        Mediator->>Mediator: ShouldStartNewMessage(currentType, newType)
+        
+        alt Content Type Transition Detected
+            Mediator->>History: FinalizeCurrentMessage()
+            Mediator->>Terminal: WriteStatic(finalizedMessage, isUpdatable: false)
+            Mediator->>History: CreateNewMessage(contentType)
+            Note over Mediator: Creates separate ChatMessage objects<br/>for Text, FunctionCall, FunctionResult
+        else Continue Current Message
+            Mediator->>History: UpdateCurrentMessage(content)
+        end
         
         alt Tool Execution Detected
-            TuiApp->>TuiApp: IsToolExecutionUpdate()
-            Note over TuiApp: Checks for FunctionCallContent<br/>or XML tool responses
+            Mediator->>Mediator: IsToolExecutionUpdate()
+            Note over Mediator: Checks for FunctionCallContent<br/>or XML tool responses
             
             alt Function Call (Tool Starting)
-                TuiApp->>TuiApp: ExtractToolNameFromUpdate()
-                TuiApp->>TuiApp: CapturePreEditContentForEditTool()
-                Note over TuiApp: Store call ID mappings<br/>Capture original file content
+                Mediator->>Mediator: ExtractToolNameFromUpdate()
+                Mediator->>Mediator: CapturePreEditContentForEditTool()
+                Note over Mediator: Store call ID mappings<br/>Capture original file content<br/>Creates FunctionCall message boundary
             end
             
             alt Function Result (Tool Completed)
-                TuiApp->>TuiApp: HandleToolExecutionResult()
-                TuiApp->>Parser: ParseToolResponse()
+                Mediator->>Mediator: HandleToolExecutionResult()
+                Mediator->>Parser: ParseToolResponse()
                 
                 Parser->>Parser: ParseXmlResponse()
                 Note over Parser: Extract status, file path,<br/>content, error info
@@ -86,16 +102,20 @@ sequenceDiagram
                     DiffGen->>Parser: UnifiedDiff
                 end
                 
-                Parser->>TuiApp: ToolResponseInfo
-                TuiApp->>Display: CreateToolDisplay()
+                Parser->>Mediator: ToolResponseInfo
+                Mediator->>Display: CreateToolDisplay()
                 Display->>Terminal: Enhanced Tool Display
+                Note over Mediator: Creates FunctionResult message boundary
             end
         else Regular Text
-            TuiApp->>Terminal: WriteStatic()
+            Mediator->>Terminal: WriteStatic(updatedMessage, isUpdatable: true)
+            Note over Mediator: Creates Text message boundary
         end
     end
     
-    Terminal->>User: Display Output
+    Mediator->>History: FinalizeLastMessage()
+    Mediator->>Terminal: WriteStatic(finalMessage, isUpdatable: false)
+    Terminal->>User: Display Output with Proper Message Boundaries
 ```
 
 ### Tool Response Processing Detail
