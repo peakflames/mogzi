@@ -5,7 +5,11 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal, IDi
     private readonly IAnsiConsole _console = console;
     private readonly Lock _lock = new();
     private readonly ManualResetEventSlim _refreshSignal = new(false);
+    // Dynamic content: Temporary UI elements like progress bars that get cleared frequently
     private int _dynamicContentLineCount = 0;
+
+    // Updatable content: Streaming text content that gets replaced during real-time updates
+    // Used for assistant messages that are built character-by-character during streaming responses
     private int _updatableContentLineCount = 0;
     private bool _isDisposed = false;
     private bool _isShutdown = false;
@@ -17,6 +21,16 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal, IDi
         _console.Cursor.Hide();
     }
 
+    /// <summary>
+    /// Writes content to the scrollback terminal.
+    /// 
+    /// Content Types:
+    /// - Static Content (isUpdatable=false): Permanent content like user messages, final assistant messages, tool results
+    /// - Updatable Content (isUpdatable=true): Streaming content that gets replaced during real-time updates (assistant messages during streaming)
+    /// - Dynamic Content: Handled separately via StartDynamicDisplayAsync for temporary progress indicators
+    /// </summary>
+    /// <param name="content">The content to write</param>
+    /// <param name="isUpdatable">True for streaming content that can be replaced, false for permanent scrollback content</param>
     public void WriteStatic(IRenderable content, bool isUpdatable = false)
     {
         if (_isShutdown)
@@ -29,7 +43,8 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal, IDi
             // Clear dynamic content before writing static content to prevent interference
             ClearDynamicContent();
 
-            // Only clear updatable content if this is not an updatable write
+            // When writing permanent static content, clear any previous streaming content
+            // When writing streaming content, we'll clear it below after measuring
             if (!isUpdatable)
             {
                 ClearUpdatableContent();
@@ -43,7 +58,7 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal, IDi
 
             if (isUpdatable)
             {
-                // For updatable content, clear the previous version first
+                // For streaming content, clear the previous streaming version first, then track new line count
                 ClearUpdatableContent();
                 _updatableContentLineCount = lineCount;
             }

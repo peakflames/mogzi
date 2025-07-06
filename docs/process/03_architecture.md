@@ -103,11 +103,25 @@ sequenceDiagram
     ITuiMediator->>ITuiStateManager: RequestStateTransitionAsync(Thinking)
     ITuiStateManager->>ThinkingTuiState: OnEnterAsync
     
-    loop Streaming Response
+    loop Streaming Response with Message Boundary Detection
         External-->>IChatClient: Content chunk
         IChatClient-->>ChatClient: ChatResponseUpdate
         ChatClient-->>IAppService: IAsyncEnumerable<ChatResponseUpdate>
         IAppService-->>ITuiMediator: Update UI
+        
+        Note over ITuiMediator: Message Boundary Detection System
+        ITuiMediator->>ITuiMediator: DetermineContentType(responseUpdate)
+        ITuiMediator->>ITuiMediator: ShouldStartNewMessage(currentType, newType)
+        
+        alt Content Type Transition Detected
+            ITuiMediator->>HistoryManager: FinalizeCurrentMessage()
+            ITuiMediator->>HistoryManager: CreateNewMessage(contentType)
+            ITuiMediator->>ScrollbackTerminal: WriteStatic(finalizedMessage)
+        else Continue Current Message
+            ITuiMediator->>HistoryManager: UpdateCurrentMessage(content)
+            ITuiMediator->>ScrollbackTerminal: WriteStatic(updatedMessage, isUpdatable: true)
+        end
+        
         ITuiMediator->>ITuiComponentManager: Update ProgressPanel
         
         alt Tool Call Required
@@ -119,6 +133,7 @@ sequenceDiagram
     end
     
     IChatClient-->>ITuiMediator: Final response
+    ITuiMediator->>HistoryManager: FinalizeLastMessage()
     ITuiMediator->>ITuiStateManager: RequestStateTransitionAsync(Input)
 ```
 

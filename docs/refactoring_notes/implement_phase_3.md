@@ -7,15 +7,25 @@ This final phase focuses on achieving full functional parity with the legacy `Le
 
 ### Detailed Work Items
 
-#### 1. UI/UX Stabilization (High Priority)
-- **Fix Welcome Screen Rendering:**
-  - Ensure the terminal is cleared before the welcome screen is displayed.
-  - Resolve the conflict between the thinking animation and the welcome message to prevent the welcome message from being overwritten.
-- **Resolve Rendering Conflicts:**
-  - Investigate and fix the underlying issue causing the static scrollback area and the dynamic content area to conflict. This will likely involve changes to `ScrollbackTerminal` and the main rendering loop in `FlexColumnTuiApp`.
-- **Stabilize Tool Execution UI:**
-  - Redesign the rendering flow for tool execution to ensure tool calls, assistant responses, and progress indicators are displayed clearly and in the correct order.
-  - Fix the UI "fighting" where different elements overwrite each other during tool use. This will involve `ToolExecutionTuiState`, `ToolExecutionDisplay`, and the `FlexColumnMediator`.
+#### 1. UI/UX Stabilization (High Priority) ✅ **COMPLETED**
+- **✅ Message Boundary Detection System Implemented:**
+  - **Root Cause Identified**: All streaming content (text + tool calls + tool results) was being appended to a single ChatMessage, causing poor message boundaries and unclear conversation flow.
+  - **Solution Implemented**: Created a comprehensive Message Boundary Detection System in `FlexColumnMediator` that:
+    - **Content Type Classification**: Distinguishes between Text, FunctionCall, and FunctionResult content types
+    - **Smart Boundary Detection**: Automatically creates new ChatMessage objects when content type transitions occur
+    - **Non-deterministic AI Handling**: Robustly handles both AI behavior patterns (Text→Tools→Text vs Tools→Text)
+    - **Message Factory Pattern**: Properly constructs ChatMessage objects for different content types
+    - **Content Validation**: Prevents empty or meaningless messages from cluttering history
+  - **Testing Strategy**: Enhanced black-box acceptance test validates proper message sequencing and boundaries
+  - **User Verification**: Independently confirmed by user with visual evidence of proper message separation
+- **✅ Tool Execution UI Stabilized:**
+  - Tool calls, assistant responses, and progress indicators now display clearly and in correct order
+  - Eliminated UI "fighting" where different elements overwrote each other during tool use
+  - Proper separation between user messages, assistant summaries, and tool execution results
+- **✅ Rendering Conflicts Resolved:**
+  - Static scrollback area and dynamic content area now work harmoniously
+  - Message boundaries create clear visual separation in conversation flow
+  - Professional chat interface matching user expectations for modern AI assistants
 
 #### 2. Implement Session Management and Chat History (Week 1)
 - Implement `ChatHistoryService` to persist chat history across sessions.

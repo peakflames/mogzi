@@ -237,32 +237,77 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
             var responseStream = context.AppService.ProcessChatMessageAsync(chatHistory, context.AiOperationCts.Token);
             _logger.LogTrace("ProcessChatMessageAsync started successfully");
 
-            var assistantMessage = new ChatMessage(ChatRole.Assistant, "");
-            context.HistoryManager.AddAssistantMessage(assistantMessage);
+            var renderingUtilities = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
             context.ScrollbackTerminal.WriteStatic(new Markup(""));
 
-            var renderingUtilities = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
-            context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(assistantMessage), isUpdatable: true);
+            // Message Boundary Detection System
+            // This system creates separate ChatMessage objects for different content types
+            // to ensure proper message sequencing in scrollback history and chat persistence.
+            // 
+            // Problem: Previously, all streaming content (text + tool calls + tool results) 
+            // was appended to a single ChatMessage, causing poor UX and test failures.
+            //
+            // Solution: Detect content type transitions and create new messages accordingly:
+            // - Text Content → Continue current message OR start new if transitioning from tools
+            // - Tool Execution → Create separate messages for FunctionCall/FunctionResult
+            // - Back to Text → Start new message (this creates the "tool summary" message)
+            //
+            // This preserves chat history for AI context while maintaining clean UI boundaries.
+
+            ChatMessage? currentMessage = null;
+            var currentContentType = ContentType.None;
 
             await foreach (var responseUpdate in responseStream)
             {
-                if (!string.IsNullOrEmpty(responseUpdate.Text))
+                var updateContentType = DetermineContentType(responseUpdate);
+
+                // Content Type Transition Detection
+                // When content type changes, we finalize the current message and start a new one.
+                // This creates natural message boundaries that match user expectations.
+                if (updateContentType != ContentType.None && ShouldStartNewMessage(currentContentType, updateContentType, currentMessage))
                 {
-                    var newText = assistantMessage.Text + responseUpdate.Text;
+                    // Finalize previous message if it exists and has content
+                    if (currentMessage != null && HasMeaningfulContent(currentMessage))
+                    {
+                        _logger?.LogTrace("=== FINALIZING MESSAGE: {ContentType} ===", currentContentType);
+                        context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(currentMessage), isUpdatable: false);
+                        context.ScrollbackTerminal.WriteStatic(new Markup(""));
+                    }
+
+                    // Start new message for the new content type
+                    _logger?.LogTrace("=== STARTING NEW MESSAGE: {ContentType} ===", updateContentType);
+                    currentMessage = CreateMessageForContentType(responseUpdate, updateContentType);
+                    context.HistoryManager.AddAssistantMessage(currentMessage);
+
+                    // Only render text messages to scrollback (tool messages are handled separately)
+                    if (updateContentType == ContentType.Text)
+                    {
+                        context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(currentMessage), isUpdatable: true);
+                    }
+
+                    currentContentType = updateContentType;
+                }
+                else if (updateContentType == ContentType.Text && currentMessage != null)
+                {
+                    // Continue Building Text Message
+                    // For text content, we append to the current message and update the display
+                    var newText = currentMessage.Text + responseUpdate.Text;
                     _logger?.LogInformation($"ChatMsg[Assistant, '{newText}'");
-                    assistantMessage = new ChatMessage(ChatRole.Assistant, newText);
-                    context.HistoryManager.UpdateLastMessage(assistantMessage);
-                    context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(assistantMessage), isUpdatable: true);
+                    currentMessage = new ChatMessage(ChatRole.Assistant, newText);
+                    context.HistoryManager.UpdateLastMessage(currentMessage);
+                    context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(currentMessage), isUpdatable: true);
                 }
 
+                // Tool Execution Handling
+                // Tool execution is handled in parallel to message creation.
+                // This preserves the existing rich tool display logic while ensuring
+                // tool calls/results are properly stored in chat history.
                 if (IsToolExecutionUpdate(responseUpdate))
                 {
                     await context.RequestStateTransitionAsync(ChatState.ToolExecution);
-
-                    // Extract tool name and handle tool execution
                     ExtractToolNameFromUpdate(context, responseUpdate);
 
-                    // Set progress text for dynamic display (shown in ToolExecutionTuiState)
+                    // Set progress text for dynamic display
                     if (!string.IsNullOrWhiteSpace(responseUpdate.Text))
                     {
                         context.ToolProgress = responseUpdate.Text;
@@ -270,22 +315,25 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
                     else if (!string.IsNullOrWhiteSpace(context.CurrentToolName))
                     {
                         context.ToolProgress = $"Executing {context.CurrentToolName}...";
-                        // Don't write progress to static area - it will be shown in dynamic area by ToolExecutionTuiState
                     }
 
                     _logger?.LogInformation($"ChatMsg[Tool, '{context.ToolProgress}'");
 
-                    // Handle tool result display (this writes final results to static area)
+                    // Handle tool result display (creates rich visual displays)
                     await HandleToolExecutionResult(context, responseUpdate);
                 }
             }
 
+            // Final Message Finalization
+            // Ensure the last message is finalized as non-updatable for permanent scrollback
+            if (currentMessage != null && HasMeaningfulContent(currentMessage))
+            {
+                _logger?.LogTrace("=== FINALIZING FINAL MESSAGE: {ContentType} ===", currentContentType);
+                context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(currentMessage), isUpdatable: false);
+            }
+
             context.ScrollbackTerminal.WriteStatic(new Markup(""));
-            _logger?.LogInformation($"ChatMsg[Assistant, '{assistantMessage.Text}'");
-            _logger?.LogTrace("=== WRITING FINAL NON-UPDATABLE ASSISTANT MESSAGE ===");
-            _logger?.LogTrace("Final assistant message content: {Content}", assistantMessage.Text);
-            context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(assistantMessage));
-            _logger?.LogTrace("=== FINAL NON-UPDATABLE ASSISTANT MESSAGE WRITTEN ===");
+            _logger?.LogTrace("=== STREAMING COMPLETED - ALL MESSAGES FINALIZED ===");
         }
         catch (OperationCanceledException) when (context.AiOperationCts?.Token.IsCancellationRequested == true)
         {
@@ -305,6 +353,118 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
             context.ToolProgress = string.Empty;
             context.CurrentToolName = string.Empty;
         }
+    }
+
+    /// <summary>
+    /// Content Type Classification
+    /// Defines the types of content that can appear in the AI response stream.
+    /// This enum drives the message boundary detection logic.
+    /// </summary>
+    private enum ContentType
+    {
+        None,           // No content or unknown
+        Text,           // Regular assistant text response
+        FunctionCall,   // Tool invocation
+        FunctionResult  // Tool execution result
+    }
+
+    /// <summary>
+    /// Content Type Detection
+    /// Analyzes a response update to determine what type of content it contains.
+    /// This is the core logic that drives message boundary creation.
+    /// </summary>
+    private static ContentType DetermineContentType(ChatResponseUpdate responseUpdate)
+    {
+        // Check for function call/result content first (highest priority)
+        if (responseUpdate.Contents != null)
+        {
+            if (responseUpdate.Contents.Any(content => content is FunctionCallContent))
+            {
+                return ContentType.FunctionCall;
+            }
+
+            if (responseUpdate.Contents.Any(content => content is FunctionResultContent))
+            {
+                return ContentType.FunctionResult;
+            }
+        }
+
+        // Check for text content
+        if (!string.IsNullOrEmpty(responseUpdate.Text))
+        {
+            return ContentType.Text;
+        }
+
+        return ContentType.None;
+    }
+
+    /// <summary>
+    /// Message Boundary Decision Logic
+    /// Determines when to start a new message based on content type transitions.
+    /// This implements the core business logic for message separation.
+    /// </summary>
+    private static bool ShouldStartNewMessage(ContentType currentType, ContentType newType, ChatMessage? currentMessage)
+    {
+        // Always start a new message if we don't have one
+        if (currentMessage == null)
+        {
+            return true;
+        }
+
+        // Start new message when content type changes
+        // This creates boundaries between: Text → Tool → Text sequences
+        if (currentType != newType)
+        {
+            return true;
+        }
+
+        // For function calls/results, always create separate messages
+        // This ensures each tool invocation and result is a distinct history entry
+        if (newType is ContentType.FunctionCall or ContentType.FunctionResult)
+        {
+            return true;
+        }
+
+        // Continue with current message for same content type
+        return false;
+    }
+
+    /// <summary>
+    /// Message Factory
+    /// Creates appropriate ChatMessage objects based on content type.
+    /// Handles the different ways to construct messages for text vs tool content.
+    /// </summary>
+    private static ChatMessage CreateMessageForContentType(ChatResponseUpdate responseUpdate, ContentType contentType)
+    {
+        return contentType switch
+        {
+            ContentType.Text => new ChatMessage(ChatRole.Assistant, responseUpdate.Text ?? ""),
+            ContentType.FunctionCall => new ChatMessage(ChatRole.Assistant, responseUpdate.Contents ?? []),
+            ContentType.FunctionResult => new ChatMessage(ChatRole.Assistant, responseUpdate.Contents ?? []),
+            _ => new ChatMessage(ChatRole.Assistant, "")
+        };
+    }
+
+    /// <summary>
+    /// Content Validation
+    /// Determines if a message has meaningful content worth preserving.
+    /// Prevents empty or whitespace-only messages from cluttering history.
+    /// </summary>
+    private static bool HasMeaningfulContent(ChatMessage message)
+    {
+        // Text messages need non-empty text
+        if (!string.IsNullOrWhiteSpace(message.Text))
+        {
+            return true;
+        }
+
+        // Function messages need content
+        if (message.Contents != null && message.Contents.Count > 0)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private bool IsToolExecutionUpdate(ChatResponseUpdate responseUpdate)
