@@ -61,6 +61,31 @@ public interface IThemeInfo
     /// Gets the border style for panels.
     /// </summary>
     BoxBorder BorderStyle { get; }
+
+    /// <summary>
+    /// Gets the color for user messages.
+    /// </summary>
+    string UserMessageColor { get; }
+
+    /// <summary>
+    /// Gets the color for assistant messages.
+    /// </summary>
+    string AssistantMessageColor { get; }
+
+    /// <summary>
+    /// Gets the color for system messages.
+    /// </summary>
+    string SystemMessageColor { get; }
+
+    /// <summary>
+    /// Gets the prefix for user messages.
+    /// </summary>
+    string UserMessagePrefix { get; }
+
+    /// <summary>
+    /// Gets the prefix for assistant messages.
+    /// </summary>
+    string AssistantMessagePrefix { get; }
 }
 
 /// <summary>
@@ -94,6 +119,7 @@ public interface IRenderingUtilities
     /// Renders a chat message with appropriate styling.
     /// </summary>
     /// <param name="message">The chat message to render</param>
+    /// <param name="themeInfo">Optional theme information for styling</param>
     /// <returns>The rendered message</returns>
-    IRenderable RenderMessage(ChatMessage message);
+    IRenderable RenderMessage(ChatMessage message, IThemeInfo? themeInfo = null);
 }

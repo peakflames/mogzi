@@ -29,4 +29,9 @@ public class DefaultThemeInfo : IThemeInfo
     public Color SecondaryColor => Color.Grey23;
     public Color AccentColor => Color.Green;
     public BoxBorder BorderStyle => BoxBorder.Rounded;
+    public string UserMessageColor => "dim";
+    public string AssistantMessageColor => "skyblue1";
+    public string SystemMessageColor => "white";
+    public string UserMessagePrefix => "[dim]>[/] ";
+    public string AssistantMessagePrefix => "✦ ";
 }

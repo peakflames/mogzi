@@ -67,7 +67,7 @@ public class RenderingUtilities(ILogger<RenderingUtilities> logger) : IRendering
         }
     }
 
-    public IRenderable RenderMessage(ChatMessage message)
+    public IRenderable RenderMessage(ChatMessage message, IThemeInfo? themeInfo = null)
     {
         if (string.IsNullOrEmpty(message.Text))
         {
@@ -75,17 +75,22 @@ public class RenderingUtilities(ILogger<RenderingUtilities> logger) : IRendering
         }
 
         var messageType = GetMessageType(message);
-        var prefix = messageType switch
+
+        // Use theme information if provided, otherwise fall back to defaults
+        var (prefix, color) = messageType switch
         {
-            MessageType.User => "[dim]>[/] ",
-            MessageType.Assistant => "✦ ",
-            _ => ""
-        };
-        var color = messageType switch
-        {
-            MessageType.User => "dim",
-            MessageType.Assistant => "skyblue1",
-            _ => "white"
+            MessageType.User => (
+                themeInfo?.UserMessagePrefix ?? "[dim]>[/] ",
+                themeInfo?.UserMessageColor ?? "dim"
+            ),
+            MessageType.Assistant => (
+                themeInfo?.AssistantMessagePrefix ?? "✦ ",
+                themeInfo?.AssistantMessageColor ?? "skyblue1"
+            ),
+            _ => (
+                "",
+                themeInfo?.SystemMessageColor ?? "white"
+            )
         };
 
         // Strip system environment context from user messages for display

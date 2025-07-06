@@ -259,100 +259,16 @@ public class InputTuiState : ITuiState
 
     private IRenderable CreateFlexFooterComponent(ITuiContext context)
     {
-        var currentDir = GetDisplayPath(context.WorkingDirectoryProvider.GetCurrentDirectory());
-        var modelInfo = GetModelDisplayInfo(context);
-        var tokenInfo = GetTokenUsageInfo(context);
+        var renderingUtilities = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
+        var currentDir = renderingUtilities.FormatDisplayPath(context.WorkingDirectoryProvider.GetCurrentDirectory());
+        var modelInfo = renderingUtilities.FormatModelInfo(context.AppService);
+        var chatHistory = context.HistoryManager.GetCurrentChatHistory();
+        var tokenInfo = renderingUtilities.FormatTokenUsage(context.AppService, chatHistory);
         var content = $"[skyblue2]{currentDir}[/]  [rosybrown]{modelInfo}[/] [dim]({tokenInfo})[/]";
         return new Panel(new Markup(content))
             .NoBorder();
     }
 
-    private string GetTokenUsageInfo(ITuiContext context)
-    {
-        try
-        {
-            var chatHistory = context.HistoryManager.GetCurrentChatHistory();
-            var tokenCount = context.AppService.CalculateTokenMetrics(chatHistory);
-
-            // Estimate context window size based on model (this could be made configurable)
-            var contextWindowSize = EstimateContextWindowSize(context);
-            var percentageUsed = Math.Min(100.0, tokenCount * 100.0 / contextWindowSize);
-            var percentageLeft = 100.0 - percentageUsed;
-
-            return $"{tokenCount:N0} tokens, {percentageLeft:F2}% context left";
-        }
-        catch (Exception ex)
-        {
-            context.Logger?.LogWarning(ex, "Error calculating token usage");
-            return "token calculation unavailable";
-        }
-    }
-
-    private int EstimateContextWindowSize(ITuiContext context)
-    {
-        try
-        {
-            var modelId = context.AppService.ChatClient.ActiveProfile.ModelId.ToLowerInvariant();
-
-            // Common model context window sizes
-            return modelId switch
-            {
-                var m when m.Contains("gpt-4.1") => 1047576, // GPT-4.1 models
-                var m when m.Contains("gpt-4") => 128000,  // GPT-4 Turbo models
-                var m when m.Contains("gpt-3.5-") => 16385, // GPT-3.5 Turbo models
-                var m when m.Contains("o3") => 200000, // o3 models
-                var m when m.Contains("o4") => 200000, // o4 models
-                var m when m.Contains("gemini-2.5") => 1048576, // Gemini 2.5 Flash models
-                var m when m.Contains("gemini-1.5") => 1048576, // Gemini 1.5 Pro models
-                var m when m.Contains("claude") => 200000, // Claude models
-                _ => 128000 // Default fallback
-            };
-        }
-        catch (Exception ex)
-        {
-            context.Logger?.LogWarning(ex, "Error estimating context window size");
-            return 128000; // Safe default
-        }
-    }
-
-    private string GetModelDisplayInfo(ITuiContext context)
-    {
-        try
-        {
-            var chatClient = context.AppService.ChatClient;
-            var provider = chatClient.ActiveApiProvider.Name;
-            var model = chatClient.ActiveProfile.ModelId;
-
-            // Format like "provider/model" or just "model" if provider is empty
-            if (!string.IsNullOrEmpty(provider))
-            {
-                return $"{provider}:{model}";
-            }
-            return model;
-        }
-        catch (Exception ex)
-        {
-            context.Logger?.LogWarning(ex, "Error getting model display info");
-            return "unknown-model";
-        }
-    }
-
-    private string GetDisplayPath(string fullPath)
-    {
-        try
-        {
-            var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            if (fullPath.StartsWith(homeDir))
-            {
-                return "~" + fullPath[homeDir.Length..].Replace('\\', '/');
-            }
-            return fullPath.Replace('\\', '/');
-        }
-        catch
-        {
-            return fullPath;
-        }
-    }
 
     private async Task NavigateCommandHistoryAsync(ITuiContext context, bool up)
     {
@@ -459,7 +375,9 @@ public class InputTuiState : ITuiState
 
             // Display only the original user input (stripped of env context)
             var displayMessage = new ChatMessage(ChatRole.User, input);
-            context.ScrollbackTerminal.WriteStatic(RenderMessage(displayMessage));
+            var renderingUtilities = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
+            var themeInfo = context.ServiceProvider.GetRequiredService<IThemeInfo>();
+            context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(displayMessage, themeInfo));
 
             if (context.SlashCommandProcessor.TryProcessCommand(input, out var commandOutput))
             {
@@ -473,7 +391,9 @@ public class InputTuiState : ITuiState
                 {
                     var commandMessage = new ChatMessage(ChatRole.Assistant, commandOutput);
                     context.HistoryManager.AddAssistantMessage(commandMessage);
-                    context.ScrollbackTerminal.WriteStatic(RenderMessage(commandMessage));
+                    var renderingUtils = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
+                    var theme = context.ServiceProvider.GetRequiredService<IThemeInfo>();
+                    context.ScrollbackTerminal.WriteStatic(renderingUtils.RenderMessage(commandMessage, theme));
                 }
                 return;
             }
@@ -486,7 +406,9 @@ public class InputTuiState : ITuiState
             context.Logger?.LogError(ex, "Error processing user input");
             var errorMessage = new ChatMessage(ChatRole.Assistant, $"Error processing input: {ex.Message}");
             context.HistoryManager.AddAssistantMessage(errorMessage);
-            context.ScrollbackTerminal.WriteStatic(RenderMessage(errorMessage));
+            var renderingUtilities = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
+            var themeInfo = context.ServiceProvider.GetRequiredService<IThemeInfo>();
+            context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(errorMessage, themeInfo));
         }
     }
 
@@ -651,52 +573,6 @@ public class InputTuiState : ITuiState
         }
     }
 
-    // TODO: This is temparary. Once the functionality is confirmed, one will need to propose the follow-up refactoring to move the rendering methods to RenderingUtilities.cs.
-    private IRenderable RenderMessage(ChatMessage message)
-    {
-        if (string.IsNullOrEmpty(message.Text))
-        {
-            return new Text(string.Empty);
-        }
-
-        var messageType = GetMessageType(message);
-        var prefix = messageType switch
-        {
-            MessageType.User => "[dim]>[/] ",
-            MessageType.Assistant => "✦ ",
-            _ => ""
-        };
-        var color = messageType switch
-        {
-            MessageType.User => "dim",
-            MessageType.Assistant => "skyblue1",
-            _ => "white"
-        };
-
-        // Strip system environment context from user messages for display
-        var displayText = message.Role == ChatRole.User
-            ? Mogzi.Utils.MessageUtils.StripSystemEnvironment(message.Text)
-            : message.Text;
-
-        return new Markup($"[{color}]{prefix}{displayText}[/]");
-    }
-
-    // TODO: This is temparary. Once the functionality is confirmed, one will need to propose the follow-up refactoring to move the rendering methods to RenderingUtilities.cs.
-    private MessageType GetMessageType(ChatMessage message)
-    {
-        if (message.Role == ChatRole.User)
-        {
-            return MessageType.User;
-        }
-        else if (message.Role == ChatRole.Assistant)
-        {
-            return MessageType.Assistant;
-        }
-        else
-        {
-            return MessageType.System;
-        }
-    }
 }
 
 #pragma warning restore IDE0010 // Add missing cases
