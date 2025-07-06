@@ -37,9 +37,9 @@ public static class ServiceConfiguration
             ? services.AddSingleton(chatClientResult.Value)
             : throw new InvalidOperationException($"Failed to create ChatClient: {string.Join(", ", chatClientResult.Errors.Select(e => e.Message))}");
 
+        _ = services.AddSingleton<ChatHistoryService>();
         _ = services.AddSingleton<IAppService, AppService>();
         _ = services.AddSingleton<HistoryManager>();
-        _ = services.AddSingleton<StateManager>();
 
         // Add autocomplete services
         _ = services.AddSingleton<SlashCommandProcessor>();
@@ -56,6 +56,9 @@ public static class ServiceConfiguration
         _ = services.AddSingleton<IScrollbackTerminal, ScrollbackTerminal>();
         _ = services.AddSingleton<ToolResponseParser>();
 
+        // Register keyboard handler as singleton to ensure same instance is used throughout
+        _ = services.AddSingleton<AdvancedKeyboardHandler>();
+
         // Add state management components
         _ = services.AddSingleton<ITuiStateManager, TuiStateManager>();
         _ = services.AddSingleton<InputContext>();
@@ -71,7 +74,7 @@ public static class ServiceConfiguration
             var workingDirectoryProvider = serviceProvider.GetRequiredService<IWorkingDirectoryProvider>();
             var toolResponseParser = serviceProvider.GetRequiredService<ToolResponseParser>();
             var appService = serviceProvider.GetRequiredService<IAppService>();
-            var stateManager = serviceProvider.GetRequiredService<ITuiStateManager>();
+            var mediator = serviceProvider.GetRequiredService<ITuiMediator>();
 
             return new TuiContext(
                 inputContext,
@@ -85,7 +88,7 @@ public static class ServiceConfiguration
                 workingDirectoryProvider,
                 toolResponseParser,
                 appService,
-                stateManager);
+                mediator);
         });
 
         // Register state implementations
@@ -131,7 +134,8 @@ public static class ServiceConfiguration
         _ = services.AddSingleton<ITuiMediator>(serviceProvider =>
         {
             var logger = serviceProvider.GetRequiredService<ILogger<FlexColumnMediator>>();
-            var mediator = new FlexColumnMediator(logger);
+            var themeInfo = serviceProvider.GetRequiredService<IThemeInfo>();
+            var mediator = new FlexColumnMediator(logger, themeInfo);
 
             // Register components with mediator
             mediator.RegisterComponent(serviceProvider.GetRequiredService<InputPanel>());

@@ -4,10 +4,11 @@ namespace Mogzi.TUI.Components;
 /// Coordinates interactions between TUI components and manages complex workflows.
 /// Implements the mediator pattern to reduce coupling between components.
 /// </summary>
-public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediator
+public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo themeInfo) : ITuiMediator
 {
     private readonly Dictionary<string, ITuiComponent> _registeredComponents = [];
     private readonly ILogger<FlexColumnMediator> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly IThemeInfo _themeInfo = themeInfo ?? throw new ArgumentNullException(nameof(themeInfo));
 
     public string Name => "FlexColumnMediator";
 
@@ -16,7 +17,7 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediat
         ArgumentException.ThrowIfNullOrEmpty(input);
         ArgumentNullException.ThrowIfNull(context);
 
-        _logger.LogDebug("Mediator handling user input: {Input}", input);
+        _logger.LogTrace("Mediator handling user input: {Input}", input);
 
         try
         {
@@ -35,15 +36,15 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediat
                 context.AppService.ChatClient.Config.ToolApprovals
             );
 
-            _logger?.LogDebug("Generated environment prompt: {EnvPrompt}", envPrompt);
+            _logger?.LogTrace("Generated environment prompt: {EnvPrompt}", envPrompt);
 
             // Create user message with environment context appended (for AI processing)
             var fullUserMessage = Mogzi.Utils.MessageUtils.AppendSystemEnvironment(input, envPrompt);
             var userMessage = new ChatMessage(ChatRole.User, fullUserMessage);
             context.HistoryManager.AddUserMessage(userMessage);
 
-            _logger?.LogDebug("Full user message (with env context) length: {Length}", fullUserMessage.Length);
-            _logger?.LogDebug("Original user input: {Input}", input);
+            _logger?.LogTrace("Full user message (with env context) length: {Length}", fullUserMessage.Length);
+            _logger?.LogTrace("Original user input: {Input}", input);
 
             // Display only the original user input (stripped of env context)
             var displayMessage = new ChatMessage(ChatRole.User, input);
@@ -112,7 +113,7 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediat
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        _logger.LogDebug("Mediator handling state change from {PreviousState} to {NewState}", previousState, newState);
+        _logger.LogTrace("Mediator handling state change from {PreviousState} to {NewState}", previousState, newState);
 
         // Notify relevant components about state changes
         await NotifyComponentAsync("ProgressPanel", new { NewState = newState, PreviousState = previousState }, context);
@@ -125,7 +126,7 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediat
         ArgumentException.ThrowIfNullOrEmpty(toolName);
         ArgumentNullException.ThrowIfNull(context);
 
-        _logger.LogDebug("Mediator handling tool execution: {ToolName} - {Progress}", toolName, progress);
+        _logger.LogTrace("Mediator handling tool execution: {ToolName} - {Progress}", toolName, progress);
 
         // Update context with tool information
         context.CurrentToolName = toolName;
@@ -153,7 +154,7 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediat
             {
                 var renderContext = CreateRenderContext(context);
                 _ = await component.HandleInputAsync(renderContext, eventData);
-                _logger.LogDebug("Notified component {ComponentName} with event data", componentName);
+                _logger.LogTrace("Notified component {ComponentName} with event data", componentName);
             }
             catch (Exception ex)
             {
@@ -162,7 +163,7 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediat
         }
         else
         {
-            _logger.LogDebug("Component {ComponentName} not registered for notifications", componentName);
+            _logger.LogTrace("Component {ComponentName} not registered for notifications", componentName);
         }
     }
 
@@ -171,7 +172,7 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediat
         ArgumentNullException.ThrowIfNull(component);
 
         _registeredComponents[component.Name] = component;
-        _logger.LogDebug("Registered component with mediator: {ComponentName}", component.Name);
+        _logger.LogTrace("Registered component with mediator: {ComponentName}", component.Name);
     }
 
     public void UnregisterComponent(ITuiComponent component)
@@ -180,11 +181,35 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediat
 
         if (_registeredComponents.Remove(component.Name))
         {
-            _logger.LogDebug("Unregistered component from mediator: {ComponentName}", component.Name);
+            _logger.LogTrace("Unregistered component from mediator: {ComponentName}", component.Name);
         }
     }
 
-    private async Task StartAiProcessingWorkflow(ITuiContext context)
+    public async Task NotifyHistoryChangedAsync()
+    {
+        // This method is called by the HistoryManager when the chat history changes.
+        // In the current architecture, the main render loop runs continuously,
+        // so we don't need to do anything here to trigger a re-render.
+        // This hook is here to fulfill the architectural pattern and for future use,
+        // e.g., if we move to a more event-driven rendering model.
+        await Task.CompletedTask;
+    }
+
+    private IRenderContext CreateRenderContext(ITuiContext context)
+    {
+        var renderingUtilities = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
+
+        return new RenderContext(
+            context,
+            ChatState.Input, // Default state for render context
+            _logger,
+            context.ServiceProvider,
+            renderingUtilities,
+            _themeInfo
+        );
+    }
+
+    public async Task StartAiProcessingWorkflow(ITuiContext context)
     {
         try
         {
@@ -214,7 +239,7 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediat
                     await context.RequestStateTransitionAsync(ChatState.ToolExecution);
 
                     // Extract tool name and handle tool execution
-                    ExtractToolNameFromUpdate(responseUpdate, context);
+                    ExtractToolNameFromUpdate(context, responseUpdate);
 
                     // Set progress text based on available information
                     if (!string.IsNullOrWhiteSpace(responseUpdate.Text))
@@ -230,7 +255,7 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediat
                     _logger?.LogInformation($"ChatMsg[Tool, '{context.ToolProgress}'");
 
                     // Handle tool result display
-                    await HandleToolExecutionResult(responseUpdate, context);
+                    await HandleToolExecutionResult(context, responseUpdate);
                 }
             }
 
@@ -240,7 +265,7 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediat
         }
         catch (OperationCanceledException) when (context.AiOperationCts?.Token.IsCancellationRequested == true)
         {
-            _logger?.LogDebug("AI operation was cancelled by user");
+            _logger?.LogTrace("AI operation was cancelled by user");
         }
         catch (Exception ex)
         {
@@ -256,21 +281,6 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediat
             context.ToolProgress = string.Empty;
             context.CurrentToolName = string.Empty;
         }
-    }
-
-    private IRenderContext CreateRenderContext(ITuiContext context)
-    {
-        var renderingUtilities = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
-        var themeInfo = new DefaultThemeInfo();
-
-        return new RenderContext(
-            context,
-            ChatState.Input, // Default state for render context
-            _logger,
-            context.ServiceProvider,
-            renderingUtilities,
-            themeInfo
-        );
     }
 
     private bool IsToolExecutionUpdate(ChatResponseUpdate responseUpdate)
@@ -304,7 +314,7 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediat
         return false;
     }
 
-    private void ExtractToolNameFromUpdate(ChatResponseUpdate responseUpdate, ITuiContext context)
+    private void ExtractToolNameFromUpdate(ITuiContext context, ChatResponseUpdate responseUpdate)
     {
         if (responseUpdate.Contents == null)
         {
@@ -326,6 +336,12 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediat
             {
                 context.CurrentToolName = toolName;
             }
+
+            // Store the mapping of call ID to tool name for later use
+            context.FunctionCallToToolName[functionCall.CallId] = functionCall.Name!;
+
+            // For EditTool, capture the pre-edit content
+            _ = CapturePreEditContentForEditTool(context, functionCall);
         }
         else
         {
@@ -393,11 +409,270 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediat
         return string.Empty;
     }
 
-    private async Task HandleToolExecutionResult(ChatResponseUpdate responseUpdate, ITuiContext context)
+    private async Task CapturePreEditContentForEditTool(ITuiContext context, FunctionCallContent functionCall)
     {
-        // This is a simplified version - the full implementation would be similar to the original
-        // For now, just log that tool execution is happening
-        _logger.LogDebug("Handling tool execution result in mediator");
+        context.Logger?.LogTrace("=== CapturePreEditContentForEditTool START ===");
+
+        try
+        {
+            // Only capture for EditTool
+            if (!IsEditTool(functionCall.Name.ToLowerInvariant()))
+            {
+                context.Logger?.LogTrace("Not an EditTool, skipping pre-edit capture");
+                return;
+            }
+
+            // Extract file_path from function arguments
+            if (functionCall.Arguments?.TryGetValue("file_path", out var filePathValue) == true)
+            {
+                var filePath = filePathValue?.ToString();
+                if (!string.IsNullOrEmpty(filePath))
+                {
+                    context.Logger?.LogTrace("Capturing pre-edit content for file: {FilePath}", filePath);
+
+                    // Read the entire file content before the edit
+                    if (File.Exists(filePath))
+                    {
+                        try
+                        {
+                            var preEditContent = await File.ReadAllTextAsync(filePath);
+                            context.FunctionCallToPreEditContent[functionCall.CallId] = preEditContent;
+                            context.Logger?.LogTrace("Captured pre-edit content, length: {Length}", preEditContent.Length);
+                        }
+                        catch (Exception ex)
+                        {
+                            context.Logger?.LogTrace(ex, "Failed to read pre-edit content from file: {FilePath}", filePath);
+                        }
+                    }
+                    else
+                    {
+                        context.Logger?.LogTrace("File does not exist, storing empty pre-edit content: {FilePath}", filePath);
+                        context.FunctionCallToPreEditContent[functionCall.CallId] = string.Empty;
+                    }
+                }
+                else
+                {
+                    context.Logger?.LogTrace("File path is null or empty");
+                }
+            }
+            else
+            {
+                context.Logger?.LogTrace("No file_path argument found in function call");
+            }
+        }
+        catch (Exception ex)
+        {
+            context.Logger?.LogError(ex, "Error capturing pre-edit content");
+        }
+
+        context.Logger?.LogTrace("=== CapturePreEditContentForEditTool END ===");
+    }
+
+    private static bool IsEditTool(string normalizedToolName)
+    {
+        return normalizedToolName is "replace_in_file" or "edit_file" or "editfile" or "edit";
+    }
+
+    private async Task HandleToolExecutionResult(ITuiContext context, ChatResponseUpdate responseUpdate)
+    {
+        try
+        {
+            if (responseUpdate.Contents == null && string.IsNullOrEmpty(responseUpdate.Text))
+            {
+                return;
+            }
+
+            string? toolName = null;
+            string? result = null;
+
+            // Handle function call content (tool execution starting)
+            var functionCall = responseUpdate.Contents?.OfType<FunctionCallContent>().FirstOrDefault();
+
+            // Handle function result content (tool execution completed)
+            var functionResult = responseUpdate.Contents?.OfType<FunctionResultContent>().FirstOrDefault();
+
+            if (functionResult != null)
+            {
+                // Get the tool name from our stored mapping
+                _ = context.FunctionCallToToolName.TryGetValue(functionResult.CallId, out toolName);
+                toolName ??= "Unknown Tool";
+
+                result = functionResult.Result?.ToString() ?? "";
+            }
+            // If we only have a function call but no result yet, don't process for display
+            else if (functionCall != null && functionResult == null)
+            {
+                return;
+            }
+            // Handle XML tool responses in text content
+            else if (!string.IsNullOrEmpty(responseUpdate.Text) &&
+                     (responseUpdate.Text.Contains("<tool_response") || responseUpdate.Text.Contains("</tool_response>")))
+            {
+                result = responseUpdate.Text;
+
+                // Extract tool name from XML if possible
+                try
+                {
+                    var toolNameMatch = System.Text.RegularExpressions.Regex.Match(result, @"tool_name=""([^""]+)""");
+                    toolName = toolNameMatch.Success ? toolNameMatch.Groups[1].Value : "Unknown Tool";
+                }
+                catch (Exception ex)
+                {
+                    context.Logger?.LogTrace(ex, "Failed to extract tool name from XML");
+                    toolName = "Unknown Tool";
+                }
+            }
+
+            // If we have a tool result to display
+            if (!string.IsNullOrEmpty(result) && !string.IsNullOrEmpty(toolName))
+            {
+                // Parse the tool response for enhanced display
+                var toolInfo = context.ToolResponseParser.ParseToolResponse(toolName, result);
+
+                // Handle different tool types appropriately
+                UnifiedDiff? diff = null;
+                string? displayContent = null;
+
+                try
+                {
+                    var normalizedToolName = toolInfo.ToolName.ToLowerInvariant();
+
+                    // For WriteFileTool - show content directly, no diff
+                    if (IsWriteFileTool(normalizedToolName))
+                    {
+                        displayContent = toolInfo.NewContent ?? ExtractContentFromXml(result);
+                    }
+                    // For EditTool and DiffPatchTools - generate/extract diffs
+                    else if (IsEditTool(normalizedToolName) || IsDiffPatchTool(normalizedToolName))
+                    {
+                        if (!string.IsNullOrEmpty(toolInfo.FilePath))
+                        {
+                            string? originalContent = null;
+                            var newContent = toolInfo.NewContent;
+
+                            // For EditTool, use the captured pre-edit content
+                            if (IsEditTool(normalizedToolName) && functionResult != null)
+                            {
+                                if (context.FunctionCallToPreEditContent.TryGetValue(functionResult.CallId, out var preEditContent))
+                                {
+                                    originalContent = preEditContent;
+                                }
+                            }
+                            else
+                            {
+                                // For DiffPatchTools, try to read original content from file
+                                if (File.Exists(toolInfo.FilePath))
+                                {
+                                    try
+                                    {
+                                        originalContent = await File.ReadAllTextAsync(toolInfo.FilePath);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        context.Logger?.LogTrace(ex, "Could not read original file content for diff: {FilePath}", toolInfo.FilePath);
+                                    }
+                                }
+                            }
+
+                            // For EditTool, use content_on_disk as new content
+                            // For DiffPatchTools, read current file content if needed
+                            if (string.IsNullOrEmpty(newContent) && File.Exists(toolInfo.FilePath))
+                            {
+                                try
+                                {
+                                    newContent = await File.ReadAllTextAsync(toolInfo.FilePath);
+                                }
+                                catch (Exception ex)
+                                {
+                                    context.Logger?.LogTrace(ex, "Could not read current file content: {FilePath}", toolInfo.FilePath);
+                                }
+                            }
+
+                            // Set up logger for UnifiedDiffGenerator debugging
+                            UnifiedDiffGenerator.SetLogger(context.Logger);
+
+                            // Generate diff using the tool response parser
+                            diff = context.ToolResponseParser.ExtractFileDiff(
+                                toolInfo.ToolName,
+                                result,
+                                originalContent,
+                                newContent,
+                                toolInfo.FilePath);
+                        }
+                    }
+                    else
+                    {
+                        displayContent = toolInfo.Summary;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    context.Logger?.LogTrace(ex, "Could not process tool result for display");
+                }
+
+                // Create enhanced tool display with clean styling
+                var toolDisplay = ToolExecutionDisplay.CreateToolDisplay(
+                    toolInfo.ToolName,
+                    toolInfo.Status,
+                    toolInfo.Description,
+                    diff: diff,
+                    result: displayContent ?? toolInfo.Summary ?? result
+                );
+
+                // Display the tool execution result in scrollback
+                context.ScrollbackTerminal.WriteStatic(toolDisplay);
+                context.ScrollbackTerminal.WriteStatic(new Markup(""));
+            }
+        }
+        catch (Exception ex)
+        {
+            context.Logger?.LogError(ex, "Error handling tool execution result");
+        }
+
         await Task.CompletedTask;
     }
+
+    private static bool IsWriteFileTool(string normalizedToolName)
+    {
+        return normalizedToolName is "write_file" or "writefile" or "write_to_file";
+    }
+
+    private static bool IsDiffPatchTool(string normalizedToolName)
+    {
+        return normalizedToolName is "apply_code_patch" or "generate_code_patch" or "preview_patch_application";
+    }
+
+    private static string? ExtractContentFromXml(string xmlResponse)
+    {
+        try
+        {
+            var doc = new XmlDocument();
+            doc.LoadXml(xmlResponse);
+
+            // Look for content_on_disk element
+            var contentNode = doc.SelectSingleNode("//content_on_disk");
+            if (contentNode != null)
+            {
+                return contentNode.InnerText;
+            }
+
+            // Fallback: look for any content in notes
+            var notesNode = doc.SelectSingleNode("//notes");
+            if (notesNode != null)
+            {
+                return notesNode.InnerText?.Trim();
+            }
+
+            return null;
+        }
+        catch (XmlException)
+        {
+            // If XML parsing fails, return null
+            return null;
+        }
+    }
+
+
+
+
 }

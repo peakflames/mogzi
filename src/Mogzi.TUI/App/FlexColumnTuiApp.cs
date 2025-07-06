@@ -7,7 +7,6 @@ public sealed class FlexColumnTuiApp : IDisposable
     private readonly ITuiStateManager _stateManager;
     private readonly ITuiContext _tuiContext;
     private readonly ITuiComponentManager _componentManager;
-    private readonly ITuiMediator _mediator;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly AdvancedKeyboardHandler _keyboardHandler;
     private readonly IScrollbackTerminal _scrollbackTerminal;
@@ -27,13 +26,13 @@ public sealed class FlexColumnTuiApp : IDisposable
         _stateManager = serviceProvider.GetRequiredService<ITuiStateManager>();
         _tuiContext = serviceProvider.GetRequiredService<ITuiContext>();
         _componentManager = serviceProvider.GetRequiredService<ITuiComponentManager>();
-        _mediator = serviceProvider.GetRequiredService<ITuiMediator>();
         _scrollbackTerminal = serviceProvider.GetRequiredService<IScrollbackTerminal>();
         _historyManager = serviceProvider.GetRequiredService<HistoryManager>();
 
         _cancellationTokenSource = new CancellationTokenSource();
 
-        _keyboardHandler = new AdvancedKeyboardHandler(_serviceProvider.GetService<ILogger<AdvancedKeyboardHandler>>());
+        // Get the keyboard handler from DI container instead of creating a new instance
+        _keyboardHandler = serviceProvider.GetRequiredService<AdvancedKeyboardHandler>();
 
         _keyboardHandler.KeyPressed += OnKeyPressed;
         _keyboardHandler.KeyCombinationPressed += OnKeyCombinationPressed;
@@ -41,11 +40,18 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         RegisterKeyBindings();
 
-        _logger.LogDebug("FlexColumnTuiApp initialized with component architecture");
+        _logger.LogTrace("FlexColumnTuiApp initialized with component architecture");
     }
 
     public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken = default)
     {
+        if (_logger is null)
+        {
+            Console.WriteLine("Logger is null");
+            return 1;
+        }
+
+        _logger.LogTrace("FlexColumnTuiApp.RunAsync called with {ArgCount} arguments", args.Length);
         ObjectDisposedException.ThrowIf(_isDisposed, this);
 
         if (IsRunning)
@@ -59,7 +65,7 @@ public sealed class FlexColumnTuiApp : IDisposable
 
             using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token);
 
-            Initialize(args);
+            await Initialize(args);
 
             IsRunning = true;
             Started?.Invoke();
@@ -89,19 +95,41 @@ public sealed class FlexColumnTuiApp : IDisposable
     }
 
 #pragma warning disable IDE0060 // Remove unused parameter
-    private async void Initialize(string[] args)
-#pragma warning restore IDE0060 // Remove unused parameter
+    private async Task Initialize(string[] args)
     {
-        _logger.LogDebug("Initializing FlexColumn TUI application");
-        _scrollbackTerminal.Initialize();
+        try
+        {
+            // Register state factories
+            _logger.LogTrace("INIT STEP 2: About to call RegisterStateFactories()");
+            RegisterStateFactories();
+            _logger.LogTrace("INIT STEP 3: RegisterStateFactories() completed");
 
-        // Initialize state manager with state factories
-        RegisterStateFactories();
-        await _stateManager.InitializeAsync(_tuiContext);
+            // Initialize state manager with context
+            _logger.LogTrace("INIT STEP 4: About to call _stateManager.InitializeAsync(_tuiContext)");
+            _logger.LogTrace("INIT STEP 4a: _stateManager is null: {IsNull}", _stateManager == null);
+            _logger.LogTrace("INIT STEP 4b: _tuiContext is null: {IsNull}", _tuiContext == null);
 
-        LoadCommandHistory();
-        RenderInitialContent();
-        _logger.LogDebug("FlexColumn TUI application initialized");
+            if (_tuiContext is null)
+            {
+                throw new InvalidOperationException("TuiContext is null during initialization");
+            }
+
+            if (_stateManager is null)
+            {
+                throw new InvalidOperationException("StateManager is null during initialization");
+            }
+
+            await _stateManager.InitializeAsync(_tuiContext);
+
+            _logger.LogTrace("INIT STEP 5: _stateManager.InitializeAsync(_tuiContext) completed");
+
+            _logger.LogTrace("INIT STEP 6: FlexColumn TUI application initialization complete");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "INIT ERROR: Failed to initialize FlexColumn TUI application");
+            throw;
+        }
     }
 
     private void RegisterStateFactories()
@@ -116,7 +144,9 @@ public sealed class FlexColumnTuiApp : IDisposable
         var chatHistory = _historyManager.GetCurrentChatHistory();
         if (!chatHistory.Any())
         {
-            _scrollbackTerminal.WriteStatic(CreateWelcomeMessage());
+            // The WelcomePanel component will be rendered automatically by the TuiComponentManager.
+            // We just need to ensure its visibility is set correctly on startup.
+            // This is handled in TuiComponentManager.UpdateComponentVisibility.
 
             // TODO: Implement once session management is implemented
             // _scrollbackTerminal.WriteStatic(new Markup("[dim]No existing chat history found, starting fresh session[/]"));
@@ -155,7 +185,7 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private async Task<int> RunMainLoopAsync(CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Starting FlexColumn Live loop");
+        _logger.LogTrace("Starting FlexColumn Live loop");
 
         try
         {
@@ -193,11 +223,16 @@ public sealed class FlexColumnTuiApp : IDisposable
                 themeInfo
             );
 
+            _logger.LogTrace("RenderDynamicContent: TuiContext instance ID: {ContextId}, CurrentInput: '{CurrentInput}'",
+                _tuiContext.GetHashCode(), _tuiContext.InputContext.CurrentInput);
+
             // Update component visibility based on current state
             _componentManager.UpdateComponentVisibility(_stateManager.CurrentStateType, renderContext);
 
             // Render the layout using the component manager
-            return _componentManager.RenderLayout(renderContext);
+            var result = _componentManager.RenderLayout(renderContext);
+            _logger.LogTrace("RenderDynamicContent: Layout rendered successfully");
+            return result;
         }
         catch (Exception ex)
         {
@@ -205,34 +240,6 @@ public sealed class FlexColumnTuiApp : IDisposable
             return new Text($"Rendering error: {ex.Message}");
         }
     }
-
-
-    private IRenderable CreateWelcomeMessage()
-    {
-        var contentItems = new List<IRenderable>
-        {
-            // Shadow effect style with multi-color letters - "Mogzi" with each letter different color
-            new Markup("[bold blue]███╗   ███╗[/] [bold cyan] ██████╗ [/] [bold green] ██████╗ [/] [bold yellow]███████╗[/] [bold magenta]██╗[/]"),
-            new Markup("[bold blue]████╗ ████║[/] [bold cyan]██╔═══██╗[/] [bold green]██╔════╝ [/] [bold yellow]╚══███╔╝[/] [bold magenta]██║[/]"),
-            new Markup("[bold blue]██╔████╔██║[/] [bold cyan]██║   ██║[/] [bold green]██║  ███╗[/] [bold yellow]  ███╔╝ [/] [bold magenta]██║[/]"),
-            new Markup("[bold blue]██║╚██╔╝██║[/] [bold cyan]██║   ██║[/] [bold green]██║   ██║[/] [bold yellow] ███╔╝  [/] [bold magenta]██║[/]"),
-            new Markup("[bold blue]██║ ╚═╝ ██║[/] [bold cyan]╚██████╔╝[/] [bold green]╚██████╔╝[/] [bold yellow]███████╗[/] [bold magenta]██║[/]"),
-            new Markup("[bold blue]╚═╝     ╚═╝[/] [bold cyan] ╚═════╝ [/] [bold green] ╚═════╝ [/] [bold yellow]╚══════╝[/] [bold magenta]╚═╝[/]"),
-            new Text(""),
-            new Markup("[bold cyan]◢◤◢◤◢◤ Now connected to your Multi-model Autonomous Assistant ◢◤◢◤◢◤[/]"),
-            new Text(""),
-            new Markup("[dim]Your AI-powered development assistant[/]"),
-            new Text(""),
-            new Markup("[grey69]Tips for getting started:[/]"),
-            new Markup("[grey69]1. Ask questions, edit files, or run commands[/]"),
-            new Markup("[grey69]2. Be specific for the best results[/]"),
-            new Markup("[grey69]3. Use [/][magenta]/help[/][dim] for more information[/]"),
-            new Text("")
-        };
-        return new Rows(contentItems);
-    }
-
-
 
     private IRenderable RenderMessage(ChatMessage message)
     {
@@ -291,7 +298,7 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         _keyboardHandler.RegisterKeyBinding(ConsoleKey.L, ConsoleModifiers.Control, args =>
         {
-            _logger.LogDebug("Ctrl+L detected, clearing screen");
+            _logger.LogTrace("Ctrl+L detected, clearing screen");
             _historyManager.ClearHistory();
             _scrollbackTerminal.Initialize();
             RenderInitialContent();
@@ -312,11 +319,11 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         _keyboardHandler.RegisterKeyBinding(ConsoleKey.E, ConsoleModifiers.Control, args =>
         {
-            _logger.LogDebug("Ctrl+E detected - external editor feature placeholder");
+            _logger.LogTrace("Ctrl+E detected - external editor feature placeholder");
             args.Handled = true;
         });
 
-        _logger.LogDebug("FlexColumn key bindings registered");
+        _logger.LogTrace("FlexColumn key bindings registered");
     }
 
     private async void OnKeyPressed(object? sender, KeyPressEventArgs e)
@@ -329,6 +336,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         try
         {
             await _stateManager.HandleKeyPressAsync(e);
+            _scrollbackTerminal.Refresh();
         }
         catch (Exception ex)
         {
@@ -345,7 +353,7 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         try
         {
-            _logger.LogDebug("Unhandled key combination: {Key} + {Modifiers}", e.Key, e.Modifiers);
+            _logger.LogTrace("Unhandled key combination: {Key} + {Modifiers}", e.Key, e.Modifiers);
         }
         catch (Exception ex)
         {
@@ -364,7 +372,17 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         try
         {
-            await _stateManager.HandleCharacterTypedAsync(e);
+            _logger.LogTrace("OnCharacterTyped received: {Character}", e.Character);
+            _logger.LogTrace("StateManager instance: {StateManagerInstance}, IsNull: {IsNull}",
+                _stateManager?.GetHashCode(), _stateManager == null);
+            _logger.LogTrace("About to call _stateManager.HandleCharacterTypedAsync");
+            if (_stateManager is not null)
+            {
+                await _stateManager.HandleCharacterTypedAsync(e);
+            }
+            _logger.LogTrace("Successfully called _stateManager.HandleCharacterTypedAsync");
+            _logger.LogTrace("Requesting terminal refresh after character typed.");
+            _scrollbackTerminal.Refresh();
         }
         catch (Exception ex)
         {
@@ -374,7 +392,7 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private async Task ShutdownAsync()
     {
-        _logger.LogDebug("Shutting down FlexColumn TUI application");
+        _logger.LogTrace("Shutting down FlexColumn TUI application");
 
         try
         {
@@ -386,7 +404,7 @@ public sealed class FlexColumnTuiApp : IDisposable
             _logger.LogError(ex, "Error during shutdown");
         }
 
-        _logger.LogDebug("FlexColumn TUI application shutdown complete");
+        _logger.LogTrace("FlexColumn TUI application shutdown complete");
     }
 
     public void Dispose()
@@ -407,12 +425,14 @@ public sealed class FlexColumnTuiApp : IDisposable
         Stopped = null;
         UnhandledError = null;
 
-        _logger?.LogDebug("FlexColumnTuiApp disposed");
+        _logger?.LogTrace("FlexColumnTuiApp disposed");
 
         GC.SuppressFinalize(this);
     }
 
+#pragma warning disable IDE0051 // Remove unused private members
     private void LoadCommandHistory()
+#pragma warning restore IDE0051 // Remove unused private members
     {
         try
         {
@@ -426,7 +446,7 @@ public sealed class FlexColumnTuiApp : IDisposable
             _tuiContext.CommandHistory.Clear();
             _tuiContext.CommandHistory.AddRange(userMessages);
 
-            _logger?.LogDebug("Loaded {Count} commands from history", _tuiContext.CommandHistory.Count);
+            _logger?.LogTrace("Loaded {Count} commands from history", _tuiContext.CommandHistory.Count);
         }
         catch (Exception ex)
         {
@@ -471,61 +491,6 @@ public sealed class FlexColumnTuiApp : IDisposable
         }
 
         inputContext.CursorPosition = inputContext.CurrentInput.Length;
-    }
-
-    private async Task SubmitCurrentInput()
-    {
-        var inputContext = _tuiContext.InputContext;
-        if (string.IsNullOrWhiteSpace(inputContext.CurrentInput) || _stateManager.CurrentStateType != ChatState.Input)
-        {
-            return;
-        }
-
-        var inputToSubmit = inputContext.CurrentInput;
-        AddToCommandHistory(inputToSubmit);
-        inputContext.Clear();
-        _tuiContext.CommandHistoryIndex = -1;
-
-        await ProcessUserInput(inputToSubmit);
-    }
-
-    private void AddToCommandHistory(string command)
-    {
-        if (string.IsNullOrWhiteSpace(command))
-        {
-            return;
-        }
-
-        if (_tuiContext.CommandHistory.Contains(command))
-        {
-            return;
-        }
-
-        _tuiContext.CommandHistory.Add(command);
-
-        if (_tuiContext.CommandHistory.Count > 100)
-        {
-            _tuiContext.CommandHistory.RemoveAt(0);
-        }
-
-        _tuiContext.CommandHistoryIndex = -1;
-    }
-
-    private async Task ProcessUserInput(string input)
-    {
-        try
-        {
-            // Delegate user input processing to the mediator
-            await _mediator.HandleUserInputAsync(input, _tuiContext);
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error processing user input through mediator");
-            var errorMessage = new ChatMessage(ChatRole.Assistant, $"Error processing input: {ex.Message}");
-            _historyManager.AddAssistantMessage(errorMessage);
-            var renderingUtilities = _serviceProvider.GetRequiredService<IRenderingUtilities>();
-            _scrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(errorMessage));
-        }
     }
 
 }

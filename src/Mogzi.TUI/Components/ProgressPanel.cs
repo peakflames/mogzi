@@ -60,7 +60,7 @@ public class ProgressPanel : ITuiComponent
     {
         // Simple rotating animation
         var frames = new[] { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" };
-        var frameIndex = (int)(DateTime.Now.Millisecond / 100) % frames.Length;
+        var frameIndex = DateTime.Now.Millisecond / 100 % frames.Length;
         return frames[frameIndex];
     }
 
@@ -72,7 +72,7 @@ public class ProgressPanel : ITuiComponent
 
     public Task InitializeAsync(IRenderContext context)
     {
-        context.Logger.LogDebug("ProgressPanel initialized");
+        context.Logger.LogTrace("ProgressPanel initialized");
         return Task.CompletedTask;
     }
 

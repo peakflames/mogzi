@@ -73,4 +73,17 @@ public interface ITuiMediator
     /// </summary>
     /// <param name="component">The component to unregister</param>
     void UnregisterComponent(ITuiComponent component);
+
+    /// <summary>
+    /// Notifies the mediator that the chat history has changed.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task NotifyHistoryChangedAsync();
+
+    /// <summary>
+    /// Starts the AI processing workflow.
+    /// </summary>
+    /// <param name="context">The TUI context</param>
+    /// <returns>A task representing the asynchronous operation</returns>
+    Task StartAiProcessingWorkflow(ITuiContext context);
 }

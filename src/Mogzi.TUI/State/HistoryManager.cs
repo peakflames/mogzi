@@ -1,15 +1,10 @@
 namespace Mogzi.TUI.State;
 
-public class HistoryManager(StateManager stateManager)
+public class HistoryManager(ITuiMediator mediator)
 {
     private readonly List<ChatMessage> _completedMessages = [];
     private readonly List<ChatMessage> _pendingMessages = [];
-    private readonly StateManager _stateManager = stateManager;
-
-    /// <summary>
-    /// Unique identifier for this HistoryManager instance for state change notifications.
-    /// </summary>
-    public string ComponentId { get; } = "HistoryManager";
+    private readonly ITuiMediator _mediator = mediator;
 
     public void AddUserMessage(ChatMessage message)
     {
@@ -79,6 +74,8 @@ public class HistoryManager(StateManager stateManager)
 
     private void NotifyStateChanged()
     {
-        _stateManager.NotifyStateChanged(ComponentId);
+        // This is now handled by the mediator, which will trigger a re-render.
+        // In a more advanced implementation, the mediator could notify specific components.
+        _ = _mediator.NotifyHistoryChangedAsync();
     }
 }

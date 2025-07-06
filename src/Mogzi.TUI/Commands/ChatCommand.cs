@@ -26,6 +26,7 @@ public sealed class ChatCommand : ICommand
             var profileName = ArgumentParser.GetString(parsedArgs, ["profile"], null);
             var toolApprovals = ArgumentParser.GetString(parsedArgs, ["tool-approvals", "ta"], null);
 
+
             // Validate tool-approvals value if provided
             if (!string.IsNullOrEmpty(toolApprovals) &&
                 toolApprovals != "readonly" && toolApprovals != "all")
@@ -37,15 +38,19 @@ public sealed class ChatCommand : ICommand
             // Setup dependency injection
             var services = new ServiceCollection();
             ServiceConfiguration.ConfigureServices(services, configPath, profileName, toolApprovals);
+
             var serviceProvider = services.BuildServiceProvider();
 
+
             // Create and run the FlexColumn TUI application
+            var logger = serviceProvider.GetRequiredService<ILogger<ChatCommand>>();
             var app = serviceProvider.GetRequiredService<FlexColumnTuiApp>();
 
             // Convert parsed args back to string array format for compatibility
             var tuiArgs = BuildArgsFromParsed(parsedArgs);
+            var result = await app.RunAsync(tuiArgs);
 
-            return await app.RunAsync(tuiArgs);
+            return result;
         }
         catch (OperationCanceledException)
         {

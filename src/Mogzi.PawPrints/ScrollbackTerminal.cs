@@ -1,11 +1,13 @@
 namespace Mogzi.PawPrints;
 
-public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal
+public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal, IDisposable
 {
     private readonly IAnsiConsole _console = console;
     private readonly Lock _lock = new();
+    private readonly ManualResetEventSlim _refreshSignal = new(false);
     private int _dynamicContentLineCount = 0;
     private int _updatableContentLineCount = 0;
+    private bool _isDisposed = false;
     private bool _isShutdown = false;
 
     public void Initialize()
@@ -45,25 +47,24 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal
 
     public async Task StartDynamicDisplayAsync(Func<IRenderable> dynamicContentProvider, CancellationToken cancellationToken)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        while (!cancellationToken.IsCancellationRequested && !_isDisposed)
         {
-            if (_isShutdown)
-            {
-                break;
-            }
-
             var dynamicContent = dynamicContentProvider();
             UpdateDynamic(dynamicContent);
 
             try
             {
-                await Task.Delay(50, cancellationToken);
+                // Wait for either the delay to complete or a refresh to be signaled
+                _ = _refreshSignal.Wait(50, cancellationToken);
+                _refreshSignal.Reset(); // Reset the signal after waiting
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException)
             {
                 break;
             }
         }
+
+        await Task.CompletedTask;
     }
 
     public void Shutdown()
@@ -80,6 +81,26 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal
             ClearDynamicContent();
         }
         _console.Cursor.Show();
+    }
+
+    public void Refresh()
+    {
+        if (!_isDisposed)
+        {
+            // This is a non-blocking call to signal the event.
+            _refreshSignal.Set();
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+        _isDisposed = true;
+        _refreshSignal.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     private void UpdateDynamic(IRenderable content)

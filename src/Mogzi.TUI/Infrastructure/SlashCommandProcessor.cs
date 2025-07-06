@@ -35,7 +35,7 @@ public sealed class SlashCommandProcessor
         _logger = logger;
         _chatClient = chatClient;
         RegisterCommands();
-        _logger?.LogDebug("SlashCommandProcessor initialized with {Count} commands", _commands.Count);
+        _logger?.LogTrace("SlashCommandProcessor initialized with {Count} commands", _commands.Count);
     }
 
     /// <summary>
@@ -66,7 +66,7 @@ public sealed class SlashCommandProcessor
                 return true;
             }
 
-            _logger?.LogDebug("Executing slash command: {Command} with args: {Args}", command, args);
+            _logger?.LogTrace("Executing slash command: {Command} with args: {Args}", command, args);
             output = cmd.ExecuteWithOutput?.Invoke(args) ?? "Command executed successfully";
             return true;
         }
@@ -230,26 +230,6 @@ public sealed class SlashCommandProcessor
     }
 
     /// <summary>
-    /// Shows an error message for unknown commands.
-    /// </summary>
-    private void ShowUnknownCommand(string command)
-    {
-        var content = new Rows(
-            new Markup($"[red]Unknown command:[/] {command}"),
-            new Markup("[yellow]Tip:[/] Type [blue]/help[/] to see available commands")
-        );
-
-        var panel = new Panel(content)
-            .Header(" Command Error ")
-            .Border(BoxBorder.Heavy)
-            .BorderColor(Color.Red)
-            .Padding(1, 0);
-
-        _console.Write(panel);
-        _console.WriteLine();
-    }
-
-    /// <summary>
     /// Gets an error message for unknown commands.
     /// </summary>
     private string GetUnknownCommandMessage(string command)
@@ -335,7 +315,7 @@ public sealed class SlashCommandProcessor
     {
         try
         {
-            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            var assembly = Assembly.GetExecutingAssembly();
             var version = assembly.GetName().Version;
             return version?.ToString() ?? "UNKNOWN";
         }

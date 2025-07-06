@@ -1,17 +1,10 @@
 namespace Mogzi.TUI.Models;
 
-public class CompletionItem
+public class CompletionItem(string text, string description = "", CompletionItemType type = CompletionItemType.Text)
 {
-    public string Text { get; }
-    public string Description { get; }
-    public CompletionItemType Type { get; }
-
-    public CompletionItem(string text, string description = "", CompletionItemType type = CompletionItemType.Text)
-    {
-        Text = text;
-        Description = description;
-        Type = type;
-    }
+    public string Text { get; } = text;
+    public string Description { get; } = description;
+    public CompletionItemType Type { get; } = type;
 }
 
 public enum CompletionItemType

@@ -10,11 +10,11 @@ public class FilePathProvider(IWorkingDirectoryProvider workingDirectoryProvider
 
     public bool ShouldTrigger(string input, int cursorPosition)
     {
-        // _logger.LogDebug("FilePathProvider.ShouldTrigger called with input='{Input}', cursorPosition={CursorPosition}", input, cursorPosition);
+        // _logger.LogTrace("FilePathProvider.ShouldTrigger called with input='{Input}', cursorPosition={CursorPosition}", input, cursorPosition);
 
         if (cursorPosition <= 0 || cursorPosition > input.Length)
         {
-            // _logger.LogDebug("FilePathProvider.ShouldTrigger returning false - invalid cursor position");
+            // _logger.LogTrace("FilePathProvider.ShouldTrigger returning false - invalid cursor position");
             return false;
         }
 
@@ -27,7 +27,7 @@ public class FilePathProvider(IWorkingDirectoryProvider workingDirectoryProvider
                 // Found @, check if it's at word boundary or start
                 if (i == 0 || char.IsWhiteSpace(input[i - 1]))
                 {
-                    _logger.LogDebug("FilePathProvider.ShouldTrigger returning true - found @ at valid position {Position}", i);
+                    _logger.LogTrace("FilePathProvider.ShouldTrigger returning true - found @ at valid position {Position}", i);
                     return true;
                 }
             }
@@ -38,7 +38,7 @@ public class FilePathProvider(IWorkingDirectoryProvider workingDirectoryProvider
             }
         }
 
-        // _logger.LogDebug("FilePathProvider.ShouldTrigger returning false - no @ found");
+        // _logger.LogTrace("FilePathProvider.ShouldTrigger returning false - no @ found");
         return false;
     }
 
@@ -83,15 +83,15 @@ public class FilePathProvider(IWorkingDirectoryProvider workingDirectoryProvider
 
     public async Task<List<CompletionItem>> GetSuggestionsAsync(string partialInput)
     {
-        // _logger.LogDebug("FilePathProvider.GetSuggestionsAsync called with partialInput='{PartialInput}'", partialInput);
+        // _logger.LogTrace("FilePathProvider.GetSuggestionsAsync called with partialInput='{PartialInput}'", partialInput);
 
         try
         {
             var workingDir = _workingDirectoryProvider.GetCurrentDirectory();
-            // _logger.LogDebug("Working directory: {WorkingDir}", workingDir);
+            // _logger.LogTrace("Working directory: {WorkingDir}", workingDir);
 
             var searchPath = string.IsNullOrEmpty(partialInput) ? workingDir : Path.Combine(workingDir, partialInput);
-            // _logger.LogDebug("Search path: {SearchPath}", searchPath);
+            // _logger.LogTrace("Search path: {SearchPath}", searchPath);
 
             // If partialInput ends with a path separator, search in that directory
             string searchDirectory;
@@ -114,18 +114,18 @@ public class FilePathProvider(IWorkingDirectoryProvider workingDirectoryProvider
                 searchPattern = Path.GetFileName(partialInput);
             }
 
-            // _logger.LogDebug("Search directory: {SearchDirectory}, pattern: '{SearchPattern}'", searchDirectory, searchPattern);
+            // _logger.LogTrace("Search directory: {SearchDirectory}, pattern: '{SearchPattern}'", searchDirectory, searchPattern);
 
             // Ensure we stay within the working directory for security
             if (!IsWithinWorkingDirectory(searchDirectory, workingDir))
             {
-                _logger.LogDebug("Search directory is outside working directory, returning empty results");
+                _logger.LogTrace("Search directory is outside working directory, returning empty results");
                 return [];
             }
 
             if (!Directory.Exists(searchDirectory))
             {
-                _logger.LogDebug("Search directory does not exist, returning empty results");
+                _logger.LogTrace("Search directory does not exist, returning empty results");
                 return [];
             }
 
@@ -133,27 +133,27 @@ public class FilePathProvider(IWorkingDirectoryProvider workingDirectoryProvider
 
             // Get directories
             var directories = Directory.GetDirectories(searchDirectory)
-                .Where(dir => string.IsNullOrEmpty(searchPattern) || 
+                .Where(dir => string.IsNullOrEmpty(searchPattern) ||
                              Path.GetFileName(dir).StartsWith(searchPattern, StringComparison.OrdinalIgnoreCase))
                 .Take(20); // Limit results
 
-            // _logger.LogDebug("Found {DirectoryCount} directories", directories.Count());
+            // _logger.LogTrace("Found {DirectoryCount} directories", directories.Count());
 
             foreach (var dir in directories)
             {
                 var relativePath = GetRelativePath(dir, workingDir);
                 var displayName = relativePath + "/";
                 completionItems.Add(new CompletionItem(displayName, "Directory", CompletionItemType.Directory));
-                // _logger.LogDebug("Added directory: {DisplayName}", displayName);
+                // _logger.LogTrace("Added directory: {DisplayName}", displayName);
             }
 
             // Get files
             var files = Directory.GetFiles(searchDirectory)
-                .Where(file => string.IsNullOrEmpty(searchPattern) || 
+                .Where(file => string.IsNullOrEmpty(searchPattern) ||
                               Path.GetFileName(file).StartsWith(searchPattern, StringComparison.OrdinalIgnoreCase))
                 .Take(20); // Limit results
 
-            // _logger.LogDebug("Found {FileCount} files", files.Count());
+            // _logger.LogTrace("Found {FileCount} files", files.Count());
 
             foreach (var file in files)
             {
@@ -161,10 +161,10 @@ public class FilePathProvider(IWorkingDirectoryProvider workingDirectoryProvider
                 var fileInfo = new FileInfo(file);
                 var description = $"File ({fileInfo.Length} bytes)";
                 completionItems.Add(new CompletionItem(relativePath, description, CompletionItemType.File));
-                // _logger.LogDebug("Added file: {RelativePath}", relativePath);
+                // _logger.LogTrace("Added file: {RelativePath}", relativePath);
             }
 
-            _logger.LogDebug("Returning {CompletionCount} completion items", completionItems.Count);
+            _logger.LogTrace("Returning {CompletionCount} completion items", completionItems.Count);
             return await Task.FromResult(completionItems.OrderBy(c => c.Type).ThenBy(c => c.Text).ToList());
         }
         catch (Exception ex)

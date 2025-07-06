@@ -39,7 +39,7 @@ public class TuiStateManager(ILogger<TuiStateManager> logger) : ITuiStateManager
     public Task InitializeAsync(ITuiContext context)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
-        _logger.LogDebug("TuiStateManager initialized with context");
+        _logger.LogTrace("TuiStateManager initialized with context");
 
         // Start with Input state
         return TransitionToStateAsync(ChatState.Input);
@@ -57,9 +57,9 @@ public class TuiStateManager(ILogger<TuiStateManager> logger) : ITuiStateManager
 
         lock (_stateLock)
         {
-            if (_currentStateType == newStateType)
+            if (_currentStateType == newStateType && _currentState != null)
             {
-                _logger.LogDebug("Already in state {StateType}, skipping transition", newStateType);
+                _logger.LogTrace("Already in state {StateType}, skipping transition", newStateType);
                 return;
             }
 
@@ -78,7 +78,7 @@ public class TuiStateManager(ILogger<TuiStateManager> logger) : ITuiStateManager
 
         try
         {
-            _logger.LogDebug("Transitioning from {PreviousState} to {NewState}",
+            _logger.LogTrace("Transitioning from {PreviousState} to {NewState}",
                 previousState?.Name ?? "none", newState.Name);
 
             // Call exit on previous state
@@ -90,7 +90,7 @@ public class TuiStateManager(ILogger<TuiStateManager> logger) : ITuiStateManager
             // Call enter on new state
             await newState.OnEnterAsync(_context, previousState);
 
-            _logger.LogDebug("Successfully transitioned to {NewState}", newState.Name);
+            _logger.LogTrace("Successfully transitioned to {NewState}", newState.Name);
         }
         catch (Exception ex)
         {
@@ -138,14 +138,22 @@ public class TuiStateManager(ILogger<TuiStateManager> logger) : ITuiStateManager
 
     public async Task HandleCharacterTypedAsync(CharacterTypedEventArgs e)
     {
+        _logger.LogTrace("TuiStateManager.HandleCharacterTypedAsync called with character: '{Character}'", e.Character);
+        _logger.LogTrace("TuiStateManager context null check: {IsNull}", _context == null);
+        _logger.LogTrace("TuiStateManager currentState null check: {IsNull}", _currentState == null);
+
         if (_context == null || _currentState == null)
         {
+            _logger.LogWarning("TuiStateManager early return - context null: {ContextNull}, currentState null: {StateNull}",
+                _context == null, _currentState == null);
             return;
         }
 
         try
         {
+            _logger.LogTrace("TuiStateManager delegating character '{Character}' to state: {StateName}", e.Character, _currentState.Name);
             await _currentState.HandleCharacterTypedAsync(_context, e);
+            _logger.LogTrace("TuiStateManager successfully delegated character '{Character}' to state: {StateName}", e.Character, _currentState.Name);
         }
         catch (Exception ex)
         {
@@ -163,7 +171,7 @@ public class TuiStateManager(ILogger<TuiStateManager> logger) : ITuiStateManager
             _stateFactories[stateType] = stateFactory;
         }
 
-        _logger.LogDebug("Registered state factory for {StateType}", stateType);
+        _logger.LogTrace("Registered state factory for {StateType}", stateType);
     }
 
     public async Task ShutdownAsync()
@@ -188,6 +196,6 @@ public class TuiStateManager(ILogger<TuiStateManager> logger) : ITuiStateManager
             }
         }
 
-        _logger.LogDebug("TuiStateManager shutdown complete");
+        _logger.LogTrace("TuiStateManager shutdown complete");
     }
 }

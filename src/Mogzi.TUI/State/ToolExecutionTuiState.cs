@@ -68,13 +68,13 @@ public class ToolExecutionTuiState : ITuiState
 
     public Task OnEnterAsync(ITuiContext context, ITuiState? previousState)
     {
-        context.Logger.LogDebug("Entering ToolExecutionTuiState from {PreviousState}", previousState?.Name ?? "none");
+        context.Logger.LogTrace("Entering ToolExecutionTuiState from {PreviousState}", previousState?.Name ?? "none");
         return Task.CompletedTask;
     }
 
     public Task OnExitAsync(ITuiContext context, ITuiState? nextState)
     {
-        context.Logger.LogDebug("Exiting ToolExecutionTuiState to {NextState}", nextState?.Name ?? "none");
+        context.Logger.LogTrace("Exiting ToolExecutionTuiState to {NextState}", nextState?.Name ?? "none");
         return Task.CompletedTask;
     }
 

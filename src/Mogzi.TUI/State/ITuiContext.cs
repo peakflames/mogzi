@@ -62,6 +62,11 @@ public interface ITuiContext
     IAppService AppService { get; }
 
     /// <summary>
+    /// Gets the TUI mediator for coordinating component interactions.
+    /// </summary>
+    ITuiMediator Mediator { get; }
+
+    /// <summary>
     /// Gets the current tool progress text.
     /// </summary>
     string ToolProgress { get; set; }

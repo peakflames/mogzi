@@ -15,7 +15,7 @@ public class FooterPanel : ITuiComponent
             context.TuiContext.WorkingDirectoryProvider.GetCurrentDirectory());
         var modelInfo = context.RenderingUtilities.FormatModelInfo(context.TuiContext.AppService);
         var tokenInfo = context.RenderingUtilities.FormatTokenUsage(
-            context.TuiContext.AppService, 
+            context.TuiContext.AppService,
             context.TuiContext.HistoryManager.GetCurrentChatHistory());
 
         var content = $"[skyblue2]{currentDir}[/]  [rosybrown]{modelInfo}[/] [dim]({tokenInfo})[/]";
@@ -32,7 +32,7 @@ public class FooterPanel : ITuiComponent
 
     public Task InitializeAsync(IRenderContext context)
     {
-        context.Logger.LogDebug("FooterPanel initialized");
+        context.Logger.LogTrace("FooterPanel initialized");
         return Task.CompletedTask;
     }
 

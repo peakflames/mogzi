@@ -93,42 +93,42 @@ public class InputTuiState : ITuiState
                     break;
 
                 case ConsoleKey.UpArrow:
-                    NavigateCommandHistory(context, up: true);
+                    await NavigateCommandHistoryAsync(context, up: true);
                     e.Handled = true;
                     break;
 
                 case ConsoleKey.DownArrow:
-                    NavigateCommandHistory(context, up: false);
+                    await NavigateCommandHistoryAsync(context, up: false);
                     e.Handled = true;
                     break;
 
                 case ConsoleKey.LeftArrow:
-                    MoveCursorLeft(context);
+                    await MoveCursorLeftAsync(context);
                     e.Handled = true;
                     break;
 
                 case ConsoleKey.RightArrow:
-                    MoveCursorRight(context);
+                    await MoveCursorRightAsync(context);
                     e.Handled = true;
                     break;
 
                 case ConsoleKey.Home:
-                    MoveCursorToStart(context);
+                    await MoveCursorToStartAsync(context);
                     e.Handled = true;
                     break;
 
                 case ConsoleKey.End:
-                    MoveCursorToEnd(context);
+                    await MoveCursorToEndAsync(context);
                     e.Handled = true;
                     break;
 
                 case ConsoleKey.Backspace:
-                    DeleteCharacterBefore(context);
+                    await DeleteCharacterBeforeAsync(context);
                     e.Handled = true;
                     break;
 
                 case ConsoleKey.Delete:
-                    DeleteCharacterAfter(context);
+                    await DeleteCharacterAfterAsync(context);
                     e.Handled = true;
                     break;
 
@@ -153,26 +153,25 @@ public class InputTuiState : ITuiState
 
         try
         {
-            InsertCharacter(context, e.Character);
+            context.Logger.LogTrace("InputTuiState handling character: {Character}", e.Character);
+            await InsertCharacterAsync(context, e.Character);
             e.Handled = true;
         }
         catch (Exception ex)
         {
             context.Logger.LogError(ex, "Error handling character typed in InputTuiState: {Character}", e.Character);
         }
-
-        await Task.CompletedTask;
     }
 
     public Task OnEnterAsync(ITuiContext context, ITuiState? previousState)
     {
-        context.Logger.LogDebug("Entering InputTuiState from {PreviousState}", previousState?.Name ?? "none");
+        context.Logger.LogTrace("Entering InputTuiState from {PreviousState}", previousState?.Name ?? "none");
         return Task.CompletedTask;
     }
 
     public Task OnExitAsync(ITuiContext context, ITuiState? nextState)
     {
-        context.Logger.LogDebug("Exiting InputTuiState to {NextState}", nextState?.Name ?? "none");
+        context.Logger.LogTrace("Exiting InputTuiState to {NextState}", nextState?.Name ?? "none");
         return Task.CompletedTask;
     }
 
@@ -355,7 +354,7 @@ public class InputTuiState : ITuiState
         }
     }
 
-    private void NavigateCommandHistory(ITuiContext context, bool up)
+    private async Task NavigateCommandHistoryAsync(ITuiContext context, bool up)
     {
         if (context.CommandHistory.Count == 0)
         {
@@ -390,7 +389,7 @@ public class InputTuiState : ITuiState
         }
 
         context.InputContext.CursorPosition = context.InputContext.CurrentInput.Length;
-        UpdateAutocompleteState(context);
+        await UpdateAutocompleteStateAsync(context);
     }
 
     private async Task SubmitCurrentInput(ITuiContext context)
@@ -448,15 +447,15 @@ public class InputTuiState : ITuiState
                 context.AppService.ChatClient.Config.ToolApprovals
             );
 
-            context.Logger?.LogDebug("Generated environment prompt: {EnvPrompt}", envPrompt);
+            context.Logger?.LogTrace("Generated environment prompt: {EnvPrompt}", envPrompt);
 
             // Create user message with environment context appended (for AI processing)
             var fullUserMessage = Mogzi.Utils.MessageUtils.AppendSystemEnvironment(input, envPrompt);
             var userMessage = new ChatMessage(ChatRole.User, fullUserMessage);
             context.HistoryManager.AddUserMessage(userMessage);
 
-            context.Logger?.LogDebug("Full user message (with env context) length: {Length}", fullUserMessage.Length);
-            context.Logger?.LogDebug("Original user input: {Input}", input);
+            context.Logger?.LogTrace("Full user message (with env context) length: {Length}", fullUserMessage.Length);
+            context.Logger?.LogTrace("Original user input: {Input}", input);
 
             // Display only the original user input (stripped of env context)
             var displayMessage = new ChatMessage(ChatRole.User, input);
@@ -491,61 +490,18 @@ public class InputTuiState : ITuiState
         }
     }
 
-    private IRenderable RenderMessage(ChatMessage message)
+    private async Task InsertCharacterAsync(ITuiContext context, char character)
     {
-        if (string.IsNullOrEmpty(message.Text))
-        {
-            return new Text(string.Empty);
-        }
-
-        var messageType = GetMessageType(message);
-        var prefix = messageType switch
-        {
-            MessageType.User => "[dim]>[/] ",
-            MessageType.Assistant => "✦ ",
-            _ => ""
-        };
-        var color = messageType switch
-        {
-            MessageType.User => "dim",
-            MessageType.Assistant => "skyblue1",
-            _ => "white"
-        };
-
-        // Strip system environment context from user messages for display
-        var displayText = message.Role == ChatRole.User
-            ? Mogzi.Utils.MessageUtils.StripSystemEnvironment(message.Text)
-            : message.Text;
-
-        return new Markup($"[{color}]{prefix}{displayText}[/]");
-    }
-
-    private MessageType GetMessageType(ChatMessage message)
-    {
-        if (message.Role == ChatRole.User)
-        {
-            return MessageType.User;
-        }
-        else if (message.Role == ChatRole.Assistant)
-        {
-            return MessageType.Assistant;
-        }
-        else
-        {
-            return MessageType.System;
-        }
-    }
-
-    private void InsertCharacter(ITuiContext context, char character)
-    {
+        var oldInput = context.InputContext.CurrentInput;
         context.InputContext.CursorPosition = Math.Max(0, Math.Min(context.InputContext.CursorPosition, context.InputContext.CurrentInput.Length));
         context.InputContext.CurrentInput = context.InputContext.CurrentInput.Insert(context.InputContext.CursorPosition, character.ToString());
         context.InputContext.CursorPosition++;
         context.CommandHistoryIndex = -1;
-        UpdateAutocompleteState(context);
+        context.Logger.LogTrace("Input buffer changed from '{OldInput}' to '{NewInput}'", oldInput, context.InputContext.CurrentInput);
+        await UpdateAutocompleteStateAsync(context);
     }
 
-    private void DeleteCharacterBefore(ITuiContext context)
+    private async Task DeleteCharacterBeforeAsync(ITuiContext context)
     {
         if (context.InputContext.CurrentInput.Length == 0)
         {
@@ -561,10 +517,10 @@ public class InputTuiState : ITuiState
         }
 
         context.CommandHistoryIndex = -1;
-        UpdateAutocompleteState(context);
+        await UpdateAutocompleteStateAsync(context);
     }
 
-    private void DeleteCharacterAfter(ITuiContext context)
+    private async Task DeleteCharacterAfterAsync(ITuiContext context)
     {
         if (context.InputContext.CurrentInput.Length == 0)
         {
@@ -579,37 +535,37 @@ public class InputTuiState : ITuiState
         }
 
         context.CommandHistoryIndex = -1;
-        UpdateAutocompleteState(context);
+        await UpdateAutocompleteStateAsync(context);
     }
 
-    private void MoveCursorLeft(ITuiContext context)
+    private async Task MoveCursorLeftAsync(ITuiContext context)
     {
         if (context.InputContext.CursorPosition > 0)
         {
             context.InputContext.CursorPosition--;
-            UpdateAutocompleteState(context);
+            await UpdateAutocompleteStateAsync(context);
         }
     }
 
-    private void MoveCursorRight(ITuiContext context)
+    private async Task MoveCursorRightAsync(ITuiContext context)
     {
         if (context.InputContext.CursorPosition < context.InputContext.CurrentInput.Length)
         {
             context.InputContext.CursorPosition++;
-            UpdateAutocompleteState(context);
+            await UpdateAutocompleteStateAsync(context);
         }
     }
 
-    private void MoveCursorToStart(ITuiContext context)
+    private async Task MoveCursorToStartAsync(ITuiContext context)
     {
         context.InputContext.CursorPosition = 0;
-        UpdateAutocompleteState(context);
+        await UpdateAutocompleteStateAsync(context);
     }
 
-    private void MoveCursorToEnd(ITuiContext context)
+    private async Task MoveCursorToEndAsync(ITuiContext context)
     {
         context.InputContext.CursorPosition = context.InputContext.CurrentInput.Length;
-        UpdateAutocompleteState(context);
+        await UpdateAutocompleteStateAsync(context);
     }
 
     private void ClearCurrentInput(ITuiContext context)
@@ -618,7 +574,7 @@ public class InputTuiState : ITuiState
         context.CommandHistoryIndex = -1;
     }
 
-    private async void UpdateAutocompleteState(ITuiContext context)
+    private async Task UpdateAutocompleteStateAsync(ITuiContext context)
     {
         try
         {
@@ -692,6 +648,53 @@ public class InputTuiState : ITuiState
             context.InputContext.SelectedSuggestionIndex =
                 (context.InputContext.SelectedSuggestionIndex + 1)
                 % context.InputContext.CompletionItems.Count;
+        }
+    }
+
+    // TODO: This is temparary. Once the functionality is confirmed, one will need to propose the follow-up refactoring to move the rendering methods to RenderingUtilities.cs.
+    private IRenderable RenderMessage(ChatMessage message)
+    {
+        if (string.IsNullOrEmpty(message.Text))
+        {
+            return new Text(string.Empty);
+        }
+
+        var messageType = GetMessageType(message);
+        var prefix = messageType switch
+        {
+            MessageType.User => "[dim]>[/] ",
+            MessageType.Assistant => "✦ ",
+            _ => ""
+        };
+        var color = messageType switch
+        {
+            MessageType.User => "dim",
+            MessageType.Assistant => "skyblue1",
+            _ => "white"
+        };
+
+        // Strip system environment context from user messages for display
+        var displayText = message.Role == ChatRole.User
+            ? Mogzi.Utils.MessageUtils.StripSystemEnvironment(message.Text)
+            : message.Text;
+
+        return new Markup($"[{color}]{prefix}{displayText}[/]");
+    }
+
+    // TODO: This is temparary. Once the functionality is confirmed, one will need to propose the follow-up refactoring to move the rendering methods to RenderingUtilities.cs.
+    private MessageType GetMessageType(ChatMessage message)
+    {
+        if (message.Role == ChatRole.User)
+        {
+            return MessageType.User;
+        }
+        else if (message.Role == ChatRole.Assistant)
+        {
+            return MessageType.Assistant;
+        }
+        else
+        {
+            return MessageType.System;
         }
     }
 }

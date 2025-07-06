@@ -4,18 +4,13 @@ namespace Mogzi.TUI.Components;
 /// Manages the lifecycle and coordination of TUI components.
 /// Handles component registration, layout composition, and input distribution.
 /// </summary>
-public class TuiComponentManager : ITuiComponentManager
+public class TuiComponentManager(ILogger<TuiComponentManager> logger) : ITuiComponentManager
 {
-    private readonly Dictionary<string, ITuiComponent> _components = new();
-    private readonly ILogger<TuiComponentManager> _logger;
+    private readonly Dictionary<string, ITuiComponent> _components = [];
+    private readonly ILogger<TuiComponentManager> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
     public IReadOnlyDictionary<string, ITuiComponent> Components => _components.AsReadOnly();
     public ITuiLayout? CurrentLayout { get; set; }
-
-    public TuiComponentManager(ILogger<TuiComponentManager> logger)
-    {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
 
     public void RegisterComponent(ITuiComponent component)
     {
@@ -27,7 +22,7 @@ public class TuiComponentManager : ITuiComponentManager
         }
 
         _components[component.Name] = component;
-        _logger.LogDebug("Registered component: {ComponentName}", component.Name);
+        _logger.LogTrace("Registered component: {ComponentName}", component.Name);
     }
 
     public bool UnregisterComponent(string componentName)
@@ -36,7 +31,7 @@ public class TuiComponentManager : ITuiComponentManager
 
         if (_components.Remove(componentName))
         {
-            _logger.LogDebug("Unregistered component: {ComponentName}", componentName);
+            _logger.LogTrace("Unregistered component: {ComponentName}", componentName);
             return true;
         }
 
@@ -59,6 +54,9 @@ public class TuiComponentManager : ITuiComponentManager
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        _logger.LogTrace("RenderLayout: TuiContext instance ID: {ContextId}, CurrentInput: '{CurrentInput}'",
+            context.TuiContext.GetHashCode(), context.TuiContext.InputContext.CurrentInput);
+
         if (CurrentLayout == null)
         {
             _logger.LogWarning("No layout set, returning empty content");
@@ -75,7 +73,10 @@ public class TuiComponentManager : ITuiComponentManager
 
         try
         {
-            return CurrentLayout.Compose(_components, context);
+            _logger.LogTrace("RenderLayout: Calling layout.Compose with {ComponentCount} components", _components.Count);
+            var result = CurrentLayout.Compose(_components, context);
+            _logger.LogTrace("RenderLayout: Layout composition completed successfully");
+            return result;
         }
         catch (Exception ex)
         {
@@ -98,7 +99,7 @@ public class TuiComponentManager : ITuiComponentManager
                 if (await component.HandleInputAsync(context, inputEvent))
                 {
                     handled = true;
-                    _logger.LogDebug("Input event handled by component: {ComponentName}", component.Name);
+                    _logger.LogTrace("Input event handled by component: {ComponentName}", component.Name);
                     break; // Stop at first component that handles the input
                 }
             }
@@ -115,14 +116,14 @@ public class TuiComponentManager : ITuiComponentManager
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        _logger.LogDebug("Initializing {ComponentCount} components", _components.Count);
+        _logger.LogTrace("Initializing {ComponentCount} components", _components.Count);
 
         foreach (var component in _components.Values)
         {
             try
             {
                 await component.InitializeAsync(context);
-                _logger.LogDebug("Initialized component: {ComponentName}", component.Name);
+                _logger.LogTrace("Initialized component: {ComponentName}", component.Name);
             }
             catch (Exception ex)
             {
@@ -130,19 +131,19 @@ public class TuiComponentManager : ITuiComponentManager
             }
         }
 
-        _logger.LogDebug("Component initialization complete");
+        _logger.LogTrace("Component initialization complete");
     }
 
     public async Task DisposeComponentsAsync()
     {
-        _logger.LogDebug("Disposing {ComponentCount} components", _components.Count);
+        _logger.LogTrace("Disposing {ComponentCount} components", _components.Count);
 
         foreach (var component in _components.Values)
         {
             try
             {
                 await component.DisposeAsync();
-                _logger.LogDebug("Disposed component: {ComponentName}", component.Name);
+                _logger.LogTrace("Disposed component: {ComponentName}", component.Name);
             }
             catch (Exception ex)
             {
@@ -151,7 +152,7 @@ public class TuiComponentManager : ITuiComponentManager
         }
 
         _components.Clear();
-        _logger.LogDebug("Component disposal complete");
+        _logger.LogTrace("Component disposal complete");
     }
 
     public void SetComponentVisibility(string componentName, bool isVisible)
@@ -161,7 +162,7 @@ public class TuiComponentManager : ITuiComponentManager
         if (_components.TryGetValue(componentName, out var component))
         {
             component.IsVisible = isVisible;
-            _logger.LogDebug("Set component {ComponentName} visibility to {IsVisible}", componentName, isVisible);
+            _logger.LogTrace("Set component {ComponentName} visibility to {IsVisible}", componentName, isVisible);
         }
         else
         {
@@ -180,12 +181,12 @@ public class TuiComponentManager : ITuiComponentManager
                 SetComponentVisibility("InputPanel", true);
                 SetComponentVisibility("FooterPanel", true);
                 SetComponentVisibility("ProgressPanel", false);
-                
+
                 // Show autocomplete/user selection panels based on input context
                 var inputContext = context.TuiContext.InputContext;
                 SetComponentVisibility("AutocompletePanel", inputContext.State == InputState.Autocomplete && inputContext.ShowSuggestions);
                 SetComponentVisibility("UserSelectionPanel", inputContext.State == InputState.UserSelection);
-                
+
                 // Show welcome panel if no chat history
                 var chatHistory = context.TuiContext.HistoryManager.GetCurrentChatHistory();
                 SetComponentVisibility("WelcomePanel", !chatHistory.Any());
@@ -206,6 +207,6 @@ public class TuiComponentManager : ITuiComponentManager
                 break;
         }
 
-        _logger.LogDebug("Updated component visibility for state: {CurrentState}", currentState);
+        _logger.LogTrace("Updated component visibility for state: {CurrentState}", currentState);
     }
 }

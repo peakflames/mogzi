@@ -7,16 +7,16 @@ public class AutocompleteManager(IEnumerable<IAutocompleteProvider> providers, I
 
     public IAutocompleteProvider? DetectTrigger(string input, int cursorPosition)
     {
-        // _logger.LogDebug("AutocompleteManager.DetectTrigger called with input='{Input}', cursorPosition={CursorPosition}", input, cursorPosition);
+        // _logger.LogTrace("AutocompleteManager.DetectTrigger called with input='{Input}', cursorPosition={CursorPosition}", input, cursorPosition);
 
         try
         {
             foreach (var provider in _providers)
             {
-                // _logger.LogDebug("Checking provider {ProviderType} (trigger: '{TriggerChar}')", provider.Type, provider.TriggerCharacter);
+                // _logger.LogTrace("Checking provider {ProviderType} (trigger: '{TriggerChar}')", provider.Type, provider.TriggerCharacter);
                 if (provider.ShouldTrigger(input, cursorPosition))
                 {
-                    // _logger.LogDebug("Autocomplete triggered for provider {ProviderType}", provider.Type);
+                    // _logger.LogTrace("Autocomplete triggered for provider {ProviderType}", provider.Type);
                     return provider;
                 }
             }
@@ -26,7 +26,7 @@ public class AutocompleteManager(IEnumerable<IAutocompleteProvider> providers, I
             _logger.LogError(ex, "Error detecting autocomplete trigger");
         }
 
-        // _logger.LogDebug("No autocomplete provider triggered");
+        // _logger.LogTrace("No autocomplete provider triggered");
         return null;
     }
 
