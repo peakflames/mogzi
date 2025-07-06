@@ -65,10 +65,24 @@ public class ThinkingTuiState : ITuiState
 
     public async Task OnEnterAsync(ITuiContext context, ITuiState? previousState)
     {
+        context.Logger.LogTrace("=== ThinkingTuiState.OnEnterAsync BEGIN ===");
         context.Logger.LogTrace("Entering ThinkingTuiState from {PreviousState}", previousState?.Name ?? "none");
+        context.Logger.LogTrace("AiOperationCts is null: {IsNull}", context.AiOperationCts == null);
 
-        // Start AI processing when entering thinking state
-        await context.Mediator.StartAiProcessingWorkflow(context);
+        try
+        {
+            // Start AI processing when entering thinking state
+            context.Logger.LogTrace("Calling StartAiProcessingWorkflow from ThinkingTuiState.OnEnterAsync");
+            await context.Mediator.StartAiProcessingWorkflow(context);
+            context.Logger.LogTrace("StartAiProcessingWorkflow completed successfully");
+        }
+        catch (Exception ex)
+        {
+            context.Logger.LogError(ex, "Error in ThinkingTuiState.OnEnterAsync");
+            throw;
+        }
+
+        context.Logger.LogTrace("=== ThinkingTuiState.OnEnterAsync END ===");
     }
 
     public Task OnExitAsync(ITuiContext context, ITuiState? nextState)

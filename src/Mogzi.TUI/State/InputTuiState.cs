@@ -88,7 +88,9 @@ public class InputTuiState : ITuiState
             switch (e.Key)
             {
                 case ConsoleKey.Enter:
+                    context.Logger.LogTrace("InputTuiState: Enter key detected, calling SubmitCurrentInput");
                     await SubmitCurrentInput(context);
+                    context.Logger.LogTrace("InputTuiState: SubmitCurrentInput completed");
                     e.Handled = true;
                     break;
 
@@ -310,16 +312,22 @@ public class InputTuiState : ITuiState
 
     private async Task SubmitCurrentInput(ITuiContext context)
     {
+        context.Logger.LogTrace("SubmitCurrentInput called with input: '{Input}'", context.InputContext.CurrentInput);
+
         if (string.IsNullOrWhiteSpace(context.InputContext.CurrentInput))
         {
+            context.Logger.LogTrace("SubmitCurrentInput: Input is null or whitespace, returning early");
             return;
         }
 
         var inputToSubmit = context.InputContext.CurrentInput;
+        context.Logger.LogTrace("SubmitCurrentInput: Processing input: '{Input}'", inputToSubmit);
+
         AddToCommandHistory(context, inputToSubmit);
         ClearCurrentInput(context);
 
         await ProcessUserInput(context, inputToSubmit);
+        context.Logger.LogTrace("SubmitCurrentInput: ProcessUserInput completed");
     }
 
     private void AddToCommandHistory(ITuiContext context, string command)
@@ -348,10 +356,13 @@ public class InputTuiState : ITuiState
     {
         try
         {
+            context.Logger.LogTrace("ProcessUserInput: Starting with input '{Input}'", input);
+
             // Add spacing before user message
             context.ScrollbackTerminal.WriteStatic(new Markup(""));
 
             // Get current environment context
+            context.Logger.LogTrace("ProcessUserInput: Getting environment prompt");
             var envPrompt = EnvSystemPrompt.GetEnvPrompt(
                 DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                 context.AppService.ChatClient.OperatingSystem.ToString(),
@@ -363,27 +374,32 @@ public class InputTuiState : ITuiState
                 context.AppService.ChatClient.Config.ToolApprovals
             );
 
-            context.Logger?.LogTrace("Generated environment prompt: {EnvPrompt}", envPrompt);
+            context.Logger.LogTrace("Generated environment prompt: {EnvPrompt}", envPrompt);
 
             // Create user message with environment context appended (for AI processing)
+            context.Logger.LogTrace("ProcessUserInput: Creating user message");
             var fullUserMessage = Mogzi.Utils.MessageUtils.AppendSystemEnvironment(input, envPrompt);
             var userMessage = new ChatMessage(ChatRole.User, fullUserMessage);
             context.HistoryManager.AddUserMessage(userMessage);
 
-            context.Logger?.LogTrace("Full user message (with env context) length: {Length}", fullUserMessage.Length);
-            context.Logger?.LogTrace("Original user input: {Input}", input);
+            context.Logger.LogTrace("Full user message (with env context) length: {Length}", fullUserMessage.Length);
+            context.Logger.LogTrace("Original user input: {Input}", input);
 
             // Display only the original user input (stripped of env context)
+            context.Logger.LogTrace("ProcessUserInput: Displaying user message");
             var displayMessage = new ChatMessage(ChatRole.User, input);
             var renderingUtilities = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
             var themeInfo = context.ServiceProvider.GetRequiredService<IThemeInfo>();
             context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(displayMessage, themeInfo));
 
+            context.Logger.LogTrace("ProcessUserInput: Checking for slash commands");
             if (context.SlashCommandProcessor.TryProcessCommand(input, out var commandOutput))
             {
+                context.Logger.LogTrace("ProcessUserInput: Slash command detected, processing");
                 if (context.InputContext.State == InputState.UserSelection)
                 {
                     // Command is interactive, so we don't process it as a chat message.
+                    context.Logger.LogTrace("ProcessUserInput: Interactive command, returning early");
                     return;
                 }
 
@@ -395,11 +411,14 @@ public class InputTuiState : ITuiState
                     var theme = context.ServiceProvider.GetRequiredService<IThemeInfo>();
                     context.ScrollbackTerminal.WriteStatic(renderingUtils.RenderMessage(commandMessage, theme));
                 }
+                context.Logger.LogTrace("ProcessUserInput: Slash command processed, returning");
                 return;
             }
 
             // Transition to thinking state and start AI processing
+            context.Logger.LogTrace("ProcessUserInput: No slash command, requesting state transition to Thinking");
             await context.RequestStateTransitionAsync(ChatState.Thinking);
+            context.Logger.LogTrace("ProcessUserInput: State transition request completed");
         }
         catch (Exception ex)
         {

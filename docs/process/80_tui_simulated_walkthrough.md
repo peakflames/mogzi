@@ -116,24 +116,25 @@ Input    Dots        Display         Display            Input
 - Each state has dedicated rendering method
 - Animation frames calculated using `DateTime.Now.Millisecond` </sim_results>
 
-### 1. State Machine Pattern
+### 1. State Pattern Implementation
 
-The TUI operates as a clear state machine with three primary states:
+The TUI uses the State Pattern with three ITuiState implementations:
 
-- `ChatState.Input` - User input mode
-- `ChatState.Thinking` - AI processing mode
-- `ChatState.ToolExecution` - Tool execution mode
+- `InputTuiState` - User input mode with autocomplete/selection support
+- `ThinkingTuiState` - AI processing mode with cancellation
+- `ToolExecutionTuiState` - Tool execution mode with progress display
 
-Each state has dedicated rendering logic and input handling behavior.
+Each state handles its own rendering and input through ITuiState interface.
 
-### 2. Event-Driven Architecture
+### 2. Component-Mediated Architecture
 
-The system is heavily event-driven:
+The system uses coordinated component interactions:
 
-- Keyboard events trigger state changes
-- AI response streams trigger UI updates
-- Tool execution events trigger specialized displays
-- All events flow through centralized handlers
+- Keyboard events → TuiStateManager → Current ITuiState
+- AI response streams → FlexColumnMediator → Component updates
+- Tool execution → ProgressPanel + ToolExecutionDisplay
+- State transitions → Component visibility management
+- All coordination flows through ITuiMediator pattern
 
 ### 3. Separation of Static vs Dynamic Content
 
@@ -161,22 +162,24 @@ Consistent tool execution pattern:
 4. Result processing and specialized display
 5. State cleanup and return to input
 
-### 6. Input Context Management
+### 6. Context and Component Management
 
-The `InputContext` serves as a unified state container for:
+The `ITuiContext` serves as a unified service container while `TuiComponentManager` handles:
 
-- Current input text and cursor position
-- Autocomplete state and suggestions
-- User selection state for interactive commands
-- Active providers and completion items
+- Component lifecycle and visibility
+- Layout composition via FlexColumnLayout
+- Input event broadcasting to components
+- Render context creation and coordination
 
-### 7. Rendering Strategy Pattern
+### 7. Component Rendering Pattern
 
-Different rendering strategies based on context:
+Modular rendering through specialized components:
 
-- Input rendering varies by state (normal, autocomplete, user selection)
-- Tool display varies by tool type (write, edit, execute)
-- Progress indicators adapt to current operation
+- InputPanel handles input display with cursor positioning
+- AutocompletePanel/UserSelectionPanel overlay when active
+- ProgressPanel adapts content based on operation type
+- ToolExecutionDisplay provides specialized tool result formatting
+- All components receive IRenderContext for consistent styling
 
 ### 8. Error Handling and Cancellation
 

@@ -211,10 +211,31 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
 
     public async Task StartAiProcessingWorkflow(ITuiContext context)
     {
+        _logger.LogTrace("=== StartAiProcessingWorkflow BEGIN ===");
+        _logger.LogTrace("AiOperationCts is null: {IsNull}", context.AiOperationCts == null);
+
         try
         {
+            // Check if AiOperationCts is null and initialize if needed
+            if (context.AiOperationCts == null)
+            {
+                _logger.LogTrace("AiOperationCts is null, initializing new CancellationTokenSource");
+                context.AiOperationCts = new CancellationTokenSource();
+                context.AiOperationStartTime = DateTime.Now;
+                _logger.LogTrace("AiOperationCts initialized successfully");
+            }
+            else
+            {
+                _logger.LogTrace("AiOperationCts already exists, using existing instance");
+            }
+
+            _logger.LogTrace("Getting chat history from HistoryManager");
             var chatHistory = context.HistoryManager.GetCurrentChatHistory();
-            var responseStream = context.AppService.ProcessChatMessageAsync(chatHistory, context.AiOperationCts!.Token);
+            _logger.LogTrace("Chat history retrieved, message count: {Count}", chatHistory.Count);
+
+            _logger.LogTrace("Starting ProcessChatMessageAsync with AiOperationCts.Token");
+            var responseStream = context.AppService.ProcessChatMessageAsync(chatHistory, context.AiOperationCts.Token);
+            _logger.LogTrace("ProcessChatMessageAsync started successfully");
 
             var assistantMessage = new ChatMessage(ChatRole.Assistant, "");
             context.HistoryManager.AddAssistantMessage(assistantMessage);
