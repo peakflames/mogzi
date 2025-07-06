@@ -48,8 +48,21 @@ public class InputTuiState : ITuiState
                         return;
 
                     case ConsoleKey.Tab:
+                        await AcceptAutocompleteSuggestion(context);
+                        e.Handled = true;
+                        return;
+
                     case ConsoleKey.Enter:
-                        AcceptAutocompleteSuggestion(context);
+                        // Check if the current input is a complete slash command
+                        // If so, submit it instead of accepting autocomplete suggestion
+                        if (context.SlashCommandProcessor?.IsValidCommand(context.InputContext.CurrentInput.Trim()) == true)
+                        {
+                            await SubmitCurrentInput(context);
+                        }
+                        else
+                        {
+                            await AcceptAutocompleteSuggestion(context);
+                        }
                         e.Handled = true;
                         return;
 
@@ -85,12 +98,50 @@ public class InputTuiState : ITuiState
                 }
             }
 
+            // Handle basic navigation keys SYNCHRONOUSLY to prevent timing issues
             switch (e.Key)
             {
+                case ConsoleKey.LeftArrow:
+                    MoveCursorLeft(context);
+                    e.Handled = true;
+                    break;
+
+                case ConsoleKey.RightArrow:
+                    MoveCursorRight(context);
+                    e.Handled = true;
+                    break;
+
+                case ConsoleKey.Home:
+                    MoveCursorToStart(context);
+                    e.Handled = true;
+                    break;
+
+                case ConsoleKey.End:
+                    MoveCursorToEnd(context);
+                    e.Handled = true;
+                    break;
+
+                case ConsoleKey.Backspace:
+                    DeleteCharacterBefore(context);
+                    e.Handled = true;
+                    break;
+
+                case ConsoleKey.Delete:
+                    DeleteCharacterAfter(context);
+                    e.Handled = true;
+                    break;
+
+                case ConsoleKey.Escape:
+                    ClearCurrentInput(context);
+                    e.Handled = true;
+                    break;
+
                 case ConsoleKey.Enter:
                     context.Logger.LogTrace("InputTuiState: Enter key detected, calling SubmitCurrentInput");
+                    context.Logger.LogTrace("InputTuiState: Current input before submit: '{Input}'", context.InputContext.CurrentInput);
                     await SubmitCurrentInput(context);
                     context.Logger.LogTrace("InputTuiState: SubmitCurrentInput completed");
+                    context.Logger.LogTrace("InputTuiState: Current input after submit: '{Input}'", context.InputContext.CurrentInput);
                     e.Handled = true;
                     break;
 
@@ -101,41 +152,6 @@ public class InputTuiState : ITuiState
 
                 case ConsoleKey.DownArrow:
                     await NavigateCommandHistoryAsync(context, up: false);
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.LeftArrow:
-                    await MoveCursorLeftAsync(context);
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.RightArrow:
-                    await MoveCursorRightAsync(context);
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.Home:
-                    await MoveCursorToStartAsync(context);
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.End:
-                    await MoveCursorToEndAsync(context);
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.Backspace:
-                    await DeleteCharacterBeforeAsync(context);
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.Delete:
-                    await DeleteCharacterAfterAsync(context);
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.Escape:
-                    ClearCurrentInput(context);
                     e.Handled = true;
                     break;
             }
@@ -155,7 +171,16 @@ public class InputTuiState : ITuiState
 
         try
         {
-            context.Logger.LogTrace("InputTuiState handling character: {Character}", e.Character);
+            context.Logger.LogTrace("InputTuiState handling character: {Character} (ASCII: {ASCII})", e.Character, (int)e.Character);
+
+            // Skip control characters like Enter (\r or \n)
+            if (e.Character is '\r' or '\n')
+            {
+                context.Logger.LogTrace("InputTuiState: Skipping control character {Character} (ASCII: {ASCII})", e.Character, (int)e.Character);
+                e.Handled = true;
+                return;
+            }
+
             await InsertCharacterAsync(context, e.Character);
             e.Handled = true;
         }
@@ -358,6 +383,42 @@ public class InputTuiState : ITuiState
         {
             context.Logger.LogTrace("ProcessUserInput: Starting with input '{Input}'", input);
 
+            // Check for slash commands FIRST, before adding to chat history
+            context.Logger.LogTrace("ProcessUserInput: Checking for slash commands");
+            context.Logger.LogTrace("ProcessUserInput: Input to check: '{Input}'", input);
+            context.Logger.LogTrace("ProcessUserInput: SlashCommandProcessor null check: {IsNull}", context.SlashCommandProcessor == null);
+
+            if (context.SlashCommandProcessor?.TryProcessCommand(input, out var commandOutput) == true)
+            {
+                context.Logger.LogTrace("ProcessUserInput: Slash command detected, processing");
+                context.Logger.LogTrace("ProcessUserInput: Command output: '{Output}'", commandOutput);
+                context.Logger.LogTrace("ProcessUserInput: Current input state: {State}", context.InputContext.State);
+
+                if (context.InputContext.State == InputState.UserSelection)
+                {
+                    // Command is interactive, so we don't process it as a chat message.
+                    context.Logger.LogTrace("ProcessUserInput: Interactive command, returning early");
+                    return;
+                }
+
+                if (!string.IsNullOrEmpty(commandOutput))
+                {
+                    context.Logger.LogTrace("ProcessUserInput: Displaying command output (not adding to chat history)");
+                    var commandMessage = new ChatMessage(ChatRole.Assistant, commandOutput);
+                    var renderingUtils = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
+                    var theme = context.ServiceProvider.GetRequiredService<IThemeInfo>();
+                    context.ScrollbackTerminal.WriteStatic(renderingUtils.RenderMessage(commandMessage, theme));
+                    context.Logger.LogTrace("ProcessUserInput: Command output displayed");
+                }
+                context.Logger.LogTrace("ProcessUserInput: Slash command processed, returning");
+                return;
+            }
+            else
+            {
+                context.Logger.LogTrace("ProcessUserInput: No slash command detected, proceeding with AI processing");
+            }
+
+            // Not a slash command, proceed with normal AI processing
             // Add spacing before user message
             context.ScrollbackTerminal.WriteStatic(new Markup(""));
 
@@ -392,29 +453,6 @@ public class InputTuiState : ITuiState
             var themeInfo = context.ServiceProvider.GetRequiredService<IThemeInfo>();
             context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(displayMessage, themeInfo));
 
-            context.Logger.LogTrace("ProcessUserInput: Checking for slash commands");
-            if (context.SlashCommandProcessor.TryProcessCommand(input, out var commandOutput))
-            {
-                context.Logger.LogTrace("ProcessUserInput: Slash command detected, processing");
-                if (context.InputContext.State == InputState.UserSelection)
-                {
-                    // Command is interactive, so we don't process it as a chat message.
-                    context.Logger.LogTrace("ProcessUserInput: Interactive command, returning early");
-                    return;
-                }
-
-                if (!string.IsNullOrEmpty(commandOutput))
-                {
-                    var commandMessage = new ChatMessage(ChatRole.Assistant, commandOutput);
-                    context.HistoryManager.AddAssistantMessage(commandMessage);
-                    var renderingUtils = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
-                    var theme = context.ServiceProvider.GetRequiredService<IThemeInfo>();
-                    context.ScrollbackTerminal.WriteStatic(renderingUtils.RenderMessage(commandMessage, theme));
-                }
-                context.Logger.LogTrace("ProcessUserInput: Slash command processed, returning");
-                return;
-            }
-
             // Transition to thinking state and start AI processing
             context.Logger.LogTrace("ProcessUserInput: No slash command, requesting state transition to Thinking");
             await context.RequestStateTransitionAsync(ChatState.Thinking);
@@ -442,7 +480,49 @@ public class InputTuiState : ITuiState
         await UpdateAutocompleteStateAsync(context);
     }
 
-    private async Task DeleteCharacterBeforeAsync(ITuiContext context)
+
+    private void ClearCurrentInput(ITuiContext context)
+    {
+        context.InputContext.Clear();
+        context.CommandHistoryIndex = -1;
+    }
+
+    // Synchronous versions of cursor movement and deletion methods to prevent timing issues
+    private void MoveCursorLeft(ITuiContext context)
+    {
+        if (context.InputContext.CursorPosition > 0)
+        {
+            context.InputContext.CursorPosition--;
+            // Fire-and-forget async autocomplete update to avoid blocking
+            _ = UpdateAutocompleteStateAsync(context);
+        }
+    }
+
+    private void MoveCursorRight(ITuiContext context)
+    {
+        if (context.InputContext.CursorPosition < context.InputContext.CurrentInput.Length)
+        {
+            context.InputContext.CursorPosition++;
+            // Fire-and-forget async autocomplete update to avoid blocking
+            _ = UpdateAutocompleteStateAsync(context);
+        }
+    }
+
+    private void MoveCursorToStart(ITuiContext context)
+    {
+        context.InputContext.CursorPosition = 0;
+        // Fire-and-forget async autocomplete update to avoid blocking
+        _ = UpdateAutocompleteStateAsync(context);
+    }
+
+    private void MoveCursorToEnd(ITuiContext context)
+    {
+        context.InputContext.CursorPosition = context.InputContext.CurrentInput.Length;
+        // Fire-and-forget async autocomplete update to avoid blocking
+        _ = UpdateAutocompleteStateAsync(context);
+    }
+
+    private void DeleteCharacterBefore(ITuiContext context)
     {
         if (context.InputContext.CurrentInput.Length == 0)
         {
@@ -458,10 +538,11 @@ public class InputTuiState : ITuiState
         }
 
         context.CommandHistoryIndex = -1;
-        await UpdateAutocompleteStateAsync(context);
+        // Fire-and-forget async autocomplete update to avoid blocking
+        _ = UpdateAutocompleteStateAsync(context);
     }
 
-    private async Task DeleteCharacterAfterAsync(ITuiContext context)
+    private void DeleteCharacterAfter(ITuiContext context)
     {
         if (context.InputContext.CurrentInput.Length == 0)
         {
@@ -476,43 +557,8 @@ public class InputTuiState : ITuiState
         }
 
         context.CommandHistoryIndex = -1;
-        await UpdateAutocompleteStateAsync(context);
-    }
-
-    private async Task MoveCursorLeftAsync(ITuiContext context)
-    {
-        if (context.InputContext.CursorPosition > 0)
-        {
-            context.InputContext.CursorPosition--;
-            await UpdateAutocompleteStateAsync(context);
-        }
-    }
-
-    private async Task MoveCursorRightAsync(ITuiContext context)
-    {
-        if (context.InputContext.CursorPosition < context.InputContext.CurrentInput.Length)
-        {
-            context.InputContext.CursorPosition++;
-            await UpdateAutocompleteStateAsync(context);
-        }
-    }
-
-    private async Task MoveCursorToStartAsync(ITuiContext context)
-    {
-        context.InputContext.CursorPosition = 0;
-        await UpdateAutocompleteStateAsync(context);
-    }
-
-    private async Task MoveCursorToEndAsync(ITuiContext context)
-    {
-        context.InputContext.CursorPosition = context.InputContext.CurrentInput.Length;
-        await UpdateAutocompleteStateAsync(context);
-    }
-
-    private void ClearCurrentInput(ITuiContext context)
-    {
-        context.InputContext.Clear();
-        context.CommandHistoryIndex = -1;
+        // Fire-and-forget async autocomplete update to avoid blocking
+        _ = UpdateAutocompleteStateAsync(context);
     }
 
     private async Task UpdateAutocompleteStateAsync(ITuiContext context)
@@ -560,9 +606,28 @@ public class InputTuiState : ITuiState
         }
     }
 
-    private void AcceptAutocompleteSuggestion(ITuiContext context)
+    private async Task AcceptAutocompleteSuggestion(ITuiContext context)
     {
+        context.Logger.LogTrace("AcceptAutocompleteSuggestion called - current input: '{Input}'", context.InputContext.CurrentInput);
+        context.Logger.LogTrace("AcceptAutocompleteSuggestion - suggestions count: {Count}", context.InputContext.Suggestions.Count);
+        context.Logger.LogTrace("AcceptAutocompleteSuggestion - selected index: {Index}", context.InputContext.SelectedSuggestionIndex);
+
         context.AutocompleteManager.AcceptSuggestion(context.InputContext);
+
+        context.Logger.LogTrace("AcceptAutocompleteSuggestion completed - input now: '{Input}'", context.InputContext.CurrentInput);
+
+        // If the completed input is a valid slash command, submit it immediately
+        var trimmedInput = context.InputContext.CurrentInput.Trim();
+        if (context.SlashCommandProcessor?.IsValidCommand(trimmedInput) == true)
+        {
+            context.Logger.LogTrace("AcceptAutocompleteSuggestion: Completed input is a valid slash command, submitting immediately");
+            // Update the input to the trimmed version (remove trailing space)
+            context.InputContext.CurrentInput = trimmedInput;
+            context.InputContext.CursorPosition = trimmedInput.Length;
+
+            // Submit the command immediately
+            await SubmitCurrentInput(context);
+        }
     }
 
     private void CancelAutocomplete(ITuiContext context)

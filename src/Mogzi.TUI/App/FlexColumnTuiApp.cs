@@ -11,6 +11,7 @@ public sealed class FlexColumnTuiApp : IDisposable
     private readonly AdvancedKeyboardHandler _keyboardHandler;
     private readonly IScrollbackTerminal _scrollbackTerminal;
     private readonly HistoryManager _historyManager;
+    private readonly SlashCommandProcessor _slashCommandProcessor;
     private bool _isDisposed = false;
 
     public bool IsRunning { get; private set; } = false;
@@ -28,6 +29,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         _componentManager = serviceProvider.GetRequiredService<ITuiComponentManager>();
         _scrollbackTerminal = serviceProvider.GetRequiredService<IScrollbackTerminal>();
         _historyManager = serviceProvider.GetRequiredService<HistoryManager>();
+        _slashCommandProcessor = serviceProvider.GetRequiredService<SlashCommandProcessor>();
 
         _cancellationTokenSource = new CancellationTokenSource();
 
@@ -37,6 +39,16 @@ public sealed class FlexColumnTuiApp : IDisposable
         _keyboardHandler.KeyPressed += OnKeyPressed;
         _keyboardHandler.KeyCombinationPressed += OnKeyCombinationPressed;
         _keyboardHandler.CharacterTyped += OnCharacterTyped;
+
+        // Wire up slash command processor events
+        _slashCommandProcessor.ExitRequested += () => _cancellationTokenSource.Cancel();
+        _slashCommandProcessor.ClearHistoryRequested += () =>
+        {
+            _historyManager.ClearHistory();
+            _scrollbackTerminal.Initialize();
+            RenderInitialContent();
+        };
+        _slashCommandProcessor.InteractiveCommandRequested += OnInteractiveCommandRequested;
 
         RegisterKeyBindings();
 
@@ -341,6 +353,30 @@ public sealed class FlexColumnTuiApp : IDisposable
         _logger.LogTrace("FlexColumn key bindings registered");
     }
 
+    /// <summary>
+    /// Handles interactive slash commands like /tool-approvals.
+    /// </summary>
+    private async void OnInteractiveCommandRequested(string command)
+    {
+        try
+        {
+            _logger.LogTrace("Interactive command requested: {Command}", command);
+
+            // Activate the user selection manager for the command
+            _tuiContext.UserSelectionManager.DetectAndActivate(command);
+
+            if (_tuiContext.UserSelectionManager.IsSelectionModeActive)
+            {
+                await _tuiContext.UserSelectionManager.UpdateSelectionsAsync();
+                _logger.LogTrace("User selection mode activated for command: {Command}", command);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling interactive command: {Command}", command);
+        }
+    }
+
     private async void OnKeyPressed(object? sender, KeyPressEventArgs e)
     {
         if (e.Handled)
@@ -351,7 +387,11 @@ public sealed class FlexColumnTuiApp : IDisposable
         try
         {
             await _stateManager.HandleKeyPressAsync(e);
-            _scrollbackTerminal.Refresh();
+            // Only refresh if the event was handled and might have changed the UI state
+            if (e.Handled)
+            {
+                _scrollbackTerminal.Refresh();
+            }
         }
         catch (Exception ex)
         {
@@ -396,8 +436,13 @@ public sealed class FlexColumnTuiApp : IDisposable
                 await _stateManager.HandleCharacterTypedAsync(e);
             }
             _logger.LogTrace("Successfully called _stateManager.HandleCharacterTypedAsync");
-            _logger.LogTrace("Requesting terminal refresh after character typed.");
-            _scrollbackTerminal.Refresh();
+
+            // Only refresh if the event was handled and might have changed the UI state
+            if (e.Handled)
+            {
+                _logger.LogTrace("Requesting terminal refresh after character typed.");
+                _scrollbackTerminal.Refresh();
+            }
         }
         catch (Exception ex)
         {

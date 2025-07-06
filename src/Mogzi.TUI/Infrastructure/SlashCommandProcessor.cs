@@ -103,6 +103,42 @@ public sealed class SlashCommandProcessor
     }
 
     /// <summary>
+    /// Checks if the given input is a valid slash command.
+    /// </summary>
+    /// <param name="input">The input string to check.</param>
+    /// <returns>True if the input is a valid slash command, false otherwise.</returns>
+    public bool IsValidCommand(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input) || !input.StartsWith("/"))
+        {
+            return false;
+        }
+
+        var parts = input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        var command = parts[0].ToLower();
+
+        return _commands.ContainsKey(command);
+    }
+
+    /// <summary>
+    /// Checks if the given input is an interactive slash command.
+    /// </summary>
+    /// <param name="input">The input string to check.</param>
+    /// <returns>True if the input is an interactive slash command, false otherwise.</returns>
+    public bool IsInteractiveCommand(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input) || !input.StartsWith("/"))
+        {
+            return false;
+        }
+
+        var parts = input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        var command = parts[0].ToLower();
+
+        return _commands.TryGetValue(command, out var cmd) && cmd.IsInteractive;
+    }
+
+    /// <summary>
     /// Registers all available slash commands.
     /// </summary>
     private void RegisterCommands()
