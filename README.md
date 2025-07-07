@@ -18,8 +18,8 @@ _Please note that this project is still in the alpha stage and being actively de
 - Profile-based configuration for easy switching between providers and models
 - Cross-platform support (Windows, MacOS, Linux)
 - Control file system access via tool appproval (`readonly` or `all`)
-- Chat history persistence to continue conversations across sessions (coming soon)
-- Session management to list and load previous chat sessions (coming soon)
+- Chat history persistence with session management
+- Pipe support for integrating with shell workflows
 - MCP-Support (coming soon)
 
 ### Examples 💡
@@ -31,8 +31,14 @@ mogzi
 # Switch to using your profile named 'sonnet'
 mogzi --profile sonnet
 
+# Resume a previous conversation
+mogzi chat --session "My Project Discussion"
+
 # Translate a README.md to portugese in one shot
 cat README.md | mogzi run -p "Translate to portugese"
+
+# Pipe content to continue an existing session
+echo "Review this code change" | mogzi chat --session project-review
 
 # (coming soon) Run a no non-interactive nworkflow prompt
 mogzi run -p workflows/generate-release-notes.md

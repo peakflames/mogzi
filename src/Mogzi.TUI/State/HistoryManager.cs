@@ -5,16 +5,53 @@ public class HistoryManager(ITuiMediator mediator)
     private readonly List<ChatMessage> _completedMessages = [];
     private readonly List<ChatMessage> _pendingMessages = [];
     private readonly ITuiMediator _mediator = mediator;
+    private SessionManager? _sessionManager;
+
+    /// <summary>
+    /// Sets the session manager for persistence. This is called during initialization.
+    /// </summary>
+    public void SetSessionManager(SessionManager sessionManager)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    /// <summary>
+    /// Adds a user message without persisting to session manager.
+    /// Used when loading existing session messages.
+    /// </summary>
+    public void AddUserMessageWithoutPersistence(ChatMessage message)
+    {
+        _completedMessages.Add(message);
+        NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Adds an assistant message without persisting to session manager.
+    /// Used when loading existing session messages.
+    /// </summary>
+    public void AddAssistantMessageWithoutPersistence(ChatMessage message)
+    {
+        _completedMessages.Add(message);
+        NotifyStateChanged();
+    }
 
     public void AddUserMessage(ChatMessage message)
     {
         _completedMessages.Add(message);
+
+        // Persist to session manager asynchronously (fire-and-forget)
+        _ = PersistMessageAsync(message);
+
         NotifyStateChanged();
     }
 
     public void AddAssistantMessage(ChatMessage message)
     {
         _completedMessages.Add(message);
+
+        // Persist to session manager asynchronously (fire-and-forget)
+        _ = PersistMessageAsync(message);
+
         NotifyStateChanged();
     }
 
@@ -25,6 +62,11 @@ public class HistoryManager(ITuiMediator mediator)
             _completedMessages.RemoveAt(_completedMessages.Count - 1);
         }
         _completedMessages.Add(message);
+
+        // For message updates, we need to update the session as well
+        // This handles streaming message updates where the last message is being modified
+        _ = PersistMessageAsync(message);
+
         NotifyStateChanged();
     }
 
@@ -77,5 +119,28 @@ public class HistoryManager(ITuiMediator mediator)
         // This is now handled by the mediator, which will trigger a re-render.
         // In a more advanced implementation, the mediator could notify specific components.
         _ = _mediator.NotifyHistoryChangedAsync();
+    }
+
+    /// <summary>
+    /// Persists a message to the session manager asynchronously.
+    /// Uses fire-and-forget pattern to avoid blocking UI operations.
+    /// </summary>
+    private async Task PersistMessageAsync(ChatMessage message)
+    {
+        if (_sessionManager == null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _sessionManager.AddMessageToCurrentSessionAsync(message);
+        }
+        catch (Exception)
+        {
+            // Log error but don't throw to avoid disrupting UI flow
+            // The mediator's logger isn't available here, so we silently handle failures
+            // In a production system, we might want to inject a logger or use a different error handling strategy
+        }
     }
 }

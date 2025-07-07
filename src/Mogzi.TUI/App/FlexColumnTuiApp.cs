@@ -104,11 +104,60 @@ public sealed class FlexColumnTuiApp : IDisposable
         }
     }
 
-#pragma warning disable IDE0060 // Remove unused parameter
     private async Task Initialize(string[] args)
     {
         try
         {
+            // Parse arguments for session management
+            var parsedArgs = ArgumentParser.Parse(args);
+            var sessionId = ArgumentParser.GetString(parsedArgs, ["session", "s"], null);
+
+            // Initialize session management
+            var sessionManager = _serviceProvider.GetRequiredService<SessionManager>();
+
+            if (!string.IsNullOrEmpty(sessionId))
+            {
+                try
+                {
+                    await sessionManager.LoadSessionAsync(sessionId);
+                    _logger.LogInformation("Loaded session: {SessionId}", sessionId);
+                }
+                catch (FileNotFoundException)
+                {
+                    _logger.LogWarning("Session not found: {SessionId}, creating new session", sessionId);
+                    await sessionManager.CreateNewSessionAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to load session: {SessionId}, creating new session", sessionId);
+                    await sessionManager.CreateNewSessionAsync();
+                }
+            }
+            else
+            {
+                // Create new session if no session ID provided
+                await sessionManager.CreateNewSessionAsync();
+            }
+
+            // Set the session manager on history manager for persistence
+            _historyManager.SetSessionManager(sessionManager);
+
+            // Load session messages into history manager for UI display
+            var sessionMessages = sessionManager.GetCurrentSessionMessages();
+            foreach (var message in sessionMessages)
+            {
+                // Add messages according to their actual role, but skip persistence since they're already persisted
+                if (message.Role == ChatRole.User)
+                {
+                    _historyManager.AddUserMessageWithoutPersistence(message);
+                }
+                else if (message.Role == ChatRole.Assistant)
+                {
+                    _historyManager.AddAssistantMessageWithoutPersistence(message);
+                }
+                // Note: We could add support for other roles if needed
+            }
+
             // Register state factories
             RegisterStateFactories();
 

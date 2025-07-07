@@ -21,6 +21,7 @@ global using Spectre.Console.Rendering;
 global using FluentAssertions;
 
 global using System.Text;
+global using System.Diagnostics;
 global using System.Security.Cryptography;
 global using System.Text.RegularExpressions;
 

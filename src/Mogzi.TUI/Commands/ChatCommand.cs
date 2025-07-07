@@ -21,11 +21,23 @@ public sealed class ChatCommand : ICommand
                 return 0;
             }
 
+            // Check for piped input and capture it
+            string? pipedInput = null;
+            if (Console.IsInputRedirected)
+            {
+                var stdinInput = await Console.In.ReadToEndAsync();
+                if (!string.IsNullOrWhiteSpace(stdinInput))
+                {
+                    pipedInput = stdinInput.Trim();
+                }
+            }
+
             // Extract configuration parameters
             var configPath = ArgumentParser.GetString(parsedArgs, ["config"], null);
             var profileName = ArgumentParser.GetString(parsedArgs, ["profile"], null);
             var toolApprovals = ArgumentParser.GetString(parsedArgs, ["tool-approvals", "ta"], null);
-
+            var sessionId = ArgumentParser.GetString(parsedArgs, ["session", "s"], null);
+            var autoSubmit = ArgumentParser.GetBool(parsedArgs, "auto-submit") || ArgumentParser.GetBool(parsedArgs, "a");
 
             // Validate tool-approvals value if provided
             if (!string.IsNullOrEmpty(toolApprovals) &&
@@ -41,6 +53,13 @@ public sealed class ChatCommand : ICommand
 
             var serviceProvider = services.BuildServiceProvider();
 
+            // If we have piped input, set it in the TUI context before starting the app
+            if (!string.IsNullOrEmpty(pipedInput))
+            {
+                var tuiContext = serviceProvider.GetRequiredService<ITuiContext>();
+                tuiContext.InputContext.CurrentInput = pipedInput;
+                tuiContext.InputContext.CursorPosition = pipedInput.Length;
+            }
 
             // Create and run the FlexColumn TUI application
             var logger = serviceProvider.GetRequiredService<ILogger<ChatCommand>>();
@@ -78,6 +97,8 @@ public sealed class ChatCommand : ICommand
         AnsiConsole.MarkupLine("    -v, --verbosity <LEVEL>      Set the verbosity level (quiet, minimal, normal, detailed, diagnostic)");
         AnsiConsole.MarkupLine("        --config <PATH>          Path to the configuration file (default: mogzi.config.json)");
         AnsiConsole.MarkupLine("        --profile <NAME>         Configuration profile to use");
+        AnsiConsole.MarkupLine("    -s, --session <SESSION_ID>   Load a specific session by its ID");
+        AnsiConsole.MarkupLine("    -a, --auto-submit            Automatically submit piped input (default: false)");
         AnsiConsole.MarkupLine("    -ta, --tool-approvals <MODE> Override tool approval mode (readonly, all)");
         AnsiConsole.MarkupLine("    -h, --help                   Show this help message");
         AnsiConsole.WriteLine();
@@ -86,8 +107,11 @@ public sealed class ChatCommand : ICommand
         AnsiConsole.MarkupLine("   mogzi chat");
         AnsiConsole.MarkupLine("   mogzi chat --verbosity normal");
         AnsiConsole.MarkupLine("   mogzi chat --profile development");
+        AnsiConsole.MarkupLine("   mogzi chat --session 0197e123-4567-7890-abcd-ef1234567890");
         AnsiConsole.MarkupLine("   mogzi chat --tool-approvals all");
         AnsiConsole.MarkupLine("   mogzi chat -ta readonly");
+        AnsiConsole.MarkupLine("   echo \"Hello AI\" | mogzi chat");
+        AnsiConsole.MarkupLine("   echo \"Hello AI\" | mogzi chat --auto-submit");
     }
 
     private static string[] BuildArgsFromParsed(Dictionary<string, string?> parsedArgs)
@@ -114,6 +138,13 @@ public sealed class ChatCommand : ICommand
         {
             args.Add("--profile");
             args.Add(profile);
+        }
+
+        var sessionId = ArgumentParser.GetString(parsedArgs, ["session", "s"]);
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            args.Add("--session");
+            args.Add(sessionId);
         }
 
         return [.. args];

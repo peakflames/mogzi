@@ -1,6 +1,281 @@
 namespace Mogzi.TUI.Tests;
 
 /// <summary>
+/// Result of executing the application process for systems-level testing.
+/// </summary>
+public record ProcessResult(int ExitCode, string Output, string Error);
+
+/// <summary>
+/// Helper methods for systems-level testing that executes the complete application.
+/// Supports the systems-first testing philosophy by testing user workflows end-to-end.
+/// </summary>
+public static class SystemsTestingHelpers
+{
+    private static readonly string ProjectPath = Path.Combine(
+        Directory.GetCurrentDirectory(), 
+        "..", "..", "..", "..", "src", "Mogzi.TUI");
+
+    /// <summary>
+    /// Executes the Mogzi application with specified arguments and optional input.
+    /// This enables testing complete user workflows through the actual application.
+    /// </summary>
+    /// <param name="args">Command line arguments to pass to the application</param>
+    /// <param name="input">Optional input to send to the application's stdin</param>
+    /// <param name="timeout">Maximum time to wait for the application to complete</param>
+    /// <returns>Process result containing exit code, output, and error streams</returns>
+    public static async Task<ProcessResult> ExecuteApplicationAsync(
+        string[] args, 
+        string? input = null, 
+        TimeSpan? timeout = null)
+    {
+        timeout ??= TimeSpan.FromSeconds(30);
+        
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                Arguments = $"run --project \"{ProjectPath}\" -- {string.Join(" ", args)}",
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                WorkingDirectory = ProjectPath
+            }
+        };
+        
+        var outputBuilder = new StringBuilder();
+        var errorBuilder = new StringBuilder();
+        
+        process.OutputDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+                outputBuilder.AppendLine(e.Data);
+        };
+        
+        process.ErrorDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+                errorBuilder.AppendLine(e.Data);
+        };
+        
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        
+        if (input != null)
+        {
+            await process.StandardInput.WriteLineAsync(input);
+            await process.StandardInput.FlushAsync();
+            process.StandardInput.Close();
+        }
+        
+        using var cts = new CancellationTokenSource(timeout.Value);
+        try
+        {
+            await process.WaitForExitAsync(cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            process.Kill(true);
+            throw new TimeoutException($"Application did not complete within {timeout.Value}");
+        }
+        
+        var output = outputBuilder.ToString();
+        var error = errorBuilder.ToString();
+        
+        return new ProcessResult(process.ExitCode, output, error);
+    }
+
+    /// <summary>
+    /// Executes the application with piped input to test pipe functionality.
+    /// </summary>
+    /// <param name="args">Command line arguments</param>
+    /// <param name="pipedInput">Content to pipe to the application</param>
+    /// <param name="timeout">Maximum time to wait</param>
+    /// <returns>Process result</returns>
+    public static async Task<ProcessResult> ExecuteApplicationWithPipeAsync(
+        string[] args,
+        string pipedInput,
+        TimeSpan? timeout = null)
+    {
+        timeout ??= TimeSpan.FromSeconds(30);
+        
+        // Create a shell command that pipes input to the application
+        var shellCommand = $"echo \"{pipedInput.Replace("\"", "\\\"")}\" | dotnet run --project \"{ProjectPath}\" -- {string.Join(" ", args)}";
+        
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "/bin/bash",
+                Arguments = $"-c \"{shellCommand}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                WorkingDirectory = ProjectPath
+            }
+        };
+        
+        var outputBuilder = new StringBuilder();
+        var errorBuilder = new StringBuilder();
+        
+        process.OutputDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+                outputBuilder.AppendLine(e.Data);
+        };
+        
+        process.ErrorDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+                errorBuilder.AppendLine(e.Data);
+        };
+        
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        
+        using var cts = new CancellationTokenSource(timeout.Value);
+        try
+        {
+            await process.WaitForExitAsync(cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            process.Kill(true);
+            throw new TimeoutException($"Application did not complete within {timeout.Value}");
+        }
+        
+        var output = outputBuilder.ToString();
+        var error = errorBuilder.ToString();
+        
+        return new ProcessResult(process.ExitCode, output, error);
+    }
+
+    /// <summary>
+    /// Extracts session ID from application output for systems-level testing.
+    /// Looks for session ID patterns in user-visible output.
+    /// </summary>
+    /// <param name="output">Application output to search</param>
+    /// <returns>Session ID if found</returns>
+    /// <exception cref="InvalidOperationException">If session ID cannot be found</exception>
+    public static string ExtractSessionIdFromOutput(string output)
+    {
+        // Look for various session ID patterns in output
+        var patterns = new[]
+        {
+            @"Session:\s*([a-f0-9-]{36})",           // "Session: uuid"
+            @"session\s+([a-f0-9-]{36})",           // "session uuid"
+            @"Loading.*?([a-f0-9-]{36})",           // "Loading ... uuid"
+            @"([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})" // Any UUID pattern
+        };
+        
+        foreach (var pattern in patterns)
+        {
+            var match = Regex.Match(output, pattern, RegexOptions.IgnoreCase);
+            if (match.Success)
+            {
+                return match.Groups[1].Value;
+            }
+        }
+        
+        throw new InvalidOperationException($"Session ID not found in output: {output}");
+    }
+
+    /// <summary>
+    /// Creates a temporary test file for attachment testing.
+    /// </summary>
+    /// <param name="filename">Name of the file to create</param>
+    /// <param name="content">Content to write to the file</param>
+    /// <returns>Full path to the created file</returns>
+    public static string CreateTestFile(string filename, string content)
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "mogzi-test-files", Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+        
+        var filePath = Path.Combine(tempDir, filename);
+        File.WriteAllText(filePath, content);
+        
+        return filePath;
+    }
+
+    /// <summary>
+    /// Creates a temporary test file with binary content for attachment testing.
+    /// </summary>
+    /// <param name="filename">Name of the file to create</param>
+    /// <param name="content">Binary content to write to the file</param>
+    /// <returns>Full path to the created file</returns>
+    public static string CreateTestFile(string filename, byte[] content)
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "mogzi-test-files", Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+        
+        var filePath = Path.Combine(tempDir, filename);
+        File.WriteAllBytes(filePath, content);
+        
+        return filePath;
+    }
+
+    /// <summary>
+    /// Gets the session file path for a given session ID.
+    /// Used for optional file system validation in systems tests.
+    /// </summary>
+    /// <param name="sessionId">Session ID</param>
+    /// <returns>Path to session.json file</returns>
+    public static string GetSessionFilePath(string sessionId)
+    {
+        var homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(homeDirectory, ".mogzi", "chats", sessionId, "session.json");
+    }
+
+    /// <summary>
+    /// Corrupts a session file to test error handling scenarios.
+    /// Used for testing graceful degradation in systems tests.
+    /// </summary>
+    /// <param name="sessionId">Session ID to corrupt</param>
+    public static void CorruptSessionFile(string sessionId)
+    {
+        var sessionFile = GetSessionFilePath(sessionId);
+        if (File.Exists(sessionFile))
+        {
+            File.WriteAllText(sessionFile, "{ invalid json content");
+        }
+    }
+
+    /// <summary>
+    /// Cleans up test files and directories created during testing.
+    /// </summary>
+    /// <param name="sessionId">Optional session ID to clean up specific session</param>
+    public static void CleanupTestFiles(string? sessionId = null)
+    {
+        try
+        {
+            // Clean up temporary test files
+            var tempTestDir = Path.Combine(Path.GetTempPath(), "mogzi-test-files");
+            if (Directory.Exists(tempTestDir))
+            {
+                Directory.Delete(tempTestDir, true);
+            }
+            
+            // Clean up specific session if provided
+            if (!string.IsNullOrEmpty(sessionId))
+            {
+                var sessionDir = Path.GetDirectoryName(GetSessionFilePath(sessionId));
+                if (sessionDir != null && Directory.Exists(sessionDir))
+                {
+                    Directory.Delete(sessionDir, true);
+                }
+            }
+        }
+        catch
+        {
+            // Ignore cleanup errors in tests
+        }
+    }
+}
+
+/// <summary>
 /// Test implementation of IScrollbackTerminal that captures static content for verification.
 /// </summary>
 public class TestScrollbackTerminal : IScrollbackTerminal, IDisposable

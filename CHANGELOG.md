@@ -3,6 +3,10 @@
 ## [0.13.8] - IN PROG
 
 - Refactored TUI application codebase to use proper state management system with state machine pattern for improved maintainability and separation of concerns
+- Added session management with persistent chat history across application runs
+- Implemented CLI session loading via `--session` argument supporting both session IDs and user-friendly names
+- Added pipe support for integrating with shell workflows and continuing existing sessions
+- Enhanced session organization with directory-based storage and attachment support
 
 
 ## [0.13.7] - 2025-07-03
