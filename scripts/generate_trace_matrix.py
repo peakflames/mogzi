@@ -107,57 +107,58 @@ def parse_requirements(requirements_file: Path) -> Dict[str, str]:
     return requirements
 
 
-def scan_test_files(test_directory: Path) -> Dict[str, List[Tuple[str, str]]]:
+def scan_test_files(test_directories: List[Path]) -> Dict[str, List[Tuple[str, str]]]:
     """
-    Scan test files for requirement ID comments.
+    Scan test files in multiple directories for requirement ID comments.
     Returns a dict mapping requirement IDs to list of (file_path, test_method) tuples.
     """
     requirement_tests = {}
     
-    if not test_directory.exists():
-        print(f"Warning: Test directory not found at {test_directory}")
-        return requirement_tests
-    
-    # Pattern to match requirement ID comments like // TOR-1.1 or // TOR-1.1, TOR-2.3
-    req_comment_pattern = r'//\s*([A-Z]+-[\d.]+(?:\s*,\s*[A-Z]+-[\d.]+)*)'
-    
-    # Pattern to find test method names
-    test_method_pattern = r'public\s+(?:async\s+)?Task\s+(\w+)\s*\('
-    
-    for test_file in test_directory.glob('**/*.cs'):
-        try:
-            with open(test_file, 'r', encoding='utf-8') as f:
-                content = f.read()
-            
-            lines = content.split('\n')
-            current_test_method = None
-            
-            for i, line in enumerate(lines):
-                # Check for test method definition
-                method_match = re.search(test_method_pattern, line)
-                if method_match:
-                    current_test_method = method_match.group(1)
-                
-                # Check for requirement ID comments
-                req_match = re.search(req_comment_pattern, line)
-                if req_match and current_test_method:
-                    # Parse multiple requirement IDs from the comment
-                    req_ids_text = req_match.group(1)
-                    req_ids = [req_id.strip() for req_id in req_ids_text.split(',')]
-                    
-                    relative_path = test_file.relative_to(test_directory.parent.parent)
-                    
-                    for req_id in req_ids:
-                        if req_id not in requirement_tests:
-                            requirement_tests[req_id] = []
-                        
-                        # Avoid duplicates
-                        test_info = (str(relative_path), current_test_method)
-                        if test_info not in requirement_tests[req_id]:
-                            requirement_tests[req_id].append(test_info)
+    for test_directory in test_directories:
+        if not test_directory.exists():
+            print(f"Warning: Test directory not found at {test_directory}")
+            continue
         
-        except Exception as e:
-            print(f"Error scanning test file {test_file}: {e}")
+        # Pattern to match requirement ID comments like // TOR-1.1 or // TOR-1.1, TOR-2.3
+        req_comment_pattern = r'//\s*([A-Z]+-[\d.]+(?:\s*,\s*[A-Z]+-[\d.]+)*)'
+        
+        # Pattern to find test method names
+        test_method_pattern = r'public\s+(?:async\s+)?Task\s+(\w+)\s*\('
+        
+        for test_file in test_directory.glob('**/*.cs'):
+            try:
+                with open(test_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                lines = content.split('\n')
+                current_test_method = None
+                
+                for i, line in enumerate(lines):
+                    # Check for test method definition
+                    method_match = re.search(test_method_pattern, line)
+                    if method_match:
+                        current_test_method = method_match.group(1)
+                    
+                    # Check for requirement ID comments
+                    req_match = re.search(req_comment_pattern, line)
+                    if req_match and current_test_method:
+                        # Parse multiple requirement IDs from the comment
+                        req_ids_text = req_match.group(1)
+                        req_ids = [req_id.strip() for req_id in req_ids_text.split(',')]
+                        
+                        relative_path = test_file.relative_to(test_directory.parent.parent)
+                        
+                        for req_id in req_ids:
+                            if req_id not in requirement_tests:
+                                requirement_tests[req_id] = []
+                            
+                            # Avoid duplicates
+                            test_info = (str(relative_path), current_test_method)
+                            if test_info not in requirement_tests[req_id]:
+                                requirement_tests[req_id].append(test_info)
+            
+            except Exception as e:
+                print(f"Error scanning test file {test_file}: {e}")
     
     total_mappings = sum(len(tests) for tests in requirement_tests.values())
     print(f"Found {total_mappings} requirement-to-test mappings across {len(requirement_tests)} requirements")
@@ -302,7 +303,7 @@ def generate_html_trace_matrix(requirements: Dict[str, str],
 ## Generation Details
 
 - **Requirements Source:** `docs/process/02_operational_requirements.md`
-- **Test Directory:** `test/Mogzi.TUI.Tests/`
+- **Test Directory:** `test/`
 - **Script:** `scripts/generate_trace_matrix.py`
 - **Output:** `{html_output_file.relative_to(find_project_root())}`
 
@@ -706,7 +707,7 @@ def generate_trace_matrix(requirements: Dict[str, str],
 ## Generation Details
 
 - **Requirements Source:** `docs/process/02_operational_requirements.md`
-- **Test Directory:** `test/Mogzi.TUI.Tests/`
+- **Test Directory:** `test/`
 - **Script:** `scripts/generate_trace_matrix.py`
 - **Output:** `{output_file.relative_to(find_project_root())}`
 
@@ -743,7 +744,10 @@ def main():
     
     # Define file paths
     requirements_file = project_root / "docs" / "process" / "02_operational_requirements.md"
-    test_directory = project_root / "test" / "Mogzi.TUI.Tests"
+    test_directories = [
+        project_root / "test" / "Mogzi.TUI.Tests",
+        project_root / "test" / "Mogzi.Tests"
+    ]
     output_file = project_root / "outputs" / "latest_rqmts_trace_matrix.md"
     html_output_file = project_root / "outputs" / "latest_rqmts_trace_matrix.html"
     
@@ -757,7 +761,7 @@ def main():
     
     # Scan test files
     print("🔍 Scanning test files...")
-    requirement_tests = scan_test_files(test_directory)
+    requirement_tests = scan_test_files(test_directories)
     
     # Generate trace matrix (markdown)
     print("📝 Generating markdown trace matrix...")
