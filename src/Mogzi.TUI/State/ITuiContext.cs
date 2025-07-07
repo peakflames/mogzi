@@ -32,6 +32,11 @@ public interface ITuiContext
     HistoryManager HistoryManager { get; }
 
     /// <summary>
+    /// Gets the session manager for persistent session management.
+    /// </summary>
+    SessionManager SessionManager { get; }
+
+    /// <summary>
     /// Gets the autocomplete manager for handling autocomplete functionality.
     /// </summary>
     AutocompleteManager AutocompleteManager { get; }

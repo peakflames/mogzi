@@ -28,9 +28,9 @@ This final phase focuses on achieving full functional parity with the legacy `Le
   - Professional chat interface matching user expectations for modern AI assistants
 
 #### 2. Implement Session Management and Chat History (Week 1)
-- Implement `ChatHistoryService` to persist chat history across sessions.
-  - Use the `Cline` AI assistant to draw critical understanding of the complexity to implementing this feature.
-- Integrate session management into the `FlexColumnTuiApp`.
+- **Note:** A detailed implementation plan for this feature has been created. See [Session Management Implementation Plan](implement_phase_3_session_management.md) for the full breakdown of tasks and the TDD approach.
+- Implement the `SessionManager` service and integrate it with the `HistoryManager` and `FlexColumnTuiApp` to provide robust session persistence.
+- Address all session-related operational requirements as defined in `docs/process/02_operational_requirements.md`.
 - Remove "TODO" comments related to session management.
 
 #### 3. Ensure Feature Parity (Week 1-2)

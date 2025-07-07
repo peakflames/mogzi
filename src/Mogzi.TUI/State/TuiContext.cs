@@ -9,6 +9,7 @@ public class TuiContext(
     ILogger<TuiContext> logger,
     IScrollbackTerminal scrollbackTerminal,
     HistoryManager historyManager,
+    SessionManager sessionManager,
     AutocompleteManager autocompleteManager,
     UserSelectionManager userSelectionManager,
     SlashCommandProcessor slashCommandProcessor,
@@ -23,6 +24,7 @@ public class TuiContext(
     public ILogger Logger { get; } = logger ?? throw new ArgumentNullException(nameof(logger));
     public IScrollbackTerminal ScrollbackTerminal { get; } = scrollbackTerminal ?? throw new ArgumentNullException(nameof(scrollbackTerminal));
     public HistoryManager HistoryManager { get; } = historyManager ?? throw new ArgumentNullException(nameof(historyManager));
+    public SessionManager SessionManager { get; } = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
     public AutocompleteManager AutocompleteManager { get; } = autocompleteManager ?? throw new ArgumentNullException(nameof(autocompleteManager));
     public UserSelectionManager UserSelectionManager { get; } = userSelectionManager ?? throw new ArgumentNullException(nameof(userSelectionManager));
     public SlashCommandProcessor SlashCommandProcessor { get; } = slashCommandProcessor ?? throw new ArgumentNullException(nameof(slashCommandProcessor));

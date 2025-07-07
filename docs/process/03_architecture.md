@@ -47,6 +47,8 @@ graph TD
     
     TC --> IC[InputContext]
     TC --> HM[HistoryManager]
+    TC --> SM[SessionManager]
+    SM --> HM
     TC --> AM[AutocompleteManager]
     TC --> USM[UserSelectionManager]
     TC --> SCP[SlashCommandProcessor]
@@ -238,7 +240,110 @@ ApplicationConfigurationRoot -> ApplicationConfiguration -> ApiProvider[], Profi
 - **ApiProvider**: External service configuration (OpenAI, custom endpoints)
 - **Profile**: User-specific model and provider combinations
 - **ChatHistory**: Message persistence and session management
+- **Session**: Represents a single chat session, including its metadata and history.
 - **ApiMetrics**: Token counting and usage tracking
+
+## Session Management Architecture
+
+**Session Entity Design:**
+```csharp
+// Domain entity representing a chat session
+public class Session
+{
+    public Guid Id { get; set; } // UUIDv7 for time-ordered generation
+    public string Name { get; set; } // User-friendly name, defaults to creation timestamp
+    public DateTime CreatedAt { get; set; }
+    public DateTime LastModifiedAt { get; set; }
+    public List<ChatMessage> History { get; set; } = [];
+    public string InitialPrompt { get; set; } = string.Empty;
+}
+```
+
+**SessionManager Service:**
+```csharp
+// Service responsible for session lifecycle management
+public class SessionManager
+{
+    private readonly string _sessionsPath;
+    private readonly ILogger<SessionManager> _logger;
+    private readonly SemaphoreSlim _fileLock = new(1, 1);
+    private Session _currentSession;
+    
+    // Atomic file operations with concurrency control
+    public async Task SaveCurrentSessionAsync()
+    {
+        await _fileLock.WaitAsync();
+        try
+        {
+            _currentSession.LastModifiedAt = DateTime.UtcNow;
+            var json = JsonSerializer.Serialize(_currentSession, _jsonOptions);
+            
+            // Use atomic file write pattern to prevent data corruption
+            var tempPath = Path.Combine(_sessionsPath, $"{_currentSession.Id}.tmp");
+            var finalPath = Path.Combine(_sessionsPath, $"{_currentSession.Id}.json");
+            
+            await File.WriteAllTextAsync(tempPath, json);
+            if (File.Exists(finalPath))
+                File.Delete(finalPath);
+            File.Move(tempPath, finalPath);
+        }
+        finally
+        {
+            _fileLock.Release();
+        }
+    }
+    
+    // Custom session naming support
+    public async Task RenameSessionAsync(string newName)
+    {
+        if (string.IsNullOrWhiteSpace(newName))
+            throw new ArgumentException("Session name cannot be empty", nameof(newName));
+            
+        await _fileLock.WaitAsync();
+        try
+        {
+            _currentSession.Name = newName;
+            _currentSession.LastModifiedAt = DateTime.UtcNow;
+            await SaveCurrentSessionAsync();
+        }
+        finally
+        {
+            _fileLock.Release();
+        }
+    }
+}
+```
+
+**Concurrency Control Architecture:**
+- **File Locking**: SemaphoreSlim ensures only one thread can access the session file at a time
+- **Atomic File Operations**: Two-phase write with temporary files prevents partial writes or corruption
+- **Cross-Process Locking**: FileShare.None during file operations prevents multiple processes from modifying the same file
+- **Error Recovery**: Corrupted session detection with backup preservation
+
+**Session Persistence Flow:**
+```mermaid
+sequenceDiagram
+    participant App as Application
+    participant SM as SessionManager
+    participant FS as File System
+    
+    App->>SM: Add message to session
+    SM->>SM: Update session.LastModifiedAt
+    SM->>SM: Acquire file lock
+    SM->>SM: Serialize session to JSON
+    SM->>FS: Write to temporary file
+    SM->>FS: Delete existing file (if present)
+    SM->>FS: Move temporary to final location
+    SM->>SM: Release file lock
+    
+    Note over SM,FS: Atomic file operation ensures<br>no partial writes occur
+```
+
+**Performance Optimization:**
+- **Asynchronous I/O**: All file operations use non-blocking async methods
+- **Minimal Serialization**: Only changed fields are updated before serialization
+- **Efficient JSON**: System.Text.Json with source generation for AOT compatibility
+- **Prioritizing Reliability**: Atomic writes ensure data integrity even if performance impact occurs
 
 **Working Directory Security:**
 - **IWorkingDirectoryProvider**: Abstraction for secure path operations

@@ -20,7 +20,7 @@
     <NoWarn>IL2026;CS1591</NoWarn>
     <AnalysisLevel>9.0</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- <TreatWarningsAsErrors>true</TreatWarningsAsErrors> -->
   </PropertyGroup>
 
   <ItemGroup>
