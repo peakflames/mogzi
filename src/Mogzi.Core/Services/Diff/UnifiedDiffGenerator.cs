@@ -39,7 +39,7 @@ public static class UnifiedDiffGenerator
         var lcsResult = LongestCommonSubsequence.FindLcs(originalLines, modifiedLines);
         var hunks = GenerateHunks(originalLines, modifiedLines, lcsResult);
 
-        s_logger?.LogDebug("Generated {HunkCount} hunks with {TotalLines} total diff lines", 
+        s_logger?.LogDebug("Generated {HunkCount} hunks with {TotalLines} total diff lines",
             hunks.Count, hunks.Sum(h => h.Lines.Count));
 
         return new UnifiedDiff
@@ -133,15 +133,15 @@ public static class UnifiedDiffGenerator
                 else
                 {
                     // Add context lines when both indices are valid and within bounds
-                    if (originalIndex < originalHunkEnd && modifiedIndex < modifiedHunkEnd && 
+                    if (originalIndex < originalHunkEnd && modifiedIndex < modifiedHunkEnd &&
                         originalIndex < original.Length && modifiedIndex < modified.Length)
                     {
-                        var contextLine = new DiffLine 
-                        { 
-                            Type = DiffLineType.Context, 
-                            Content = original[originalIndex], 
-                            OriginalLineNumber = originalIndex + 1, 
-                            ModifiedLineNumber = modifiedIndex + 1 
+                        var contextLine = new DiffLine
+                        {
+                            Type = DiffLineType.Context,
+                            Content = original[originalIndex],
+                            OriginalLineNumber = originalIndex + 1,
+                            ModifiedLineNumber = modifiedIndex + 1
                         };
                         lines.Add(contextLine);
 
@@ -184,7 +184,7 @@ public static class UnifiedDiffGenerator
 
             if (lines.Count == 0)
             {
-                s_logger?.LogWarning("Created empty hunk at OriginalStart: {OriginalStart}, ModifiedStart: {ModifiedStart}", 
+                s_logger?.LogWarning("Created empty hunk at OriginalStart: {OriginalStart}, ModifiedStart: {ModifiedStart}",
                     hunk.OriginalStart, hunk.ModifiedStart);
             }
 
@@ -229,8 +229,8 @@ public static class UnifiedDiffGenerator
             }
         }
 
-        s_logger?.LogDebug("Identified {ChangeCount} changes ({AddedCount} added, {RemovedCount} removed)", 
-            changes.Count, 
+        s_logger?.LogDebug("Identified {ChangeCount} changes ({AddedCount} added, {RemovedCount} removed)",
+            changes.Count,
             changes.Count(c => c.Type == DiffLineType.Added),
             changes.Count(c => c.Type == DiffLineType.Removed));
 

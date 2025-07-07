@@ -85,6 +85,8 @@ internal class PatchApplicator
                     currentPos++;
                     addedLines++;
                     break;
+                default:
+                    break;
             }
         }
 
@@ -100,7 +102,7 @@ internal class PatchApplicator
     private int FindHunkLocation(List<string> lines, DiffHunk hunk)
     {
         // Try to find the hunk by matching the pattern of context and removed lines
-        var originalLines = hunk.Lines.Where(l => l.Type == DiffLineType.Context || l.Type == DiffLineType.Removed).ToList();
+        var originalLines = hunk.Lines.Where(l => l.Type is DiffLineType.Context or DiffLineType.Removed).ToList();
 
         if (originalLines.Count == 0)
         {

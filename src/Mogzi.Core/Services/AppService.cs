@@ -7,25 +7,25 @@ namespace Mogzi.Services;
 /// Initializes a new instance of the AppService class
 /// </remarks>
 /// <param name="chatClient">The chat client</param>
-public class AppService(ChatClient chatClient) : IAppService
+/// <param name="chatHistoryService">The chat history service</param>
+public class AppService(ChatClient chatClient, ChatHistoryService chatHistoryService) : IAppService
 {
-    private readonly ChatClient _chatClient = chatClient;
-    private readonly ChatHistoryService _chatHistoryService = new ChatHistoryService();
+    private readonly ChatHistoryService _chatHistoryService = chatHistoryService;
 
     /// <summary>
     /// Gets the system prompt
     /// </summary>
-    public string SystemPrompt => _chatClient.SystemPrompt;
+    public string SystemPrompt => ChatClient.SystemPrompt;
 
     /// <summary>
     /// Gets the chat options
     /// </summary>
-    public ChatOptions ChatOptions => _chatClient.ChatOptions;
+    public ChatOptions ChatOptions => ChatClient.ChatOptions;
 
     /// <summary>
     /// Gets the chat client
     /// </summary>
-    public ChatClient ChatClient => _chatClient;
+    public ChatClient ChatClient { get; } = chatClient;
 
     /// <summary>
     /// Creates a new chat session
@@ -93,10 +93,10 @@ public class AppService(ChatClient chatClient) : IAppService
         if (chatHistory.Count > 0 && chatHistory[0].Role == ChatRole.System)
         {
             // Update the system message with the current system prompt
-            chatHistory[0] = new ChatMessage(ChatRole.System, _chatClient.SystemPrompt);
+            chatHistory[0] = new ChatMessage(ChatRole.System, ChatClient.SystemPrompt);
         }
 
-        return _chatClient.ChatClientMEAI.GetStreamingResponseAsync(chatHistory, _chatClient.ChatOptions, cancellationToken);
+        return ChatClient.ChatClientMEAI.GetStreamingResponseAsync(chatHistory, ChatClient.ChatOptions, cancellationToken);
     }
 
     /// <summary>
@@ -106,6 +106,6 @@ public class AppService(ChatClient chatClient) : IAppService
     /// <returns>The token count</returns>
     public int CalculateTokenMetrics(List<ChatMessage> chatHistory)
     {
-        return Mogzi.Utils.ApiMetricUtils.GetSimplisticTokenCount(chatHistory);
+        return Utils.ApiMetricUtils.GetSimplisticTokenCount(chatHistory);
     }
 }

@@ -7,7 +7,6 @@ namespace Mogzi.TUI.Infrastructure;
 public sealed class SlashCommandProcessor
 {
     private readonly Dictionary<string, SlashCommand> _commands = [];
-    private readonly ILogger<SlashCommandProcessor>? _logger;
     private readonly IAnsiConsole _console;
     private readonly ChatClient? _chatClient;
 
@@ -29,13 +28,11 @@ public sealed class SlashCommandProcessor
     /// <summary>
     /// Initializes a new instance of SlashCommandProcessor.
     /// </summary>
-    public SlashCommandProcessor(IAnsiConsole console, ILogger<SlashCommandProcessor>? logger = null, ChatClient? chatClient = null)
+    public SlashCommandProcessor(IAnsiConsole console, ChatClient? chatClient = null)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
-        _logger = logger;
         _chatClient = chatClient;
         RegisterCommands();
-        _logger?.LogDebug("SlashCommandProcessor initialized with {Count} commands", _commands.Count);
     }
 
     /// <summary>
@@ -66,7 +63,6 @@ public sealed class SlashCommandProcessor
                 return true;
             }
 
-            _logger?.LogDebug("Executing slash command: {Command} with args: {Args}", command, args);
             output = cmd.ExecuteWithOutput?.Invoke(args) ?? "Command executed successfully";
             return true;
         }
@@ -100,6 +96,42 @@ public sealed class SlashCommandProcessor
     public IReadOnlyDictionary<string, string> GetAllCommands()
     {
         return _commands.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Description);
+    }
+
+    /// <summary>
+    /// Checks if the given input is a valid slash command.
+    /// </summary>
+    /// <param name="input">The input string to check.</param>
+    /// <returns>True if the input is a valid slash command, false otherwise.</returns>
+    public bool IsValidCommand(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input) || !input.StartsWith("/"))
+        {
+            return false;
+        }
+
+        var parts = input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        var command = parts[0].ToLower();
+
+        return _commands.ContainsKey(command);
+    }
+
+    /// <summary>
+    /// Checks if the given input is an interactive slash command.
+    /// </summary>
+    /// <param name="input">The input string to check.</param>
+    /// <returns>True if the input is an interactive slash command, false otherwise.</returns>
+    public bool IsInteractiveCommand(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input) || !input.StartsWith("/"))
+        {
+            return false;
+        }
+
+        var parts = input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        var command = parts[0].ToLower();
+
+        return _commands.TryGetValue(command, out var cmd) && cmd.IsInteractive;
     }
 
     /// <summary>
@@ -230,26 +262,6 @@ public sealed class SlashCommandProcessor
     }
 
     /// <summary>
-    /// Shows an error message for unknown commands.
-    /// </summary>
-    private void ShowUnknownCommand(string command)
-    {
-        var content = new Rows(
-            new Markup($"[red]Unknown command:[/] {command}"),
-            new Markup("[yellow]Tip:[/] Type [blue]/help[/] to see available commands")
-        );
-
-        var panel = new Panel(content)
-            .Header(" Command Error ")
-            .Border(BoxBorder.Heavy)
-            .BorderColor(Color.Red)
-            .Padding(1, 0);
-
-        _console.Write(panel);
-        _console.WriteLine();
-    }
-
-    /// <summary>
     /// Gets an error message for unknown commands.
     /// </summary>
     private string GetUnknownCommandMessage(string command)
@@ -335,7 +347,7 @@ public sealed class SlashCommandProcessor
     {
         try
         {
-            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            var assembly = Assembly.GetExecutingAssembly();
             var version = assembly.GetName().Version;
             return version?.ToString() ?? "UNKNOWN";
         }

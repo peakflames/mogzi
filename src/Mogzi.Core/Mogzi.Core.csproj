@@ -6,6 +6,16 @@
     <Nullable>enable</Nullable>
     <PublishAot>true</PublishAot>
     <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+
+    <!--
+    Workaround for IDE0005: removed unused directives, we must enable XML
+    documentation and ignore the warning it generates (CS1591)
+      -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>IL2026;CS1591</NoWarn>
+    <AnalysisLevel>9.0</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>    

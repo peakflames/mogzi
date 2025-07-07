@@ -20,7 +20,7 @@ public static class MessageUtils
         }
 
         // Remove <system_environment>...</system_environment> blocks
-        var stripped = Regex.Replace(message, @"<system_environment>.*?</system_environment>", "", 
+        var stripped = Regex.Replace(message, @"<system_environment>.*?</system_environment>", "",
             RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
         // Clean up any extra whitespace that might be left

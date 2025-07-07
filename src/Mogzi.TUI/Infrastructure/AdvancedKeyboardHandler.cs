@@ -44,7 +44,7 @@ public sealed class AdvancedKeyboardHandler : IDisposable
     {
         _logger = logger;
         RegisterDefaultKeyBindings();
-        _logger?.LogDebug("AdvancedKeyboardHandler initialized");
+        _logger?.LogTrace("AdvancedKeyboardHandler initialized");
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public sealed class AdvancedKeyboardHandler : IDisposable
             throw new InvalidOperationException("Keyboard handler is already running");
         }
 
-        _logger?.LogDebug("Starting advanced keyboard input handling");
+        _logger?.LogTrace("Starting advanced keyboard input handling");
 
         using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken, _cancellationTokenSource.Token);
@@ -74,7 +74,7 @@ public sealed class AdvancedKeyboardHandler : IDisposable
         finally
         {
             IsRunning = false;
-            _logger?.LogDebug("Advanced keyboard input handling stopped");
+            _logger?.LogTrace("Advanced keyboard input handling stopped");
         }
     }
 
@@ -88,7 +88,7 @@ public sealed class AdvancedKeyboardHandler : IDisposable
             return;
         }
 
-        _logger?.LogDebug("Stopping advanced keyboard input handling");
+        _logger?.LogTrace("Stopping advanced keyboard input handling");
         _cancellationTokenSource.Cancel();
 
         if (_inputTask != null)
@@ -119,7 +119,7 @@ public sealed class AdvancedKeyboardHandler : IDisposable
         var binding = new KeyBinding(key, modifiers);
         _keyBindings[binding] = handler;
 
-        _logger?.LogDebug("Registered key binding: {Key} + {Modifiers}", key, modifiers);
+        _logger?.LogTrace("Registered key binding: {Key} + {Modifiers}", key, modifiers);
     }
 
     /// <summary>
@@ -143,7 +143,7 @@ public sealed class AdvancedKeyboardHandler : IDisposable
         var binding = new KeyBinding(key, modifiers);
         if (_keyBindings.Remove(binding))
         {
-            _logger?.LogDebug("Unregistered key binding: {Key} + {Modifiers}", key, modifiers);
+            _logger?.LogTrace("Unregistered key binding: {Key} + {Modifiers}", key, modifiers);
         }
     }
 
@@ -152,7 +152,7 @@ public sealed class AdvancedKeyboardHandler : IDisposable
     /// </summary>
     private async Task HandleKeyboardInputAsync(CancellationToken cancellationToken)
     {
-        _logger?.LogDebug("Starting keyboard input loop");
+        _logger?.LogTrace("Starting keyboard input loop");
 
         try
         {
@@ -188,7 +188,7 @@ public sealed class AdvancedKeyboardHandler : IDisposable
             throw;
         }
 
-        _logger?.LogDebug("Keyboard input loop stopped");
+        _logger?.LogTrace("Keyboard input loop stopped");
     }
 
     /// <summary>
@@ -196,6 +196,7 @@ public sealed class AdvancedKeyboardHandler : IDisposable
     /// </summary>
     private async Task ProcessKeyInputAsync(ConsoleKeyInfo keyInfo)
     {
+        _logger?.LogTrace("Processing KeyInput: Key={Key}, KeyChar='{KeyChar}', Modifiers={Modifiers}", keyInfo.Key, keyInfo.KeyChar, keyInfo.Modifiers);
         try
         {
             var keyPressArgs = new KeyPressEventArgs(keyInfo);
@@ -211,8 +212,8 @@ public sealed class AdvancedKeyboardHandler : IDisposable
                 }
             }
 
-            // Raise key combination event for complex key combinations
-            if (keyInfo.Modifiers != ConsoleModifiers.None)
+            // Raise key combination event for complex key combinations (Ctrl or Alt, but not just Shift)
+            if ((keyInfo.Modifiers & (ConsoleModifiers.Control | ConsoleModifiers.Alt)) != 0)
             {
                 var combinationArgs = new KeyCombinationEventArgs(keyInfo.Key, keyInfo.Modifiers, keyInfo.KeyChar);
                 KeyCombinationPressed?.Invoke(this, combinationArgs);
@@ -225,16 +226,16 @@ public sealed class AdvancedKeyboardHandler : IDisposable
             // Raise character typed event for printable characters
             if (!char.IsControl(keyInfo.KeyChar) && keyInfo.KeyChar != '\0')
             {
+                _logger?.LogTrace("Firing CharacterTyped event with char: '{Char}'", keyInfo.KeyChar);
                 var charArgs = new CharacterTypedEventArgs(keyInfo.KeyChar);
                 CharacterTyped?.Invoke(this, charArgs);
-                if (charArgs.Handled)
-                {
-                    return;
-                }
+                _logger?.LogTrace("CharacterTyped event invoked.");
             }
-
-            // Raise general key pressed event
-            KeyPressed?.Invoke(this, keyPressArgs);
+            else
+            {
+                // It's a control key, so fire the general key pressed event
+                KeyPressed?.Invoke(this, keyPressArgs);
+            }
         }
         catch (Exception ex)
         {
@@ -255,11 +256,11 @@ public sealed class AdvancedKeyboardHandler : IDisposable
         // Clear screen shortcut (Ctrl+L)
         RegisterKeyBinding(ConsoleKey.L, ConsoleModifiers.Control, args =>
         {
-            _logger?.LogDebug("Ctrl+L detected - clear screen requested");
+            _logger?.LogTrace("Ctrl+L detected - clear screen requested");
             // This will be handled by the consuming application
         });
 
-        _logger?.LogDebug("Default key bindings registered");
+        _logger?.LogTrace("Default key bindings registered");
     }
 
     /// <summary>
@@ -310,7 +311,7 @@ public sealed class AdvancedKeyboardHandler : IDisposable
         KeyCombinationPressed = null;
         CharacterTyped = null;
 
-        _logger?.LogDebug("AdvancedKeyboardHandler disposed");
+        _logger?.LogTrace("AdvancedKeyboardHandler disposed");
 
         GC.SuppressFinalize(this);
     }

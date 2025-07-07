@@ -32,4 +32,9 @@ public interface IScrollbackTerminal
     /// Cleans up resources and restores the terminal state.
     /// </summary>
     void Shutdown();
+
+    /// <summary>
+    /// Triggers an immediate refresh of the dynamic content area.
+    /// </summary>
+    void Refresh();
 }

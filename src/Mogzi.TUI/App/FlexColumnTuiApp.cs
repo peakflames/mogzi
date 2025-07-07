@@ -4,33 +4,15 @@ public sealed class FlexColumnTuiApp : IDisposable
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<FlexColumnTuiApp> _logger;
-    private readonly IAppService _appService;
-    private readonly HistoryManager _historyManager;
+    private readonly ITuiStateManager _stateManager;
+    private readonly ITuiContext _tuiContext;
+    private readonly ITuiComponentManager _componentManager;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly AdvancedKeyboardHandler _keyboardHandler;
-    private readonly SlashCommandProcessor _slashCommandProcessor;
-    private readonly AutocompleteManager _autocompleteManager;
-    private readonly UserSelectionManager _userSelectionManager;
     private readonly IScrollbackTerminal _scrollbackTerminal;
-    private readonly IWorkingDirectoryProvider _workingDirectoryProvider;
-    private readonly ToolResponseParser _toolResponseParser;
+    private readonly HistoryManager _historyManager;
+    private readonly SlashCommandProcessor _slashCommandProcessor;
     private bool _isDisposed = false;
-
-    // Chat state
-    private ChatState _currentState = ChatState.Input;
-    private readonly InputContext _inputContext = new();
-    private string _toolProgress = string.Empty;
-    private string _currentToolName = string.Empty;
-    private readonly List<string> _commandHistory = [];
-    private int _commandHistoryIndex = -1;
-
-    // AI operation management
-    private CancellationTokenSource? _aiOperationCts;
-    private DateTime _aiOperationStartTime;
-
-    // Tool execution tracking
-    private readonly Dictionary<string, string> _functionCallToToolName = [];
-    private readonly Dictionary<string, string> _functionCallToPreEditContent = [];
 
     public bool IsRunning { get; private set; } = false;
 
@@ -42,23 +24,23 @@ public sealed class FlexColumnTuiApp : IDisposable
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = serviceProvider.GetRequiredService<ILogger<FlexColumnTuiApp>>();
-        _appService = serviceProvider.GetRequiredService<IAppService>();
-        _historyManager = serviceProvider.GetRequiredService<HistoryManager>();
+        _stateManager = serviceProvider.GetRequiredService<ITuiStateManager>();
+        _tuiContext = serviceProvider.GetRequiredService<ITuiContext>();
+        _componentManager = serviceProvider.GetRequiredService<ITuiComponentManager>();
         _scrollbackTerminal = serviceProvider.GetRequiredService<IScrollbackTerminal>();
-        _workingDirectoryProvider = serviceProvider.GetRequiredService<IWorkingDirectoryProvider>();
-        _toolResponseParser = serviceProvider.GetRequiredService<ToolResponseParser>();
+        _historyManager = serviceProvider.GetRequiredService<HistoryManager>();
+        _slashCommandProcessor = serviceProvider.GetRequiredService<SlashCommandProcessor>();
 
         _cancellationTokenSource = new CancellationTokenSource();
 
-        _keyboardHandler = new AdvancedKeyboardHandler(_serviceProvider.GetService<ILogger<AdvancedKeyboardHandler>>());
-        _slashCommandProcessor = new SlashCommandProcessor(AnsiConsole.Console, _serviceProvider.GetService<ILogger<SlashCommandProcessor>>(), _serviceProvider.GetService<ChatClient>());
-        _autocompleteManager = serviceProvider.GetRequiredService<AutocompleteManager>();
-        _userSelectionManager = new UserSelectionManager(_serviceProvider, _inputContext);
+        // Get the keyboard handler from DI container instead of creating a new instance
+        _keyboardHandler = serviceProvider.GetRequiredService<AdvancedKeyboardHandler>();
 
         _keyboardHandler.KeyPressed += OnKeyPressed;
         _keyboardHandler.KeyCombinationPressed += OnKeyCombinationPressed;
         _keyboardHandler.CharacterTyped += OnCharacterTyped;
 
+        // Wire up slash command processor events
         _slashCommandProcessor.ExitRequested += () => _cancellationTokenSource.Cancel();
         _slashCommandProcessor.ClearHistoryRequested += () =>
         {
@@ -66,20 +48,20 @@ public sealed class FlexColumnTuiApp : IDisposable
             _scrollbackTerminal.Initialize();
             RenderInitialContent();
         };
-
-        _slashCommandProcessor.InteractiveCommandRequested += command =>
-        {
-            _userSelectionManager.DetectAndActivate(command);
-            _ = _userSelectionManager.UpdateSelectionsAsync();
-        };
+        _slashCommandProcessor.InteractiveCommandRequested += OnInteractiveCommandRequested;
 
         RegisterKeyBindings();
 
-        _logger.LogDebug("FlexColumnTuiApp initialized");
     }
 
     public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken = default)
     {
+        if (_logger is null)
+        {
+            Console.WriteLine("Logger is null");
+            return 1;
+        }
+
         ObjectDisposedException.ThrowIf(_isDisposed, this);
 
         if (IsRunning)
@@ -93,7 +75,7 @@ public sealed class FlexColumnTuiApp : IDisposable
 
             using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token);
 
-            Initialize(args);
+            await Initialize(args);
 
             IsRunning = true;
             Started?.Invoke();
@@ -123,14 +105,42 @@ public sealed class FlexColumnTuiApp : IDisposable
     }
 
 #pragma warning disable IDE0060 // Remove unused parameter
-    private void Initialize(string[] args)
-#pragma warning restore IDE0060 // Remove unused parameter
+    private async Task Initialize(string[] args)
     {
-        _logger.LogDebug("Initializing FlexColumn TUI application");
-        _scrollbackTerminal.Initialize();
-        LoadCommandHistory();
-        RenderInitialContent();
-        _logger.LogDebug("FlexColumn TUI application initialized");
+        try
+        {
+            // Register state factories
+            RegisterStateFactories();
+
+            // Initialize state manager with context
+            if (_tuiContext is null)
+            {
+                throw new InvalidOperationException("TuiContext is null during initialization");
+            }
+
+            if (_stateManager is null)
+            {
+                throw new InvalidOperationException("StateManager is null during initialization");
+            }
+
+            await _stateManager.InitializeAsync(_tuiContext);
+
+            // Initialize the terminal and render initial content
+            _scrollbackTerminal.Initialize();
+            RenderInitialContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize FlexColumn TUI application");
+            throw;
+        }
+    }
+
+    private void RegisterStateFactories()
+    {
+        _stateManager.RegisterState(ChatState.Input, _serviceProvider.GetRequiredService<InputTuiState>);
+        _stateManager.RegisterState(ChatState.Thinking, _serviceProvider.GetRequiredService<ThinkingTuiState>);
+        _stateManager.RegisterState(ChatState.ToolExecution, _serviceProvider.GetRequiredService<ToolExecutionTuiState>);
     }
 
     private void RenderInitialContent()
@@ -138,17 +148,30 @@ public sealed class FlexColumnTuiApp : IDisposable
         var chatHistory = _historyManager.GetCurrentChatHistory();
         if (!chatHistory.Any())
         {
-            _scrollbackTerminal.WriteStatic(CreateWelcomeMessage());
+            // Render welcome screen to static area to prevent it from being overwritten by dynamic content
+            // This ensures the welcome message persists in the scrollback history
+            var welcomePanel = _serviceProvider.GetRequiredService<WelcomePanel>();
+            var renderingUtilities = _serviceProvider.GetRequiredService<IRenderingUtilities>();
+            var themeInfo = _serviceProvider.GetRequiredService<IThemeInfo>();
+            var renderContext = new RenderContext(
+                _tuiContext,
+                _stateManager.CurrentStateType,
+                _logger,
+                _serviceProvider,
+                renderingUtilities,
+                themeInfo
+            );
 
-            // TODO: Implement once session management is implemented
-            // _scrollbackTerminal.WriteStatic(new Markup("[dim]No existing chat history found, starting fresh session[/]"));
-            // _scrollbackTerminal.WriteStatic(new Markup(""));
+            var welcomeContent = welcomePanel.Render(renderContext);
+            _scrollbackTerminal.WriteStatic(welcomeContent);
+            _scrollbackTerminal.WriteStatic(new Markup(""));
+
         }
         else
         {
-            // TODO: Implement once session management is implemented
-            // _scrollbackTerminal.WriteStatic(new Markup($"[dim]Loading {chatHistory.Count} messages from existing chat history[/]"));
-            // _scrollbackTerminal.WriteStatic(new Markup(""));
+            // Load existing chat history into static scrollback area
+            _scrollbackTerminal.WriteStatic(new Markup($"[dim]Loading {chatHistory.Count} messages from existing chat history[/]"));
+            _scrollbackTerminal.WriteStatic(new Markup(""));
             RenderHistory();
         }
     }
@@ -177,7 +200,6 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private async Task<int> RunMainLoopAsync(CancellationToken cancellationToken)
     {
-        _logger.LogDebug("Starting FlexColumn Live loop");
 
         try
         {
@@ -201,51 +223,33 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private IRenderable RenderDynamicContent()
     {
-        var bottomComponent = _currentState switch
+        try
         {
-            ChatState.Input when _inputContext.State == InputState.UserSelection =>
-                CreateInputWithUserSelection(_inputContext),
-            ChatState.Input when _inputContext.State == InputState.Autocomplete && _inputContext.ShowSuggestions =>
-                CreateInputWithAutocomplete(_inputContext),
-            ChatState.Input =>
-                CreateFlexInputComponent(_inputContext.CurrentInput),
-            ChatState.Thinking =>
-                CreateFlexThinkingComponent(),
-            ChatState.ToolExecution =>
-                CreateFlexToolExecutionComponent(_toolProgress),
-            _ => CreateFlexInputComponent(_inputContext.CurrentInput)
-        };
+            // Create render context for components
+            var renderingUtilities = _serviceProvider.GetRequiredService<IRenderingUtilities>();
+            var themeInfo = _serviceProvider.GetRequiredService<IThemeInfo>();
+            var renderContext = new RenderContext(
+                _tuiContext,
+                _stateManager.CurrentStateType,
+                _logger,
+                _serviceProvider,
+                renderingUtilities,
+                themeInfo
+            );
 
-        return new Rows(new Text(""), bottomComponent, new Text(""), CreateFlexFooterComponent());
-    }
+            // Update component visibility based on current state
+            _componentManager.UpdateComponentVisibility(_stateManager.CurrentStateType, renderContext);
 
-
-    private IRenderable CreateWelcomeMessage()
-    {
-        var contentItems = new List<IRenderable>
+            // Render the layout using the component manager
+            var result = _componentManager.RenderLayout(renderContext);
+            return result;
+        }
+        catch (Exception ex)
         {
-            // Shadow effect style with multi-color letters - "Mogzi" with each letter different color
-            new Markup("[bold blue]███╗   ███╗[/] [bold cyan] ██████╗ [/] [bold green] ██████╗ [/] [bold yellow]███████╗[/] [bold magenta]██╗[/]"),
-            new Markup("[bold blue]████╗ ████║[/] [bold cyan]██╔═══██╗[/] [bold green]██╔════╝ [/] [bold yellow]╚══███╔╝[/] [bold magenta]██║[/]"),
-            new Markup("[bold blue]██╔████╔██║[/] [bold cyan]██║   ██║[/] [bold green]██║  ███╗[/] [bold yellow]  ███╔╝ [/] [bold magenta]██║[/]"),
-            new Markup("[bold blue]██║╚██╔╝██║[/] [bold cyan]██║   ██║[/] [bold green]██║   ██║[/] [bold yellow] ███╔╝  [/] [bold magenta]██║[/]"),
-            new Markup("[bold blue]██║ ╚═╝ ██║[/] [bold cyan]╚██████╔╝[/] [bold green]╚██████╔╝[/] [bold yellow]███████╗[/] [bold magenta]██║[/]"),
-            new Markup("[bold blue]╚═╝     ╚═╝[/] [bold cyan] ╚═════╝ [/] [bold green] ╚═════╝ [/] [bold yellow]╚══════╝[/] [bold magenta]╚═╝[/]"),
-            new Text(""),
-            new Markup("[bold cyan]◢◤◢◤◢◤ Now connected to your Multi-model Autonomous Assistant ◢◤◢◤◢◤[/]"),
-            new Text(""),
-            new Markup("[dim]Your AI-powered development assistant[/]"),
-            new Text(""),
-            new Markup("[grey69]Tips for getting started:[/]"),
-            new Markup("[grey69]1. Ask questions, edit files, or run commands[/]"),
-            new Markup("[grey69]2. Be specific for the best results[/]"),
-            new Markup("[grey69]3. Use [/][magenta]/help[/][dim] for more information[/]"),
-            new Text("")
-        };
-        return new Rows(contentItems);
+            _logger.LogError(ex, "Error rendering dynamic content through component manager");
+            return new Text($"Rendering error: {ex.Message}");
+        }
     }
-
-
 
     private IRenderable RenderMessage(ChatMessage message)
     {
@@ -292,228 +296,6 @@ public sealed class FlexColumnTuiApp : IDisposable
         }
     }
 
-    private IRenderable CreateFlexInputComponent(string currentInput)
-    {
-        var prompt = "[blue]>[/] ";
-        var cursor = "[blink]▋[/]";
-
-        string content;
-        if (string.IsNullOrEmpty(currentInput))
-        {
-            content = $"{prompt}{cursor}[dim]Type your message or /help[/]";
-        }
-        else
-        {
-            // Insert cursor at the correct position
-            var beforeCursor = currentInput[.._inputContext.CursorPosition];
-            var afterCursor = currentInput[_inputContext.CursorPosition..];
-            content = $"{prompt}{beforeCursor}{cursor}{afterCursor}";
-        }
-
-        return new Panel(content)
-            .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Grey23)
-            .Padding(1, 0, 1, 0)
-            .Expand();
-    }
-
-    private IRenderable CreateInputWithAutocomplete(InputContext context)
-    {
-        var inputPanel = CreateFlexInputComponent(context.CurrentInput);
-
-        if (!context.ShowSuggestions || context.Suggestions.Count == 0)
-        {
-            return inputPanel;
-        }
-
-        var suggestionItems = context.Suggestions.Select((suggestion, index) =>
-        {
-            var isSelected = index == context.SelectedSuggestionIndex;
-            var style = isSelected ? "[blue on white]" : "[dim]";
-            var prefix = isSelected ? ">" : " ";
-
-            var description = _slashCommandProcessor.GetAllCommands()
-                .GetValueOrDefault(suggestion, "");
-
-            return new Markup($"{style}{prefix} {suggestion,-12} {description}[/]");
-        }).ToArray();
-
-        var suggestionsPanel = new Panel(new Rows(suggestionItems))
-            .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Blue)
-            .Padding(0, 0);
-
-        return new Rows(inputPanel, suggestionsPanel);
-    }
-
-    private IRenderable CreateInputWithUserSelection(InputContext context)
-    {
-        var inputPanel = CreateFlexInputComponent(context.CurrentInput);
-
-        if (context.CompletionItems.Count == 0)
-        {
-            return inputPanel;
-        }
-
-        var selectionItems = context.CompletionItems.Select((item, index) =>
-        {
-            var isSelected = index == context.SelectedSuggestionIndex;
-            var style = isSelected ? "[blue on white]" : "[dim]";
-            var prefix = isSelected ? ">" : " ";
-
-            return new Markup($"{style}{prefix} {item.Text,-12} {item.Description}[/]");
-        }).ToArray();
-
-        var selectionPanel = new Panel(new Rows(selectionItems))
-            .Header("Select an option")
-            .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Green)
-            .Padding(0, 0);
-
-        return new Rows(inputPanel, selectionPanel);
-    }
-
-    private IRenderable CreateFlexThinkingComponent()
-    {
-        var animationFrame = DateTime.Now.Millisecond / 250 % 4;
-        var leadingAnimation = animationFrame switch
-        {
-            0 => "   ",
-            1 => ".  ",
-            2 => ".. ",
-            3 => "...",
-            _ => "   "
-        };
-
-        // Calculate duration since AI operation started
-        var duration = (int)(DateTime.Now - _aiOperationStartTime).TotalSeconds;
-        var durationText = duration > 0 ? $"{duration}s" : "0s";
-
-        return new Panel(new Markup($"[orange3]{leadingAnimation}[/] [dim]Thinking (esc to cancel, {durationText})[/]"))
-            .NoBorder();
-    }
-
-    private IRenderable CreateFlexToolExecutionComponent(string progress)
-    {
-        var animationFrame = DateTime.Now.Millisecond / 250 % 4;
-        var leadingAnimation = animationFrame switch
-        {
-            0 => "   ",
-            1 => ".  ",
-            2 => ".. ",
-            3 => "...",
-            _ => "   "
-        };
-
-        // Provide meaningful progress text
-        var progressText = string.IsNullOrWhiteSpace(progress)
-            ? (!string.IsNullOrWhiteSpace(_currentToolName)
-                ? $"Executing {_currentToolName}..."
-                : "Executing tool...")
-            : progress;
-
-        return new Panel(new Markup($"[yellow]{leadingAnimation}[/] [dim]{progressText}[/]"))
-            .NoBorder();
-    }
-
-    private IRenderable CreateFlexFooterComponent()
-    {
-        var currentDir = GetDisplayPath(_workingDirectoryProvider.GetCurrentDirectory());
-        var modelInfo = GetModelDisplayInfo();
-        var tokenInfo = GetTokenUsageInfo();
-        var content = $"[skyblue2]{currentDir}[/]  [rosybrown]{modelInfo}[/] [dim]({tokenInfo})[/]";
-        return new Panel(new Markup(content))
-            .NoBorder();
-    }
-
-    private string GetTokenUsageInfo()
-    {
-        try
-        {
-            var chatHistory = _historyManager.GetCurrentChatHistory();
-            var tokenCount = _appService.CalculateTokenMetrics(chatHistory);
-
-            // Estimate context window size based on model (this could be made configurable)
-            var contextWindowSize = EstimateContextWindowSize();
-            var percentageUsed = Math.Min(100.0, tokenCount * 100.0 / contextWindowSize);
-            var percentageLeft = 100.0 - percentageUsed;
-
-            return $"{tokenCount:N0} tokens, {percentageLeft:F2}% context left";
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Error calculating token usage");
-            return "token calculation unavailable";
-        }
-    }
-
-    private int EstimateContextWindowSize()
-    {
-        try
-        {
-            var modelId = _appService.ChatClient.ActiveProfile.ModelId.ToLowerInvariant();
-
-            // Common model context window sizes
-            return modelId switch
-            {
-                var m when m.Contains("gpt-4.1") => 1047576, // GPT-4.1 models
-                var m when m.Contains("gpt-4") => 128000,  // GPT-4 Turbo models
-                var m when m.Contains("gpt-3.5-") => 16385, // GPT-3.5 Turbo models
-                var m when m.Contains("o3") => 200000, // o3 models
-                var m when m.Contains("o4") => 200000, // o4 models
-                var m when m.Contains("gemini-2.5") => 1048576, // Gemini 2.5 Flash models
-                var m when m.Contains("gemini-1.5") => 1048576, // Gemini 1.5 Pro models
-                var m when m.Contains("claude") => 200000, // Claude models
-                _ => 128000 // Default fallback
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Error estimating context window size");
-            return 128000; // Safe default
-        }
-    }
-
-    private string GetModelDisplayInfo()
-    {
-        try
-        {
-            var chatClient = _appService.ChatClient;
-            var provider = chatClient.ActiveApiProvider.Name;
-            var model = chatClient.ActiveProfile.ModelId;
-
-            // Format like "provider/model" or just "model" if provider is empty
-            if (!string.IsNullOrEmpty(provider))
-            {
-                return $"{provider}:{model}";
-            }
-            return model;
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Error getting model display info");
-            return "unknown-model";
-        }
-    }
-
-    private string GetDisplayPath(string fullPath)
-    {
-        try
-        {
-            var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            if (fullPath.StartsWith(homeDir))
-            {
-                return "~" + fullPath[homeDir.Length..].Replace('\\', '/');
-            }
-            return fullPath.Replace('\\', '/');
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Error formatting display path for {Path}", fullPath);
-            return fullPath;
-        }
-    }
-
     private void RegisterKeyBindings()
     {
         _keyboardHandler.RegisterKeyBinding(ConsoleKey.C, ConsoleModifiers.Control, args =>
@@ -525,7 +307,6 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         _keyboardHandler.RegisterKeyBinding(ConsoleKey.L, ConsoleModifiers.Control, args =>
         {
-            _logger.LogDebug("Ctrl+L detected, clearing screen");
             _historyManager.ClearHistory();
             _scrollbackTerminal.Initialize();
             RenderInitialContent();
@@ -546,11 +327,30 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         _keyboardHandler.RegisterKeyBinding(ConsoleKey.E, ConsoleModifiers.Control, args =>
         {
-            _logger.LogDebug("Ctrl+E detected - external editor feature placeholder");
             args.Handled = true;
         });
 
-        _logger.LogDebug("FlexColumn key bindings registered");
+    }
+
+    /// <summary>
+    /// Handles interactive slash commands like /tool-approvals.
+    /// </summary>
+    private async void OnInteractiveCommandRequested(string command)
+    {
+        try
+        {
+            // Activate the user selection manager for the command
+            _tuiContext.UserSelectionManager.DetectAndActivate(command);
+
+            if (_tuiContext.UserSelectionManager.IsSelectionModeActive)
+            {
+                await _tuiContext.UserSelectionManager.UpdateSelectionsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling interactive command: {Command}", command);
+        }
     }
 
     private async void OnKeyPressed(object? sender, KeyPressEventArgs e)
@@ -562,121 +362,12 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         try
         {
-            // Handle autocomplete navigation first
-            if (_inputContext.State == InputState.Autocomplete && _inputContext.ShowSuggestions)
+            await _stateManager.HandleKeyPressAsync(e);
+            // Only refresh if the event was handled and might have changed the UI state
+            if (e.Handled)
             {
-#pragma warning disable IDE0010 // Add missing cases
-                switch (e.Key)
-                {
-                    case ConsoleKey.UpArrow:
-                        NavigateAutocomplete(up: true);
-                        e.Handled = true;
-                        return;
-
-                    case ConsoleKey.DownArrow:
-                        NavigateAutocomplete(up: false);
-                        e.Handled = true;
-                        return;
-
-                    case ConsoleKey.Tab:
-                    case ConsoleKey.Enter:
-                        AcceptAutocompleteSuggestion();
-                        e.Handled = true;
-                        return;
-
-                    case ConsoleKey.Escape:
-                        CancelAutocomplete();
-                        e.Handled = true;
-                        return;
-                }
-#pragma warning restore IDE0010 // Add missing cases
+                _scrollbackTerminal.Refresh();
             }
-            else if (_inputContext.State == InputState.UserSelection)
-            {
-#pragma warning disable IDE0010 // Add missing cases
-                switch (e.Key)
-                {
-                    case ConsoleKey.UpArrow:
-                        NavigateUserSelection(up: true);
-                        e.Handled = true;
-                        return;
-
-                    case ConsoleKey.DownArrow:
-                        NavigateUserSelection(up: false);
-                        e.Handled = true;
-                        return;
-
-                    case ConsoleKey.Enter:
-                        await _userSelectionManager.AcceptSelectionAsync();
-                        e.Handled = true;
-                        return;
-
-                    case ConsoleKey.Escape:
-                        _userSelectionManager.Deactivate();
-                        e.Handled = true;
-                        return;
-                    default:
-                        break;
-                }
-#pragma warning restore IDE0010 // Add missing cases
-            }
-
-#pragma warning disable IDE0010 // Add missing cases
-            switch (e.Key)
-            {
-                case ConsoleKey.Enter:
-                    await SubmitCurrentInput();
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.UpArrow:
-                    NavigateCommandHistory(up: true);
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.DownArrow:
-                    NavigateCommandHistory(up: false);
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.LeftArrow:
-                    MoveCursorLeft();
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.RightArrow:
-                    MoveCursorRight();
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.Home:
-                    MoveCursorToStart();
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.End:
-                    MoveCursorToEnd();
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.Backspace:
-                    DeleteCharacterBefore();
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.Delete:
-                    DeleteCharacterAfter();
-                    e.Handled = true;
-                    break;
-
-                case ConsoleKey.Escape:
-                    HandleEscapeKey();
-                    e.Handled = true;
-                    break;
-                default:
-                    break;
-            }
-#pragma warning restore IDE0010 // Add missing cases
         }
         catch (Exception ex)
         {
@@ -693,7 +384,6 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         try
         {
-            _logger.LogDebug("Unhandled key combination: {Key} + {Modifiers}", e.Key, e.Modifiers);
         }
         catch (Exception ex)
         {
@@ -712,21 +402,25 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         try
         {
-            InsertCharacter(e.Character);
-            e.Handled = true;
+            if (_stateManager is not null)
+            {
+                await _stateManager.HandleCharacterTypedAsync(e);
+            }
+
+            // Only refresh if the event was handled and might have changed the UI state
+            if (e.Handled)
+            {
+                _scrollbackTerminal.Refresh();
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling character typed: {Character}", e.Character);
         }
-
-        await Task.CompletedTask;
     }
 
     private async Task ShutdownAsync()
     {
-        _logger.LogDebug("Shutting down FlexColumn TUI application");
-
         try
         {
             await _keyboardHandler.StopAsync();
@@ -736,8 +430,6 @@ public sealed class FlexColumnTuiApp : IDisposable
         {
             _logger.LogError(ex, "Error during shutdown");
         }
-
-        _logger.LogDebug("FlexColumn TUI application shutdown complete");
     }
 
     public void Dispose()
@@ -752,18 +444,19 @@ public sealed class FlexColumnTuiApp : IDisposable
         _cancellationTokenSource.Cancel();
         _keyboardHandler?.Dispose();
         _cancellationTokenSource?.Dispose();
-        _aiOperationCts?.Dispose();
+        _tuiContext.AiOperationCts?.Dispose();
 
         Started = null;
         Stopped = null;
         UnhandledError = null;
 
-        _logger?.LogDebug("FlexColumnTuiApp disposed");
 
         GC.SuppressFinalize(this);
     }
 
+#pragma warning disable IDE0051 // Remove unused private members
     private void LoadCommandHistory()
+#pragma warning restore IDE0051 // Remove unused private members
     {
         try
         {
@@ -774,10 +467,9 @@ public sealed class FlexColumnTuiApp : IDisposable
                 .Where(text => !string.IsNullOrWhiteSpace(text))
                 .ToList();
 
-            _commandHistory.Clear();
-            _commandHistory.AddRange(userMessages);
+            _tuiContext.CommandHistory.Clear();
+            _tuiContext.CommandHistory.AddRange(userMessages);
 
-            _logger?.LogDebug("Loaded {Count} commands from history", _commandHistory.Count);
         }
         catch (Exception ex)
         {
@@ -787,842 +479,41 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private void NavigateCommandHistory(bool up)
     {
-        if (_commandHistory.Count == 0)
+        if (_tuiContext.CommandHistory.Count == 0)
         {
             return;
         }
+
+        var inputContext = _tuiContext.InputContext;
 
         if (up)
         {
-            if (_commandHistoryIndex == -1)
+            if (_tuiContext.CommandHistoryIndex == -1)
             {
-                _commandHistoryIndex = _commandHistory.Count - 1;
-                _inputContext.CurrentInput = _commandHistory[_commandHistoryIndex];
+                _tuiContext.CommandHistoryIndex = _tuiContext.CommandHistory.Count - 1;
+                inputContext.CurrentInput = _tuiContext.CommandHistory[_tuiContext.CommandHistoryIndex];
             }
-            else if (_commandHistoryIndex > 0)
+            else if (_tuiContext.CommandHistoryIndex > 0)
             {
-                _commandHistoryIndex--;
-                _inputContext.CurrentInput = _commandHistory[_commandHistoryIndex];
-            }
-        }
-        else
-        {
-            if (_commandHistoryIndex >= 0 && _commandHistoryIndex < _commandHistory.Count - 1)
-            {
-                _commandHistoryIndex++;
-                _inputContext.CurrentInput = _commandHistory[_commandHistoryIndex];
-            }
-            else if (_commandHistoryIndex == _commandHistory.Count - 1)
-            {
-                _commandHistoryIndex = -1;
-                _inputContext.CurrentInput = string.Empty;
-            }
-        }
-
-        _inputContext.CursorPosition = _inputContext.CurrentInput.Length;
-        UpdateAutocompleteState();
-    }
-
-    private async Task SubmitCurrentInput()
-    {
-        if (string.IsNullOrWhiteSpace(_inputContext.CurrentInput) || _currentState != ChatState.Input)
-        {
-            return;
-        }
-
-        var inputToSubmit = _inputContext.CurrentInput;
-        AddToCommandHistory(inputToSubmit);
-        ClearCurrentInput();
-
-        await ProcessUserInput(inputToSubmit);
-    }
-
-    private void AddToCommandHistory(string command)
-    {
-        if (string.IsNullOrWhiteSpace(command))
-        {
-            return;
-        }
-
-        if (_commandHistory.Contains(command))
-        {
-            return;
-        }
-
-        _commandHistory.Add(command);
-
-        if (_commandHistory.Count > 100)
-        {
-            _commandHistory.RemoveAt(0);
-        }
-
-        _commandHistoryIndex = -1;
-    }
-
-    private async Task ProcessUserInput(string input)
-    {
-        try
-        {
-            // Add spacing before user message
-            _scrollbackTerminal.WriteStatic(new Markup(""));
-
-            // Get current environment context
-            var envPrompt = EnvSystemPrompt.GetEnvPrompt(
-                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-                _appService.ChatClient.OperatingSystem.ToString(),
-                _appService.ChatClient.DefaultShell,
-                _appService.ChatClient.Username,
-                _appService.ChatClient.Hostname,
-                _workingDirectoryProvider.GetCurrentDirectory(),
-                "chat", // mode - could be made configurable
-                _appService.ChatClient.Config.ToolApprovals
-            );
-
-            _logger?.LogDebug("Generated environment prompt: {EnvPrompt}", envPrompt);
-
-            // Create user message with environment context appended (for AI processing)
-            var fullUserMessage = Mogzi.Utils.MessageUtils.AppendSystemEnvironment(input, envPrompt);
-            var userMessage = new ChatMessage(ChatRole.User, fullUserMessage);
-            _historyManager.AddUserMessage(userMessage);
-
-            _logger?.LogDebug("Full user message (with env context) length: {Length}", fullUserMessage.Length);
-            _logger?.LogDebug("Original user input: {Input}", input);
-
-            // Display only the original user input (stripped of env context)
-            var displayMessage = new ChatMessage(ChatRole.User, input);
-            _scrollbackTerminal.WriteStatic(RenderMessage(displayMessage));
-
-            if (_slashCommandProcessor.TryProcessCommand(input, out var commandOutput))
-            {
-                if (_inputContext.State == InputState.UserSelection)
-                {
-                    // Command is interactive, so we don't process it as a chat message.
-                    return;
-                }
-
-                if (!string.IsNullOrEmpty(commandOutput))
-                {
-                    var commandMessage = new ChatMessage(ChatRole.Assistant, commandOutput);
-                    _historyManager.AddAssistantMessage(commandMessage);
-                    _scrollbackTerminal.WriteStatic(RenderMessage(commandMessage));
-                }
-                return;
-            }
-
-            // Create new cancellation token for this AI operation
-            _aiOperationCts?.Dispose();
-            _aiOperationCts = new CancellationTokenSource();
-            _aiOperationStartTime = DateTime.Now;
-
-            _currentState = ChatState.Thinking;
-
-            var chatHistory = _historyManager.GetCurrentChatHistory();
-            var responseStream = _appService.ProcessChatMessageAsync(chatHistory, _aiOperationCts.Token);
-
-            var assistantMessage = new ChatMessage(ChatRole.Assistant, "");
-            _historyManager.AddAssistantMessage(assistantMessage);
-            _scrollbackTerminal.WriteStatic(new Markup(""));
-            _scrollbackTerminal.WriteStatic(RenderMessage(assistantMessage), isUpdatable: true);
-
-            await foreach (var responseUpdate in responseStream)
-            {
-                if (!string.IsNullOrEmpty(responseUpdate.Text))
-                {
-                    var newText = assistantMessage.Text + responseUpdate.Text;
-                    _logger?.LogInformation($"ChatMsg[Assistant, '{newText}'");
-                    assistantMessage = new ChatMessage(ChatRole.Assistant, newText);
-                    _historyManager.UpdateLastMessage(assistantMessage);
-                    _scrollbackTerminal.WriteStatic(RenderMessage(assistantMessage), isUpdatable: true);
-                }
-
-                if (IsToolExecutionUpdate(responseUpdate))
-                {
-                    _currentState = ChatState.ToolExecution;
-
-                    // Extract tool name first
-                    ExtractToolNameFromUpdate(responseUpdate);
-
-                    // Set progress text based on available information
-                    if (!string.IsNullOrWhiteSpace(responseUpdate.Text))
-                    {
-                        _toolProgress = responseUpdate.Text;
-                    }
-                    else if (!string.IsNullOrWhiteSpace(_currentToolName))
-                    {
-                        _toolProgress = $"Executing {_currentToolName}...";
-                        _scrollbackTerminal.WriteStatic(new Markup($"[green]•[/] [dim]{_toolProgress}[/]"));
-                    }
-
-                    _logger?.LogInformation($"ChatMsg[Tool, '{_toolProgress}'");
-
-                    // Handle tool result display
-                    await HandleToolExecutionResult(responseUpdate);
-                }
-            }
-            _scrollbackTerminal.WriteStatic(new Markup(""));
-            _logger?.LogInformation($"ChatMsg[Assistant, '{assistantMessage.Text}'");
-            _scrollbackTerminal.WriteStatic(RenderMessage(assistantMessage));
-        }
-        catch (OperationCanceledException) when (_aiOperationCts?.Token.IsCancellationRequested == true)
-        {
-            // AI operation was cancelled by user - this is handled by InterruptAiOperation()
-            _logger?.LogDebug("AI operation was cancelled by user");
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error processing user input");
-            var errorMessage = new ChatMessage(ChatRole.Assistant, $"Error processing input: {ex.Message}");
-            _historyManager.AddAssistantMessage(errorMessage);
-            _scrollbackTerminal.WriteStatic(RenderMessage(errorMessage));
-        }
-        finally
-        {
-            _currentState = ChatState.Input;
-            _toolProgress = string.Empty;
-            _currentToolName = string.Empty;
-        }
-    }
-
-    private bool IsToolExecutionUpdate(ChatResponseUpdate responseUpdate)
-    {
-        if (responseUpdate.Contents == null)
-        {
-            // Check for tool response XML in text content even when Contents is null
-            if (!string.IsNullOrEmpty(responseUpdate.Text))
-            {
-                var hasToolResponse = responseUpdate.Text.Contains("<tool_response") || responseUpdate.Text.Contains("</tool_response>");
-                return hasToolResponse;
-            }
-
-            return false;
-        }
-
-        // Check for function call/result content
-        var hasFunctionContent = responseUpdate.Contents.Any(content => content is FunctionCallContent or FunctionResultContent);
-        if (hasFunctionContent)
-        {
-            return true;
-        }
-
-        // Check for tool response XML in text content
-        if (!string.IsNullOrEmpty(responseUpdate.Text))
-        {
-            var hasToolResponse = responseUpdate.Text.Contains("<tool_response") || responseUpdate.Text.Contains("</tool_response>");
-            return hasToolResponse;
-        }
-
-        return false;
-    }
-
-    private void ExtractToolNameFromUpdate(ChatResponseUpdate responseUpdate)
-    {
-        if (responseUpdate.Contents == null)
-        {
-            return;
-        }
-
-        var functionCall = responseUpdate.Contents.OfType<FunctionCallContent>().FirstOrDefault();
-        if (functionCall != null)
-        {
-            var toolName = functionCall.Name ?? "Unknown Tool";
-
-            // Create concise tool display with arrow format: toolName → keyValue
-            if (functionCall.Arguments != null && functionCall.Arguments.Count > 0)
-            {
-                var keyValue = GetKeyArgumentValue(toolName, functionCall.Arguments);
-                _currentToolName = !string.IsNullOrEmpty(keyValue) ? $"{toolName} → {keyValue}" : toolName;
-            }
-            else
-            {
-                _currentToolName = toolName;
+                _tuiContext.CommandHistoryIndex--;
+                inputContext.CurrentInput = _tuiContext.CommandHistory[_tuiContext.CommandHistoryIndex];
             }
         }
         else
         {
-            _currentToolName = string.Empty;
-        }
-    }
-
-    private string GetKeyArgumentValue(string toolName, IDictionary<string, object?> arguments)
-    {
-        // Define key arguments for common tools to show the most relevant info
-        var keyArguments = toolName.ToLowerInvariant() switch
-        {
-            "execute_command" or "shell" => new[] { "command", "cmd" },
-            "write_file" or "writefile" or "write_to_file" => ["file_path", "path", "filename"],
-            "read_file" or "readfile" or "read_file_tool" => ["file_path", "path", "filename"],
-            "edit_file" or "editfile" => ["file_path", "path", "filename"],
-            "grep" or "search" => ["pattern", "query", "search_term"],
-            "ls" or "list" or "list_files" => ["path", "directory"],
-            _ => ["path", "file", "command", "query", "name"] // fallback common keys
-        };
-
-        foreach (var key in keyArguments)
-        {
-            if (arguments.TryGetValue(key, out var value) && value != null)
+            if (_tuiContext.CommandHistoryIndex >= 0 && _tuiContext.CommandHistoryIndex < _tuiContext.CommandHistory.Count - 1)
             {
-                var valueStr = value.ToString() ?? "";
-
-                // For file paths, show just the filename if it's a full path
-                if (key.Contains("path") || key.Contains("file"))
-                {
-                    valueStr = Path.GetFileName(valueStr);
-                    if (string.IsNullOrEmpty(valueStr))
-                    {
-                        // If GetFileName returns empty, use the original but truncate
-                        valueStr = value.ToString() ?? "";
-                    }
-                }
-
-                // For commands, show first part (command name) and truncate if needed
-                if (key.Contains("command") || key.Contains("cmd"))
-                {
-                    var parts = valueStr.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length > 0)
-                    {
-                        valueStr = parts[0];
-                        if (parts.Length > 1)
-                        {
-                            // Add indication there are more arguments
-                            valueStr += "...";
-                        }
-                    }
-                }
-
-                // Final truncation to ensure single line (max 25 chars for the value part)
-                if (valueStr.Length > 25)
-                {
-                    valueStr = valueStr[..22] + "...";
-                }
-
-                return valueStr;
+                _tuiContext.CommandHistoryIndex++;
+                inputContext.CurrentInput = _tuiContext.CommandHistory[_tuiContext.CommandHistoryIndex];
+            }
+            else if (_tuiContext.CommandHistoryIndex == _tuiContext.CommandHistory.Count - 1)
+            {
+                _tuiContext.CommandHistoryIndex = -1;
+                inputContext.CurrentInput = string.Empty;
             }
         }
 
-        // If no key argument found, return empty to show just tool name
-        return string.Empty;
+        inputContext.CursorPosition = inputContext.CurrentInput.Length;
     }
 
-    private void InsertCharacter(char character)
-    {
-        if (_currentState != ChatState.Input)
-        {
-            return;
-        }
-
-        _inputContext.CursorPosition = Math.Max(0, Math.Min(_inputContext.CursorPosition, _inputContext.CurrentInput.Length));
-        _inputContext.CurrentInput = _inputContext.CurrentInput.Insert(_inputContext.CursorPosition, character.ToString());
-        _inputContext.CursorPosition++;
-        _commandHistoryIndex = -1;
-        UpdateAutocompleteState();
-    }
-
-    private void DeleteCharacterBefore()
-    {
-        if (_currentState != ChatState.Input || _inputContext.CurrentInput.Length == 0)
-        {
-            return;
-        }
-
-        _inputContext.CursorPosition = Math.Max(0, Math.Min(_inputContext.CursorPosition, _inputContext.CurrentInput.Length));
-
-        if (_inputContext.CursorPosition > 0)
-        {
-            _inputContext.CurrentInput = _inputContext.CurrentInput.Remove(_inputContext.CursorPosition - 1, 1);
-            _inputContext.CursorPosition--;
-        }
-
-        _commandHistoryIndex = -1;
-        UpdateAutocompleteState();
-    }
-
-    private void DeleteCharacterAfter()
-    {
-        if (_currentState != ChatState.Input || _inputContext.CurrentInput.Length == 0)
-        {
-            return;
-        }
-
-        _inputContext.CursorPosition = Math.Max(0, Math.Min(_inputContext.CursorPosition, _inputContext.CurrentInput.Length));
-
-        if (_inputContext.CursorPosition < _inputContext.CurrentInput.Length)
-        {
-            _inputContext.CurrentInput = _inputContext.CurrentInput.Remove(_inputContext.CursorPosition, 1);
-        }
-
-        _commandHistoryIndex = -1;
-        UpdateAutocompleteState();
-    }
-
-    private void MoveCursorLeft()
-    {
-        if (_inputContext.CursorPosition > 0)
-        {
-            _inputContext.CursorPosition--;
-            UpdateAutocompleteState();
-        }
-    }
-
-    private void MoveCursorRight()
-    {
-        if (_inputContext.CursorPosition < _inputContext.CurrentInput.Length)
-        {
-            _inputContext.CursorPosition++;
-            UpdateAutocompleteState();
-        }
-    }
-
-    private void MoveCursorToStart()
-    {
-        _inputContext.CursorPosition = 0;
-        UpdateAutocompleteState();
-    }
-
-    private void MoveCursorToEnd()
-    {
-        _inputContext.CursorPosition = _inputContext.CurrentInput.Length;
-        UpdateAutocompleteState();
-    }
-
-    private void ClearCurrentInput()
-    {
-        _inputContext.Clear();
-        _commandHistoryIndex = -1;
-    }
-
-    private async void UpdateAutocompleteState()
-    {
-        try
-        {
-            // Detect which provider should be triggered
-            var provider = _autocompleteManager.DetectTrigger(_inputContext.CurrentInput, _inputContext.CursorPosition);
-
-            if (provider != null)
-            {
-                _inputContext.ActiveProvider = provider;
-                await _autocompleteManager.UpdateSuggestionsAsync(_inputContext);
-            }
-            else
-            {
-                _inputContext.ClearAutocomplete();
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating autocomplete state");
-            _inputContext.ClearAutocomplete();
-        }
-    }
-
-    private void NavigateAutocomplete(bool up)
-    {
-        if (!_inputContext.ShowSuggestions || _inputContext.Suggestions.Count == 0)
-        {
-            return;
-        }
-
-        if (up)
-        {
-            _inputContext.SelectedSuggestionIndex =
-                (_inputContext.SelectedSuggestionIndex - 1 + _inputContext.Suggestions.Count)
-                % _inputContext.Suggestions.Count;
-        }
-        else
-        {
-            _inputContext.SelectedSuggestionIndex =
-                (_inputContext.SelectedSuggestionIndex + 1)
-                % _inputContext.Suggestions.Count;
-        }
-    }
-
-    private void AcceptAutocompleteSuggestion()
-    {
-        _autocompleteManager.AcceptSuggestion(_inputContext);
-    }
-
-    private void CancelAutocomplete()
-    {
-        _inputContext.ClearAutocomplete();
-    }
-
-    private void NavigateUserSelection(bool up)
-    {
-        if (_inputContext.CompletionItems.Count == 0)
-        {
-            return;
-        }
-
-        if (up)
-        {
-            _inputContext.SelectedSuggestionIndex =
-                (_inputContext.SelectedSuggestionIndex - 1 + _inputContext.CompletionItems.Count)
-                % _inputContext.CompletionItems.Count;
-        }
-        else
-        {
-            _inputContext.SelectedSuggestionIndex =
-                (_inputContext.SelectedSuggestionIndex + 1)
-                % _inputContext.CompletionItems.Count;
-        }
-    }
-
-    private void HandleEscapeKey()
-    {
-#pragma warning disable IDE0010 // Add missing cases
-        switch (_currentState)
-        {
-            case ChatState.Input:
-                // Clear current input when in input state
-                ClearCurrentInput();
-                break;
-
-            case ChatState.Thinking:
-            case ChatState.ToolExecution:
-                // Interrupt AI operation and return to input
-                InterruptAiOperation();
-                break;
-        }
-#pragma warning restore IDE0010 // Add missing cases
-    }
-
-    private void InterruptAiOperation()
-    {
-        try
-        {
-            // Cancel the AI operation
-            _aiOperationCts?.Cancel();
-
-            // Set state back to input
-            _currentState = ChatState.Input;
-
-            // Clear any progress indicators
-            _toolProgress = string.Empty;
-            _currentToolName = string.Empty;
-
-            // Display interruption message without assistant prefix
-            _scrollbackTerminal.WriteStatic(new Markup("⚠ Request cancelled."));
-            _scrollbackTerminal.WriteStatic(new Markup(""));
-
-            // Add to history as assistant message for context
-            var interruptMessage = new ChatMessage(ChatRole.Assistant, "⚠ Request cancelled.");
-            _historyManager.AddAssistantMessage(interruptMessage);
-
-            _logger?.LogInformation("AI operation interrupted by user (Escape key)");
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error interrupting AI operation");
-        }
-    }
-
-    private async Task HandleToolExecutionResult(ChatResponseUpdate responseUpdate)
-    {
-        try
-        {
-            if (responseUpdate.Contents == null && string.IsNullOrEmpty(responseUpdate.Text))
-            {
-                return;
-            }
-
-            string? toolName = null;
-            string? result = null;
-
-            // Handle function call content (tool execution starting)
-            var functionCall = responseUpdate.Contents?.OfType<FunctionCallContent>().FirstOrDefault();
-            if (functionCall != null)
-            {
-                // Store the mapping of call ID to tool name for later use
-                _functionCallToToolName[functionCall.CallId] = functionCall.Name;
-
-                // For EditTool, capture the pre-edit content (Gemini CLI approach)
-                await CapturePreEditContentForEditTool(functionCall);
-            }
-
-            // Handle function result content (tool execution completed)
-            var functionResult = responseUpdate.Contents?.OfType<FunctionResultContent>().FirstOrDefault();
-
-            if (functionResult != null)
-            {
-                // Get the tool name from our stored mapping
-                _ = _functionCallToToolName.TryGetValue(functionResult.CallId, out toolName);
-                toolName ??= "Unknown Tool";
-
-                result = functionResult.Result?.ToString() ?? "";
-            }
-            // If we only have a function call but no result yet, don't process for display
-            else if (functionCall != null && functionResult == null)
-            {
-                return;
-            }
-            // Handle XML tool responses in text content
-            else if (!string.IsNullOrEmpty(responseUpdate.Text) &&
-                     (responseUpdate.Text.Contains("<tool_response") || responseUpdate.Text.Contains("</tool_response>")))
-            {
-                result = responseUpdate.Text;
-
-                // Extract tool name from XML if possible
-                try
-                {
-                    var toolNameMatch = System.Text.RegularExpressions.Regex.Match(result, @"tool_name=""([^""]+)""");
-                    toolName = toolNameMatch.Success ? toolNameMatch.Groups[1].Value : "Unknown Tool";
-                }
-                catch (Exception ex)
-                {
-                    _logger?.LogDebug(ex, "Failed to extract tool name from XML");
-                    toolName = "Unknown Tool";
-                }
-            }
-
-            // If we have a tool result to display
-            if (!string.IsNullOrEmpty(result) && !string.IsNullOrEmpty(toolName))
-            {
-                // Parse the tool response for enhanced display
-                var toolInfo = _toolResponseParser.ParseToolResponse(toolName, result);
-
-                // Handle different tool types appropriately
-                UnifiedDiff? diff = null;
-                string? displayContent = null;
-
-                try
-                {
-                    var normalizedToolName = toolInfo.ToolName.ToLowerInvariant();
-
-                    // For WriteFileTool - show content directly, no diff
-                    if (IsWriteFileTool(normalizedToolName))
-                    {
-                        displayContent = toolInfo.NewContent ?? ExtractContentFromXml(result);
-                    }
-                    // For EditTool and DiffPatchTools - generate/extract diffs
-                    else if (IsEditTool(normalizedToolName) || IsDiffPatchTool(normalizedToolName))
-                    {
-                        if (!string.IsNullOrEmpty(toolInfo.FilePath))
-                        {
-                            string? originalContent = null;
-                            var newContent = toolInfo.NewContent;
-
-                            // For EditTool, use the captured pre-edit content (Gemini CLI approach)
-                            if (IsEditTool(normalizedToolName) && functionResult != null)
-                            {
-                                if (_functionCallToPreEditContent.TryGetValue(functionResult.CallId, out var preEditContent))
-                                {
-                                    originalContent = preEditContent;
-                                }
-                            }
-                            else
-                            {
-                                // For DiffPatchTools, try to read original content from file
-                                if (File.Exists(toolInfo.FilePath))
-                                {
-                                    try
-                                    {
-                                        originalContent = await File.ReadAllTextAsync(toolInfo.FilePath);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        _logger?.LogDebug(ex, "Could not read original file content for diff: {FilePath}", toolInfo.FilePath);
-                                    }
-                                }
-                            }
-
-                            // For EditTool, use content_on_disk as new content
-                            // For DiffPatchTools, read current file content if needed
-                            if (string.IsNullOrEmpty(newContent) && File.Exists(toolInfo.FilePath))
-                            {
-                                try
-                                {
-                                    newContent = await File.ReadAllTextAsync(toolInfo.FilePath);
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger?.LogDebug(ex, "Could not read current file content: {FilePath}", toolInfo.FilePath);
-                                }
-                            }
-
-                            // Set up logger for UnifiedDiffGenerator debugging
-                            UnifiedDiffGenerator.SetLogger(_logger);
-
-                            // Generate diff using the tool response parser
-                            diff = _toolResponseParser.ExtractFileDiff(
-                                toolInfo.ToolName,
-                                result,
-                                originalContent,
-                                newContent,
-                                toolInfo.FilePath);
-                        }
-                    }
-                    else
-                    {
-                        displayContent = toolInfo.Summary;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger?.LogDebug(ex, "Could not process tool result for display");
-                }
-
-                // Create enhanced tool display with clean styling
-                var toolDisplay = ToolExecutionDisplay.CreateToolDisplay(
-                    toolInfo.ToolName,
-                    toolInfo.Status,
-                    toolInfo.Description,
-                    diff: diff,
-                    result: displayContent ?? toolInfo.Summary ?? result
-                );
-
-                // Display the tool execution result in scrollback
-                _scrollbackTerminal.WriteStatic(toolDisplay);
-                _scrollbackTerminal.WriteStatic(new Markup(""));
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error handling tool execution result");
-        }
-
-        await Task.CompletedTask;
-    }
-
-    private static bool IsWriteFileTool(string normalizedToolName)
-    {
-        return normalizedToolName is "write_file" or "writefile" or "write_to_file";
-    }
-
-    private static bool IsEditTool(string normalizedToolName)
-    {
-        return normalizedToolName is "replace_in_file" or "edit_file" or "editfile" or "edit";
-    }
-
-    private static bool IsDiffPatchTool(string normalizedToolName)
-    {
-        return normalizedToolName is "apply_code_patch" or "generate_code_patch" or "preview_patch_application";
-    }
-
-    private static string? ExtractContentFromXml(string xmlResponse)
-    {
-        try
-        {
-            var doc = new XmlDocument();
-            doc.LoadXml(xmlResponse);
-
-            // Look for content_on_disk element
-            var contentNode = doc.SelectSingleNode("//content_on_disk");
-            if (contentNode != null)
-            {
-                return contentNode.InnerText;
-            }
-
-            // Fallback: look for any content in notes
-            var notesNode = doc.SelectSingleNode("//notes");
-            if (notesNode != null)
-            {
-                return notesNode.InnerText?.Trim();
-            }
-
-            return null;
-        }
-        catch (XmlException)
-        {
-            // If XML parsing fails, return null
-            return null;
-        }
-    }
-
-    private async Task CapturePreEditContentForEditTool(FunctionCallContent functionCall)
-    {
-        _logger?.LogDebug("=== CapturePreEditContentForEditTool START ===");
-
-        try
-        {
-            // Only capture for EditTool
-            if (!IsEditTool(functionCall.Name.ToLowerInvariant()))
-            {
-                _logger?.LogDebug("Not an EditTool, skipping pre-edit capture");
-                return;
-            }
-
-            // Extract file_path from function arguments
-            if (functionCall.Arguments?.TryGetValue("file_path", out var filePathValue) == true)
-            {
-                var filePath = filePathValue?.ToString();
-                if (!string.IsNullOrEmpty(filePath))
-                {
-                    _logger?.LogDebug("Capturing pre-edit content for file: {FilePath}", filePath);
-
-                    // Read the entire file content before the edit (Gemini CLI approach)
-                    if (File.Exists(filePath))
-                    {
-                        try
-                        {
-                            var preEditContent = await File.ReadAllTextAsync(filePath);
-                            _functionCallToPreEditContent[functionCall.CallId] = preEditContent;
-                            _logger?.LogDebug("Captured pre-edit content, length: {Length}", preEditContent.Length);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger?.LogDebug(ex, "Failed to read pre-edit content from file: {FilePath}", filePath);
-                        }
-                    }
-                    else
-                    {
-                        _logger?.LogDebug("File does not exist, storing empty pre-edit content: {FilePath}", filePath);
-                        _functionCallToPreEditContent[functionCall.CallId] = string.Empty;
-                    }
-                }
-                else
-                {
-                    _logger?.LogDebug("File path is null or empty");
-                }
-            }
-            else
-            {
-                _logger?.LogDebug("No file_path argument found in function call");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error capturing pre-edit content");
-        }
-
-        _logger?.LogDebug("=== CapturePreEditContentForEditTool END ===");
-    }
-
-    private string? ExtractOriginalContentFromFunctionCall(FunctionCallContent? functionCall)
-    {
-        if (functionCall?.Arguments == null)
-        {
-            _logger?.LogDebug("No function call or arguments available for original content extraction");
-            return null;
-        }
-
-        // For EditTool (replace_in_file), extract the old_string parameter
-        if (functionCall.Arguments.TryGetValue("old_string", out var oldStringValue))
-        {
-            var oldString = oldStringValue?.ToString();
-            _logger?.LogDebug("Extracted old_string from function call, length: {Length}", oldString?.Length ?? 0);
-            return oldString;
-        }
-
-        _logger?.LogDebug("No old_string parameter found in function call arguments");
-        return null;
-    }
-
-    private string? ExtractCallIdFromUpdate(ChatResponseUpdate responseUpdate)
-    {
-        // Try to extract call ID from function call content
-        var functionCall = responseUpdate.Contents?.OfType<FunctionCallContent>().FirstOrDefault();
-        if (functionCall != null)
-        {
-            return functionCall.CallId;
-        }
-
-        // Try to extract call ID from function result content
-        var functionResult = responseUpdate.Contents?.OfType<FunctionResultContent>().FirstOrDefault();
-        if (functionResult != null)
-        {
-            return functionResult.CallId;
-        }
-
-        // No call ID found
-        return null;
-    }
 }

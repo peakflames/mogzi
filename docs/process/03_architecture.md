@@ -24,21 +24,37 @@
 graph TD
     A[Program.cs] --> B[ServiceCollection]
     B --> C[FlexColumnTuiApp]
-    C --> D[IScrollbackTerminal]
-    C --> E[AdvancedKeyboardHandler]
-    C --> F[SlashCommandProcessor]
-    C --> G[HistoryManager]
-    C --> H[StateManager]
-    C --> AC[AutocompleteManager]
+    C --> D[ITuiStateManager]
+    C --> E[ITuiComponentManager]
+    C --> F[ITuiMediator]
+    C --> G[IScrollbackTerminal]
+    C --> H[AdvancedKeyboardHandler]
     
-    AC --> FP[FilePathProvider]
-    AC --> SCP[SlashCommandProvider]
-    FP --> IAP[IAutocompleteProvider]
-    SCP --> IAP
+    D --> IS[InputTuiState]
+    D --> TS[ThinkingTuiState]
+    D --> TES[ToolExecutionTuiState]
+    D --> TC[ITuiContext]
     
-    C --> IC[InputContext]
-    IC --> IS[InputState]
-    IC --> CT[CompletionItem]
+    E --> IP[InputPanel]
+    E --> AP[AutocompletePanel]
+    E --> USP[UserSelectionPanel]
+    E --> FP[FooterPanel]
+    E --> WP[WelcomePanel]
+    E --> PP[ProgressPanel]
+    E --> FL[FlexColumnLayout]
+    
+    F --> FCM[FlexColumnMediator]
+    
+    TC --> IC[InputContext]
+    TC --> HM[HistoryManager]
+    TC --> AM[AutocompleteManager]
+    TC --> USM[UserSelectionManager]
+    TC --> SCP[SlashCommandProcessor]
+    
+    AM --> FPP[FilePathProvider]
+    AM --> SCPP[SlashCommandProvider]
+    FPP --> IAP[IAutocompleteProvider]
+    SCPP --> IAP
     
     I[IAppService] --> J[ChatClient]
     J --> K[SystemTools]
@@ -60,31 +76,65 @@ graph TD
 sequenceDiagram
     participant User
     participant FlexColumnTuiApp
+    participant ITuiStateManager
+    participant ITuiComponentManager
+    participant ITuiMediator
+    participant InputTuiState
     participant IAppService
     participant ChatClient
     participant IChatClient
     participant Tools
 
     User->>FlexColumnTuiApp: Types message
-    FlexColumnTuiApp->>IAppService: ProcessChatMessageAsync
+    FlexColumnTuiApp->>ITuiStateManager: HandleCharacterTypedAsync
+    ITuiStateManager->>InputTuiState: HandleCharacterTypedAsync
+    InputTuiState->>ITuiComponentManager: Update InputPanel
+    ITuiComponentManager->>FlexColumnTuiApp: Render updated UI
+    
+    User->>FlexColumnTuiApp: Presses Enter
+    FlexColumnTuiApp->>ITuiStateManager: HandleKeyPressAsync
+    ITuiStateManager->>InputTuiState: HandleKeyPressAsync
+    InputTuiState->>ITuiMediator: HandleUserInputAsync
+    ITuiMediator->>IAppService: ProcessChatMessageAsync
     IAppService->>ChatClient: GetStreamingResponseAsync
     ChatClient->>IChatClient: GetStreamingResponseAsync
     IChatClient->>External: OpenAI API Request
     
-    loop Streaming Response
+    ITuiMediator->>ITuiStateManager: RequestStateTransitionAsync(Thinking)
+    ITuiStateManager->>ThinkingTuiState: OnEnterAsync
+    
+    loop Streaming Response with Message Boundary Detection
         External-->>IChatClient: Content chunk
         IChatClient-->>ChatClient: ChatResponseUpdate
         ChatClient-->>IAppService: IAsyncEnumerable<ChatResponseUpdate>
-        IAppService-->>FlexColumnTuiApp: Update UI
+        IAppService-->>ITuiMediator: Update UI
+        
+        Note over ITuiMediator: Message Boundary Detection System
+        ITuiMediator->>ITuiMediator: DetermineContentType(responseUpdate)
+        ITuiMediator->>ITuiMediator: ShouldStartNewMessage(currentType, newType)
+        
+        alt Content Type Transition Detected
+            ITuiMediator->>HistoryManager: FinalizeCurrentMessage()
+            ITuiMediator->>HistoryManager: CreateNewMessage(contentType)
+            ITuiMediator->>ScrollbackTerminal: WriteStatic(finalizedMessage)
+        else Continue Current Message
+            ITuiMediator->>HistoryManager: UpdateCurrentMessage(content)
+            ITuiMediator->>ScrollbackTerminal: WriteStatic(updatedMessage, isUpdatable: true)
+        end
+        
+        ITuiMediator->>ITuiComponentManager: Update ProgressPanel
         
         alt Tool Call Required
+            ITuiMediator->>ITuiStateManager: RequestStateTransitionAsync(ToolExecution)
             IChatClient->>Tools: Execute AIFunction
             Tools-->>IChatClient: Tool result
             IChatClient->>External: Continue with result
         end
     end
     
-    IChatClient-->>FlexColumnTuiApp: Final response
+    IChatClient-->>ITuiMediator: Final response
+    ITuiMediator->>HistoryManager: FinalizeLastMessage()
+    ITuiMediator->>ITuiStateManager: RequestStateTransitionAsync(Input)
 ```
 
 ## Service Layer Architecture
@@ -538,16 +588,437 @@ sequenceDiagram
 
 ## State Management Architecture
 
+**State Pattern Implementation:**
+```csharp
+// Core state interface with lifecycle management
+public interface ITuiState
+{
+    string Name { get; }
+    IRenderable RenderDynamicContent(ITuiContext context);
+    Task HandleKeyPressAsync(ITuiContext context, KeyPressEventArgs e);
+    Task HandleCharacterTypedAsync(ITuiContext context, CharacterTypedEventArgs e);
+    Task OnEnterAsync(ITuiContext context, ITuiState? previousState);
+    Task OnExitAsync(ITuiContext context, ITuiState? nextState);
+}
+
+// State manager for coordinating transitions
+public interface ITuiStateManager
+{
+    ChatState CurrentStateType { get; }
+    ITuiState? CurrentState { get; }
+    Task RequestStateTransitionAsync(ChatState newState);
+    Task InitializeAsync(ITuiContext context);
+    IRenderable RenderDynamicContent();
+    Task HandleKeyPressAsync(KeyPressEventArgs e);
+    Task HandleCharacterTypedAsync(CharacterTypedEventArgs e);
+}
+```
+
+**State Implementations:**
+- **InputTuiState**: Handles normal input, autocomplete, user selection, command history navigation
+- **ThinkingTuiState**: Manages AI processing state with cancellation support and progress indication
+- **ToolExecutionTuiState**: Handles tool execution display, progress updates, and result presentation
+
+**TUI Context Architecture:**
+```csharp
+// Shared context providing services and state to all components
+public interface ITuiContext
+{
+    // Core services
+    IServiceProvider ServiceProvider { get; }
+    ILogger Logger { get; }
+    IScrollbackTerminal ScrollbackTerminal { get; }
+    IAppService AppService { get; }
+    IWorkingDirectoryProvider WorkingDirectoryProvider { get; }
+    
+    // State management
+    InputContext InputContext { get; }
+    HistoryManager HistoryManager { get; }
+    AutocompleteManager AutocompleteManager { get; }
+    UserSelectionManager UserSelectionManager { get; }
+    SlashCommandProcessor SlashCommandProcessor { get; }
+    ToolResponseParser ToolResponseParser { get; }
+    ITuiStateManager StateManager { get; }
+    
+    // Application state
+    List<string> CommandHistory { get; }
+    int CommandHistoryIndex { get; set; }
+    string CurrentToolName { get; set; }
+    string ToolProgress { get; set; }
+    CancellationTokenSource? AiOperationCts { get; set; }
+    DateTime? AiOperationStartTime { get; set; }
+    
+    // State transition coordination
+    Task RequestStateTransitionAsync(ChatState newState);
+}
+```
+
+**State Transition Flow:**
+```mermaid
+stateDiagram-v2
+    [*] --> Input
+    Input --> Thinking : User submits input
+    Thinking --> ToolExecution : Tool call detected
+    Thinking --> Input : Response complete
+    ToolExecution --> Thinking : Tool execution complete
+    ToolExecution --> Input : All tools complete
+    Input --> Input : User typing/navigation
+    Thinking --> Input : User cancellation (Escape)
+    ToolExecution --> Input : User cancellation (Escape)
+```
+
 **Application State:**
-- **ChatState Enum**: Input, Thinking, ToolExecution states
-- **StateManager**: Centralized state coordination
-- **HistoryManager**: Chat session persistence and loading
-- **Event-Driven Updates**: Real-time UI updates via IAsyncEnumerable
+- **ChatState Enum**: Input, Thinking, ToolExecution states with clear transitions
+- **TuiStateManager**: Centralized state coordination with async state transitions
+- **HistoryManager**: Chat session persistence and loading with message management
+- **Event-Driven Updates**: Real-time UI updates via IAsyncEnumerable and state notifications
 
 **Terminal State Management:**
 - **ScrollbackTerminal**: Static content rendering with dynamic updates
 - **Cursor Management**: Hide/show cursor during operations
 - **Content Clearing**: Efficient dynamic content updates without full redraws
+
+## Component Architecture
+
+**Component System Design:**
+```csharp
+// Base component interface for modular UI elements
+public interface ITuiComponent
+{
+    string Name { get; }
+    bool IsVisible { get; set; }
+    IRenderable Render(IRenderContext context);
+    Task<bool> HandleInputAsync(IRenderContext context, object inputEvent);
+    Task InitializeAsync(IRenderContext context);
+    Task DisposeAsync();
+}
+
+// Component manager for lifecycle and coordination
+public interface ITuiComponentManager
+{
+    IReadOnlyDictionary<string, ITuiComponent> Components { get; }
+    ITuiLayout? CurrentLayout { get; set; }
+    void RegisterComponent(ITuiComponent component);
+    bool UnregisterComponent(string componentName);
+    ITuiComponent? GetComponent(string componentName);
+    T? GetComponent<T>(string componentName) where T : class, ITuiComponent;
+    IRenderable RenderLayout(IRenderContext context);
+    Task<bool> BroadcastInputAsync(object inputEvent, IRenderContext context);
+    Task InitializeComponentsAsync(IRenderContext context);
+    Task DisposeComponentsAsync();
+    void SetComponentVisibility(string componentName, bool isVisible);
+    void UpdateComponentVisibility(ChatState currentState, IRenderContext context);
+}
+
+// Concrete implementation with comprehensive lifecycle management
+public class TuiComponentManager : ITuiComponentManager
+{
+    private readonly Dictionary<string, ITuiComponent> _components = new();
+    private readonly ILogger<TuiComponentManager> _logger;
+
+    // Implementation handles component registration, validation, rendering,
+    // input distribution, and visibility management with robust error handling
+}
+```
+
+**Render Context Architecture:**
+```csharp
+// Provides rendering context and services for components
+public interface IRenderContext
+{
+    ITuiContext TuiContext { get; }
+    ChatState CurrentState { get; }
+    ILogger Logger { get; }
+    IServiceProvider ServiceProvider { get; }
+    IThemeInfo? ThemeInfo { get; }
+    IRenderingUtilities RenderingUtilities { get; }
+}
+
+// Concrete implementation with primary constructor pattern
+public class RenderContext(
+    ITuiContext tuiContext,
+    ChatState currentState,
+    ILogger logger,
+    IServiceProvider serviceProvider,
+    IRenderingUtilities renderingUtilities,
+    IThemeInfo? themeInfo = null) : IRenderContext
+{
+    public ITuiContext TuiContext { get; } = tuiContext ?? throw new ArgumentNullException(nameof(tuiContext));
+    public ChatState CurrentState { get; } = currentState;
+    public ILogger Logger { get; } = logger ?? throw new ArgumentNullException(nameof(logger));
+    public IServiceProvider ServiceProvider { get; } = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+    public IThemeInfo? ThemeInfo { get; } = themeInfo;
+    public IRenderingUtilities RenderingUtilities { get; } = renderingUtilities ?? throw new ArgumentNullException(nameof(renderingUtilities));
+}
+
+// Rendering utilities for consistent component styling
+public interface IRenderingUtilities
+{
+    string FormatDisplayPath(string fullPath);
+    string FormatModelInfo(IAppService appService);
+    string FormatTokenUsage(IAppService appService, IEnumerable<ChatMessage> chatHistory);
+    IRenderable RenderMessage(ChatMessage message);
+}
+
+// Concrete implementation with comprehensive formatting logic
+public class RenderingUtilities(ILogger<RenderingUtilities> logger) : IRenderingUtilities
+{
+    private readonly ILogger<RenderingUtilities> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+    // Implementation includes path formatting, model info display,
+    // token usage calculation, and message rendering with error handling
+}
+```
+
+**Component Implementations:**
+- **InputPanel**: Handles the main input area with cursor positioning, text display, and input validation
+  ```csharp
+  public class InputPanel : ITuiComponent
+  {
+      // Renders input field with cursor positioning and placeholder text
+      // Supports different input states (normal, autocomplete, selection)
+  }
+  ```
+
+- **AutocompletePanel**: Displays autocomplete suggestions with selection highlighting and navigation
+  ```csharp
+  public class AutocompletePanel : ITuiComponent
+  {
+      // Renders suggestion list with highlighting for selected items
+      // Integrates with SlashCommandProcessor for command descriptions
+  }
+  ```
+
+- **UserSelectionPanel**: Shows interactive selection options for user commands with navigation
+  ```csharp
+  public class UserSelectionPanel : ITuiComponent
+  {
+      // Renders selection options with highlighting and descriptions
+      // Supports keyboard navigation and selection confirmation
+  }
+  ```
+
+- **FooterPanel**: Displays status information including directory, model, and token usage
+  ```csharp
+  public class FooterPanel : ITuiComponent
+  {
+      // Renders status bar with working directory, model info, and token usage
+      // Uses RenderingUtilities for consistent formatting
+  }
+  ```
+
+- **WelcomePanel**: Shows welcome message and branding with colorful ASCII art
+  ```csharp
+  public class WelcomePanel : ITuiComponent
+  {
+      // Renders multi-color ASCII logo and welcome message
+      // Provides getting started tips and command information
+  }
+  ```
+
+- **ProgressPanel**: Displays animated progress indicators for AI operations and tool execution
+  ```csharp
+  public class ProgressPanel : ITuiComponent
+  {
+      // Renders animated spinner with operation status and duration
+      // Supports different states (thinking, tool execution)
+      // Includes cancellation instructions
+  }
+  ```
+
+**Layout System:**
+```csharp
+// Layout interface for component arrangement
+public interface ITuiLayout
+{
+    string Name { get; }
+    IEnumerable<string> GetRequiredComponents();
+    IRenderable Compose(IReadOnlyDictionary<string, ITuiComponent> components, IRenderContext context);
+    bool ValidateComponents(IReadOnlyDictionary<string, ITuiComponent> availableComponents);
+}
+
+// FlexColumnLayout implementation for vertical component stacking
+public class FlexColumnLayout : ITuiLayout
+{
+    public string Name => "FlexColumnLayout";
+
+    public IEnumerable<string> GetRequiredComponents()
+    {
+        return
+        [
+            "InputPanel",
+            "AutocompletePanel", 
+            "UserSelectionPanel",
+            "ProgressPanel",
+            "FooterPanel",
+            "WelcomePanel"
+        ];
+    }
+
+    public IRenderable Compose(IReadOnlyDictionary<string, ITuiComponent> components, IRenderContext context)
+    {
+        // Determines which components to show based on current state
+        // Arranges components in vertical columns with flexible sizing
+        // Handles component spacing and conditional visibility
+        // Returns a composed Spectre.Console Renderable
+    }
+}
+```
+
+**Mediator Pattern Integration:**
+```csharp
+// Mediator for coordinating complex component interactions
+public interface ITuiMediator
+{
+    string Name { get; }
+    Task HandleUserInputAsync(string input, ITuiContext context);
+    Task HandleKeyPressAsync(KeyPressEventArgs e, ITuiContext context);
+    Task HandleCharacterTypedAsync(CharacterTypedEventArgs e, ITuiContext context);
+    Task HandleStateChangeAsync(ChatState newState, ChatState previousState, ITuiContext context);
+    Task HandleToolExecutionAsync(string toolName, string progress, ITuiContext context);
+    Task NotifyComponentAsync(string componentName, object eventData, ITuiContext context);
+    void RegisterComponent(ITuiComponent component);
+    void UnregisterComponent(ITuiComponent component);
+}
+
+// FlexColumnMediator implementation with comprehensive workflow coordination
+public class FlexColumnMediator(ILogger<FlexColumnMediator> logger) : ITuiMediator
+{
+    private readonly Dictionary<string, ITuiComponent> _registeredComponents = [];
+    private readonly ILogger<FlexColumnMediator> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+    public string Name => "FlexColumnMediator";
+
+    // Implementation handles user input processing, AI response streaming,
+    // tool execution coordination, and component notifications
+    // Manages complex workflows like environment context generation,
+    // AI processing, and tool execution with error handling
+}
+```
+
+**Component Lifecycle Management:**
+- **Registration**: Components registered with manager during application startup via DI container
+  ```csharp
+  // In ServiceConfiguration.cs
+  services.AddSingleton<InputPanel>();
+  services.AddSingleton<AutocompletePanel>();
+  services.AddSingleton<UserSelectionPanel>();
+  services.AddSingleton<ProgressPanel>();
+  services.AddSingleton<FooterPanel>();
+  services.AddSingleton<WelcomePanel>();
+  
+  // Component manager and mediator configured with factory pattern
+  services.AddSingleton<ITuiComponentManager>(serviceProvider =>
+  {
+      var componentManager = new TuiComponentManager(logger);
+      // Register all components and set layout
+      componentManager.RegisterComponent(serviceProvider.GetRequiredService<InputPanel>());
+      // ... other components
+      componentManager.CurrentLayout = serviceProvider.GetRequiredService<ITuiLayout>();
+      return componentManager;
+  });
+  
+  services.AddSingleton<ITuiMediator>(serviceProvider =>
+  {
+      var mediator = new FlexColumnMediator(logger);
+      // Register components with mediator
+      mediator.RegisterComponent(serviceProvider.GetRequiredService<InputPanel>());
+      // ... other components
+      return mediator;
+  });
+  ```
+
+- **Initialization**: Components initialized with render context and dependencies
+  ```csharp
+  // In TuiComponentManager.cs
+  public async Task InitializeComponentsAsync(IRenderContext context)
+  {
+      foreach (var component in _components.Values)
+      {
+          await component.InitializeAsync(context);
+      }
+  }
+  ```
+
+- **Visibility Management**: Component visibility updated based on application state
+  ```csharp
+  // In TuiComponentManager.cs
+  public void UpdateComponentVisibility(ChatState currentState, IRenderContext context)
+  {
+      switch (currentState)
+      {
+          case ChatState.Input:
+              SetComponentVisibility("InputPanel", true);
+              SetComponentVisibility("ProgressPanel", false);
+              // Additional visibility logic based on input context
+              break;
+          case ChatState.Thinking:
+          case ChatState.ToolExecution:
+              SetComponentVisibility("InputPanel", false);
+              SetComponentVisibility("ProgressPanel", true);
+              break;
+      }
+  }
+  ```
+
+- **Input Distribution**: Input events broadcast to relevant components
+  ```csharp
+  // In TuiComponentManager.cs
+  public async Task<bool> BroadcastInputAsync(object inputEvent, IRenderContext context)
+  {
+      foreach (var component in _components.Values.Where(c => c.IsVisible))
+      {
+          if (await component.HandleInputAsync(context, inputEvent))
+          {
+              return true; // Input handled, stop propagation
+          }
+      }
+      return false; // Input not handled by any component
+  }
+  ```
+
+- **Disposal**: Components properly disposed during application shutdown
+  ```csharp
+  // In TuiComponentManager.cs
+  public async Task DisposeComponentsAsync()
+  {
+      foreach (var component in _components.Values)
+      {
+          await component.DisposeAsync();
+      }
+      _components.Clear();
+  }
+  ```
+
+**Theme and Styling:**
+```csharp
+// Theme information for consistent component styling
+public interface IThemeInfo
+{
+    Color PrimaryColor { get; }
+    Color SecondaryColor { get; }
+    Color AccentColor { get; }
+    BoxBorder BorderStyle { get; }
+}
+
+// Default theme implementation
+public class DefaultThemeInfo : IThemeInfo
+{
+    public Color PrimaryColor => Color.Blue;
+    public Color SecondaryColor => Color.Grey23;
+    public Color AccentColor => Color.Green;
+    public BoxBorder BorderStyle => BoxBorder.Rounded;
+}
+```
+
+**Component Communication Patterns:**
+- **Event Broadcasting**: Input events distributed to all relevant components with priority handling
+- **Mediator Coordination**: Complex workflows coordinated through mediator pattern with clear responsibilities
+- **State-Based Visibility**: Component visibility managed based on application state with explicit rules
+- **Render Context Sharing**: Shared context provides consistent access to services and utilities
+- **Async Operations**: All component operations support async/await patterns with proper cancellation
+- **Service Provider Integration**: Components access shared services through DI container
+- **Error Isolation**: Component errors are isolated and logged without affecting other components
 
 ## Diff/Patch Architecture
 

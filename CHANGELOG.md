@@ -2,6 +2,8 @@
 
 ## [0.13.8] - IN PROG
 
+- Refactored TUI application to use proper state management system with state machine pattern for improved maintainability and separation of concerns
+
 
 ## [0.13.7] - 2025-07-03
 
