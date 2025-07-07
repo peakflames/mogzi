@@ -73,14 +73,15 @@ python -m http.server -d outputs/
 
 ### Adding Test Coverage
 
-To link test cases to specific requirements, add requirement ID comments in your test methods:
+To link test cases to specific requirements, add requirement ID comments on the same line as the assertion that validates the requirement:
 
 ```csharp
 [Fact]
 public void MyTestMethod_ShouldValidateRequirement()
 {
-    // TOR-1.1, TOR-2.3
     // Test implementation here...
+    var result = MyMethod();
+    result.Should().BeTrue("this is the reason why"); // TOR-1.1, TOR-2.3
 }
 ```
 

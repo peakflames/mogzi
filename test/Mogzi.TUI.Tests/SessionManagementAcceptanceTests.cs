@@ -55,6 +55,7 @@ public class SessionManagementAcceptanceTests : IDisposable
     [Fact]
     public async Task AttachmentHandling_WithVariousFileTypes_CreatesDirectoryBasedStorage()
     {
+        // TOR-5.3.11, TOR-5.3.12
         // Arrange
         _output?.WriteLine("🧪 Testing TOR-5.3.11 & TOR-5.3.12: Attachment handling with directory-based storage");
         _logger.LogInformation("Testing attachment handling with various file types");
@@ -126,6 +127,7 @@ public class SessionManagementAcceptanceTests : IDisposable
     [Fact]
     public async Task AttachmentMetadata_PreservesOriginalInformation_InSessionData()
     {
+        // TOR-5.3.13
         // Arrange
         _output?.WriteLine("🧪 Testing TOR-5.3.13: Attachment metadata preservation");
         _logger.LogInformation("Testing attachment metadata preservation");
@@ -173,6 +175,7 @@ public class SessionManagementAcceptanceTests : IDisposable
     [Fact]
     public async Task ContentBasedHashing_PreventsDuplicates_EnsuresDataIntegrity()
     {
+        // TOR-5.3.14
         // Arrange
         _output?.WriteLine("🧪 Testing TOR-5.3.14: Content-based hashing for deduplication");
         _logger.LogInformation("Testing content-based hashing and deduplication");
@@ -247,6 +250,7 @@ public class SessionManagementAcceptanceTests : IDisposable
     [Fact]
     public async Task DirectoryStructure_OrganizesSessionData_ForEfficientAccess()
     {
+        // TOR-5.3.15
         // Arrange
         _output?.WriteLine("🧪 Testing TOR-5.3.15: Directory structure organization");
         _logger.LogInformation("Testing directory structure organization");
@@ -475,6 +479,7 @@ public class SessionManagementAcceptanceTests : IDisposable
     [Fact]
     public async Task NewSessionCreation_OnStartup_CreatesUUIDv7InCorrectDirectory()
     {
+        // TOR-5.3.1
         // Arrange
         _output?.WriteLine("🧪 Testing TOR-5.3.1: New session creation with UUIDv7 in ~/.mogzi/chats/");
         _logger.LogInformation("Testing new session creation");
@@ -515,6 +520,7 @@ public class SessionManagementAcceptanceTests : IDisposable
     [Fact]
     public async Task SessionLoading_BySessionId_ResumesConversation()
     {
+        // TOR-5.3.4
         // Arrange
         _output?.WriteLine("🧪 Testing TOR-5.3.4: Load specific session by ID");
         _logger.LogInformation("Testing session loading by ID");
@@ -556,6 +562,7 @@ public class SessionManagementAcceptanceTests : IDisposable
     [Fact]
     public async Task SessionStorage_InJSONFormat_IsHumanReadable()
     {
+        // TOR-5.3.7
         // Arrange
         _output?.WriteLine("🧪 Testing TOR-5.3.7: Human-readable JSON format storage");
         _logger.LogInformation("Testing JSON format storage");
@@ -605,6 +612,7 @@ public class SessionManagementAcceptanceTests : IDisposable
     [Fact]
     public async Task SessionNaming_CustomNames_EnablesEasierIdentification()
     {
+        // TOR-5.3.10
         // Arrange
         _output?.WriteLine("🧪 Testing TOR-5.3.10: Custom session names for easier identification");
         _logger.LogInformation("Testing custom session naming");

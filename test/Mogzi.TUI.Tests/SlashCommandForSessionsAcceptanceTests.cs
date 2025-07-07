@@ -62,6 +62,7 @@ public class SlashCommandForSessionsAcceptanceTests : IDisposable
     [Fact]
     public async Task SessionClearCommand_ClearsCurrentSessionHistory_WithoutAiInteraction()
     {
+        // TOR-5.3.5
         // Arrange
         _output?.WriteLine("🚀 Testing /session clear command functionality");
         _logger.LogInformation("🚀 Testing /session clear command functionality");
@@ -112,6 +113,7 @@ public class SlashCommandForSessionsAcceptanceTests : IDisposable
     [Fact]
     public async Task SessionListCommand_ShowsAvailableSessions_AllowsUserSelection()
     {
+        // TOR-5.3.2
         // Arrange
         _output?.WriteLine("🚀 Testing /session list command functionality");
         _logger.LogInformation("🚀 Testing /session list command functionality");
@@ -209,6 +211,7 @@ public class SlashCommandForSessionsAcceptanceTests : IDisposable
     [Fact]
     public async Task SessionRenameCommand_WithArgument_RenamesCurrentSession()
     {
+        // TOR-5.3.10
         // Arrange
         _output?.WriteLine("🚀 Testing /session rename command with argument");
         _logger.LogInformation("🚀 Testing /session rename command with argument");

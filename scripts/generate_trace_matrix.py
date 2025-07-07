@@ -192,14 +192,47 @@ def generate_html_trace_matrix(requirements: Dict[str, str],
         if req_id in requirement_tests:
             priority_stats[priority]['covered'] += 1
     
-    # Generate priority coverage summary
-    priority_summary = ""
+    # Calculate stats for implemented requirements
+    implemented_reqs = {req_id: desc for req_id, desc in requirements.items() if "Impl Status**: Implemented" in desc}
+    total_implemented = len(implemented_reqs)
+    covered_implemented = len([req_id for req_id in implemented_reqs.keys() if req_id in requirement_tests])
+    coverage_implemented_percentage = (covered_implemented / total_implemented * 100) if total_implemented > 0 else 0
+
+    # Calculate coverage by priority for all requirements
+    priority_stats_all = {}
+    for req_id, description in requirements.items():
+        priority_match = re.search(r'\*\*Priority\*\*:\s*(\w+)', description)
+        priority = priority_match.group(1) if priority_match else "Unknown"
+        if priority not in priority_stats_all:
+            priority_stats_all[priority] = {'total': 0, 'covered': 0}
+        priority_stats_all[priority]['total'] += 1
+        if req_id in requirement_tests:
+            priority_stats_all[priority]['covered'] += 1
+
+    # Calculate coverage by priority for implemented requirements
+    priority_stats_impl = {}
+    for req_id, description in implemented_reqs.items():
+        priority_match = re.search(r'\*\*Priority\*\*:\s*(\w+)', description)
+        priority = priority_match.group(1) if priority_match else "Unknown"
+        if priority not in priority_stats_impl:
+            priority_stats_impl[priority] = {'total': 0, 'covered': 0}
+        priority_stats_impl[priority]['total'] += 1
+        if req_id in requirement_tests:
+            priority_stats_impl[priority]['covered'] += 1
+
+    # Generate priority coverage summary for both
+    priority_summary_all = ""
+    priority_summary_impl = ""
     for priority in ['Critical', 'High', 'Medium', 'Low', 'Unknown']:
-        if priority in priority_stats:
-            stats = priority_stats[priority]
+        if priority in priority_stats_all:
+            stats = priority_stats_all[priority]
             coverage_pct = (stats['covered'] / stats['total'] * 100) if stats['total'] > 0 else 0
-            priority_summary += f"- **{priority} Priority:** {stats['covered']}/{stats['total']} ({coverage_pct:.1f}%)\n"
-    
+            priority_summary_all += f"- **{priority}:** {stats['covered']}/{stats['total']} ({coverage_pct:.1f}%)\n"
+        if priority in priority_stats_impl:
+            stats = priority_stats_impl[priority]
+            coverage_pct = (stats['covered'] / stats['total'] * 100) if stats['total'] > 0 else 0
+            priority_summary_impl += f"- **{priority}:** {stats['covered']}/{stats['total']} ({coverage_pct:.1f}%)\n"
+
     # Generate the markdown content for conversion
     markdown_content = f"""# Requirements Trace Matrix
 
@@ -207,12 +240,17 @@ def generate_html_trace_matrix(requirements: Dict[str, str],
 
 ## Summary
 
-- **Total Requirements:** {total_requirements}
-- **Requirements with Test Coverage:** {covered_requirements}
-- **Coverage Percentage:** {coverage_percentage:.1f}%
+| Overall Project Metrics | Implemented Requirements Metrics |
+|-------------------------|----------------------------------|
+| **Total Rqmts:** {total_requirements} | **Total Rqmts:** {total_implemented} |
+| **Covered Rqmts:** {covered_requirements} | **Covered Rqmts:** {covered_implemented} |
+| **Coverage:** {coverage_percentage:.1f}% | **Coverage:** {coverage_implemented_percentage:.1f}% |
 
 ### Coverage by Priority
-{priority_summary}
+
+| Overall Project | Implemented Rqmts |
+|-----------------|-------------------|
+| {priority_summary_all.replace(os.linesep, '<br>')} | {priority_summary_impl.replace(os.linesep, '<br>')} |
 
 ## Requirements Trace Matrix Table
 
@@ -558,14 +596,47 @@ def generate_trace_matrix(requirements: Dict[str, str],
         if req_id in requirement_tests:
             priority_stats[priority]['covered'] += 1
     
-    # Generate priority coverage summary
-    priority_summary = ""
+    # Calculate stats for implemented requirements
+    implemented_reqs = {req_id: desc for req_id, desc in requirements.items() if "Impl Status**: Implemented" in desc}
+    total_implemented = len(implemented_reqs)
+    covered_implemented = len([req_id for req_id in implemented_reqs.keys() if req_id in requirement_tests])
+    coverage_implemented_percentage = (covered_implemented / total_implemented * 100) if total_implemented > 0 else 0
+
+    # Calculate coverage by priority for all requirements
+    priority_stats_all = {}
+    for req_id, description in requirements.items():
+        priority_match = re.search(r'\*\*Priority\*\*:\s*(\w+)', description)
+        priority = priority_match.group(1) if priority_match else "Unknown"
+        if priority not in priority_stats_all:
+            priority_stats_all[priority] = {'total': 0, 'covered': 0}
+        priority_stats_all[priority]['total'] += 1
+        if req_id in requirement_tests:
+            priority_stats_all[priority]['covered'] += 1
+
+    # Calculate coverage by priority for implemented requirements
+    priority_stats_impl = {}
+    for req_id, description in implemented_reqs.items():
+        priority_match = re.search(r'\*\*Priority\*\*:\s*(\w+)', description)
+        priority = priority_match.group(1) if priority_match else "Unknown"
+        if priority not in priority_stats_impl:
+            priority_stats_impl[priority] = {'total': 0, 'covered': 0}
+        priority_stats_impl[priority]['total'] += 1
+        if req_id in requirement_tests:
+            priority_stats_impl[priority]['covered'] += 1
+
+    # Generate priority coverage summary for both
+    priority_summary_all = ""
+    priority_summary_impl = ""
     for priority in ['Critical', 'High', 'Medium', 'Low', 'Unknown']:
-        if priority in priority_stats:
-            stats = priority_stats[priority]
+        if priority in priority_stats_all:
+            stats = priority_stats_all[priority]
             coverage_pct = (stats['covered'] / stats['total'] * 100) if stats['total'] > 0 else 0
-            priority_summary += f"- **{priority} Priority:** {stats['covered']}/{stats['total']} ({coverage_pct:.1f}%)\n"
-    
+            priority_summary_all += f"- **{priority}:** {stats['covered']}/{stats['total']} ({coverage_pct:.1f}%)\n"
+        if priority in priority_stats_impl:
+            stats = priority_stats_impl[priority]
+            coverage_pct = (stats['covered'] / stats['total'] * 100) if stats['total'] > 0 else 0
+            priority_summary_impl += f"- **{priority}:** {stats['covered']}/{stats['total']} ({coverage_pct:.1f}%)\n"
+
     # Generate the markdown content
     content = f"""# Requirements Trace Matrix
 
@@ -573,12 +644,17 @@ def generate_trace_matrix(requirements: Dict[str, str],
 
 ## Summary
 
-- **Total Requirements:** {total_requirements}
-- **Requirements with Test Coverage:** {covered_requirements}
-- **Coverage Percentage:** {coverage_percentage:.1f}%
+| Overall Project Metrics | Implemented Requirements Metrics |
+|-------------------------|----------------------------------|
+| **Total Rqmts:** {total_requirements} | **Total Rqmts:** {total_implemented} |
+| **Covered Rqmts:** {covered_requirements} | **Covered Rqmts:** {covered_implemented} |
+| **Coverage:** {coverage_percentage:.1f}% | **Coverage:** {coverage_implemented_percentage:.1f}% |
 
 ### Coverage by Priority
-{priority_summary}
+
+| Overall Project | Implemented Rqmts |
+|-----------------|-------------------|
+| {priority_summary_all.replace(os.linesep, '<br>')} | {priority_summary_impl.replace(os.linesep, '<br>')} |
 
 ## Requirements Trace Matrix Table
 

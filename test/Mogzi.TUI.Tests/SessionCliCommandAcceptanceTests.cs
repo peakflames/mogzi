@@ -62,6 +62,7 @@ public class SessionCliCommandAcceptanceTests : IDisposable
     [Fact]
     public async Task SessionListCommand_WithMultipleSessions_DisplaysSessionTable()
     {
+        // TOR-5.3.2
         // Arrange
         _output?.WriteLine("🚀 Testing 'mogzi session list' with multiple sessions");
         _logger.LogInformation("🚀 Testing 'mogzi session list' with multiple sessions");
@@ -114,6 +115,7 @@ public class SessionCliCommandAcceptanceTests : IDisposable
     [Fact]
     public async Task SessionInfoCommand_WithValidSessionName_DisplaysSessionInformation()
     {
+        // TOR-5.3.4
         // Arrange
         _output?.WriteLine("🚀 Testing 'mogzi session info' with valid session name");
         _logger.LogInformation("🚀 Testing 'mogzi session info' with valid session name");
@@ -154,6 +156,7 @@ public class SessionCliCommandAcceptanceTests : IDisposable
     [Fact]
     public async Task SessionInfoCommand_WithValidSessionId_DisplaysSessionInformation()
     {
+        // TOR-5.3.4
         // Arrange
         _output?.WriteLine("🚀 Testing 'mogzi session info' with valid session ID");
         _logger.LogInformation("🚀 Testing 'mogzi session info' with valid session ID");
@@ -189,6 +192,7 @@ public class SessionCliCommandAcceptanceTests : IDisposable
     [Fact]
     public async Task SessionInfoCommand_WithInvalidSessionName_ReturnsErrorCode()
     {
+        // TOR-8.2
         // Arrange
         _output?.WriteLine("🚀 Testing 'mogzi session info' with invalid session name");
         _logger.LogInformation("🚀 Testing 'mogzi session info' with invalid session name");

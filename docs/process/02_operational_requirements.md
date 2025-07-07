@@ -98,23 +98,23 @@
   - **Verification**: Test
 - **TOR-5.3.1**: On startup, if no session is specified via command-line arguments, the system SHALL create a new chat session. The session file SHALL be saved in the `~/.mogzi/chats/` directory with a UUIDv7 timestamp as its filename.
   - **Priority**: Critical
-  - **Impl Status**: Not Implemented
+  - **Impl Status**: Implemented
   - **Verification**: Test, Analysis
 - **TOR-5.3.2**: The system SHALL provide a mechanism (e.g., a slash command like `/session list` and a corresponding CLI argument) to list all available chat sessions.
   - **Priority**: High
-  - **Impl Status**: Not Implemented
+  - **Impl Status**: Implemented
   - **Verification**: Test, Demonstration
 - **TOR-5.3.3**: The session list SHALL display the session's name (which defaults to its creation timestamp), its last modification date and time, and the first 50 characters of the initial user prompt that started the session.
   - **Priority**: Medium
-  - **Impl Status**: Not Implemented
+  - **Impl Status**: Implemented
   - **Verification**: Test, Inspection
 - **TOR-5.3.4**: The system SHALL allow a user to load a specific session by its name via a command-line argument (e.g., `--session <session_name>`), which will resume the conversation from where it was left off.
   - **Priority**: Critical
-  - **Impl Status**: Not Implemented
+  - **Impl Status**: Implemented
   - **Verification**: Test
 - **TOR-5.3.5**: The system SHALL provide a mechanism (e.g., a slash command like `/session clear`) to clear the contents of the *current* chat session, effectively starting it fresh. This action should not delete the session file itself, but rather its content.
   - **Priority**: Low
-  - **Impl Status**: Not Implemented
+  - **Impl Status**: Implemented
   - **Verification**: Test
 - **TOR-5.3.6**: The system SHALL handle cases where a session history file is corrupted or malformed by logging an error and starting a new, empty session, while preserving the corrupted file for later inspection (e.g., by renaming it to `<session_name>.corrupted`).
   - **Priority**: High
@@ -122,7 +122,7 @@
   - **Verification**: Test
 - **TOR-5.3.7**: The session history SHALL be stored in a human-readable JSON format to facilitate debugging and manual inspection.
   - **Priority**: Critical
-  - **Impl Status**: Not Implemented
+  - **Impl Status**: Implemented
   - **Verification**: Inspection
 
 - **TOR-5.3.11**: The system SHALL support attachment handling for images, PDFs, and other file types within chat messages.
@@ -162,7 +162,7 @@
 
 - **TOR-5.3.10**: The system SHALL allow users to assign custom names to sessions for easier identification and management.
   - **Priority**: Medium
-  - **Impl Status**: Not Implemented
+  - **Impl Status**: Implemented
   - **Verification**: Demonstration
 
 ### TOR-6: Extensibility and Integration

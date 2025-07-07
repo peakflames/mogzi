@@ -8,6 +8,7 @@ public class SystemPromptTests
     [Fact]
     public void GetModelFamily_ShouldReturnClaude_WhenModelIdContainsClaude()
     {
+        // TOR-1.1
         // Arrange
         var modelId = "claude-3-5-sonnet-20241022";
 
@@ -21,6 +22,7 @@ public class SystemPromptTests
     [Fact]
     public void GetModelFamily_ShouldReturnGemini_WhenModelIdContainsGemini()
     {
+        // TOR-1.1
         // Arrange
         var modelId = "gemini-1.5-pro";
 
@@ -35,6 +37,7 @@ public class SystemPromptTests
     [Fact]
     public void GetModelFamily_ShouldReturnOther_WhenModelIdIsUnknown()
     {
+        // TOR-1.1
         // Arrange
         var modelId = "unknown-model";
 
@@ -48,6 +51,7 @@ public class SystemPromptTests
     [Fact]
     public void GetSystemPrompt_ShouldIncludeAbsolutePath_WhenRelativePathProvided()
     {
+        // TOR-1.1, TOR-1.3
         // Arrange
         var config = new ApplicationConfiguration
         {
@@ -86,6 +90,7 @@ public class SystemPromptTests
     [Fact]
     public void GetSystemPrompt_ShouldContainModelSpecificContent_ForClaudeModel()
     {
+        // TOR-1.1, TOR-1.3
         // Arrange
         var config = new ApplicationConfiguration
         {
@@ -121,6 +126,7 @@ public class SystemPromptTests
     [Fact]
     public void GetSystemPrompt_ShouldContainModelSpecificContent_ForGeminiModel()
     {
+        // TOR-1.1, TOR-1.3
         // Arrange
         var config = new ApplicationConfiguration
         {
@@ -156,6 +162,7 @@ public class SystemPromptTests
     [Fact]
     public void GetSystemPrompt_ShouldContainToolUsageInstructions()
     {
+        // TOR-1.1, TOR-1.3
         // Arrange
         var config = new ApplicationConfiguration
         {
@@ -192,6 +199,7 @@ public class SystemPromptTests
     [Fact]
     public void GetSystemPrompt_ShouldContainEnvironmentInformation()
     {
+        // TOR-1.1, TOR-1.3
         // Arrange
         var config = new ApplicationConfiguration
         {
