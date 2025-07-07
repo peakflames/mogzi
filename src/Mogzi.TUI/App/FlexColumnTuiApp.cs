@@ -59,7 +59,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         if (_logger is null)
         {
             Console.WriteLine("Logger is null");
-            return 1;
+            return 7;
         }
 
         ObjectDisposedException.ThrowIf(_isDisposed, this);
@@ -94,7 +94,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         {
             _logger.LogError(ex, "Fatal error in FlexColumn TUI application");
             UnhandledError?.Invoke(ex);
-            return 1;
+            return 8;
         }
         finally
         {
@@ -320,7 +320,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in FlexColumn Live loop");
-            return 1;
+            return 9;
         }
     }
 

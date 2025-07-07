@@ -44,7 +44,7 @@ public sealed class ChatCommand : ICommand
                 toolApprovals != "readonly" && toolApprovals != "all")
             {
                 AnsiConsole.MarkupLine("[red]Error: --tool-approvals must be either 'readonly' or 'all'[/]");
-                return 1;
+                return 4;
             }
 
             // Setup dependency injection
@@ -85,7 +85,7 @@ public sealed class ChatCommand : ICommand
         catch (Exception ex)
         {
             AnsiConsole.WriteException(ex);
-            return 1;
+            return 5;
         }
     }
 

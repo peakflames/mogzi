@@ -156,6 +156,18 @@ public sealed class AdvancedKeyboardHandler : IDisposable
 
         try
         {
+            // Check if console input is redirected (e.g., from tests with piped input)
+            var isConsoleInputRedirected = Console.IsInputRedirected;
+
+            if (isConsoleInputRedirected)
+            {
+                _logger?.LogTrace("Console input is redirected, keyboard input handling will be limited");
+                // When input is redirected, we can't use Console.KeyAvailable
+                // Just wait for cancellation in this case
+                await Task.Delay(Timeout.Infinite, cancellationToken);
+                return;
+            }
+
             while (!cancellationToken.IsCancellationRequested)
             {
                 // Check if a key is available without blocking
