@@ -89,14 +89,14 @@ public class SessionCliCommandAcceptanceTests : IDisposable
         var result = await sessionCommand.ExecuteAsync(["list"]);
         
         // Assert
-        result.Should().Be(0, "command should succeed with sessions present");
+        result.Should().Be(0, "command should succeed with sessions present"); // TOR-5.3.2
         
         // Verify sessions exist in the session manager
-        var allSessions = await _sessionManager.ListSessionsAsync();
-        allSessions.Should().HaveCountGreaterOrEqualTo(2, "should have at least the 2 test sessions");
+        var allSessions = await _sessionManager.ListSessionsAsync(); // TOR-5.3.2
+        allSessions.Should().HaveCountGreaterOrEqualTo(2, "should have at least the 2 test sessions"); // TOR-5.3.2
         
         var testSessions = allSessions.Where(s => s.Name.StartsWith("Test Session")).ToList();
-        testSessions.Should().HaveCount(2, "should have exactly 2 test sessions");
+        testSessions.Should().HaveCount(2, "should have exactly 2 test sessions"); // TOR-5.3.2
         
         var session1 = testSessions.FirstOrDefault(s => s.Name == "Test Session 1");
         var session2 = testSessions.FirstOrDefault(s => s.Name == "Test Session 2");
@@ -138,14 +138,14 @@ public class SessionCliCommandAcceptanceTests : IDisposable
         var result = await sessionCommand.ExecuteAsync(["info", sessionName]);
         
         // Assert
-        result.Should().Be(0, "command should succeed with valid session name");
+        result.Should().Be(0, "command should succeed with valid session name"); // TOR-5.3.4
         
         // Verify the session was loaded correctly by checking SessionManager state
-        _sessionManager.CurrentSession.Should().NotBeNull("session should be loaded");
-        _sessionManager.CurrentSession!.Name.Should().Be(sessionName, "correct session should be loaded");
-        _sessionManager.CurrentSession.Id.Should().Be(sessionId, "session ID should match");
-        _sessionManager.CurrentSession.History.Should().HaveCount(2, "session should have 2 messages");
-        _sessionManager.CurrentSession.InitialPrompt.Should().Be("Test user message for info display", "initial prompt should be set correctly");
+        _sessionManager.CurrentSession.Should().NotBeNull("session should be loaded"); // TOR-5.3.4
+        _sessionManager.CurrentSession!.Name.Should().Be(sessionName, "correct session should be loaded"); // TOR-5.3.4
+        _sessionManager.CurrentSession.Id.Should().Be(sessionId, "session ID should match"); // TOR-5.3.4
+        _sessionManager.CurrentSession.History.Should().HaveCount(2, "session should have 2 messages"); // TOR-5.3.4
+        _sessionManager.CurrentSession.InitialPrompt.Should().Be("Test user message for info display", "initial prompt should be set correctly"); // TOR-5.3.4
         
         _output?.WriteLine("✅ Session info command completed successfully with valid session name");
         _logger.LogInformation("🎉 Session info command with valid session name test completed successfully!");
@@ -174,13 +174,13 @@ public class SessionCliCommandAcceptanceTests : IDisposable
         var result = await sessionCommand.ExecuteAsync(["info", sessionId.ToString()]);
         
         // Assert
-        result.Should().Be(0, "command should succeed with valid session ID");
+        result.Should().Be(0, "command should succeed with valid session ID"); // TOR-5.3.4
         
         // Verify the session was loaded correctly
-        _sessionManager.CurrentSession.Should().NotBeNull("session should be loaded");
-        _sessionManager.CurrentSession!.Name.Should().Be(sessionName, "correct session should be loaded");
-        _sessionManager.CurrentSession.Id.Should().Be(sessionId, "session ID should match");
-        _sessionManager.CurrentSession.InitialPrompt.Should().Be("Test message for ID lookup", "initial prompt should be set correctly");
+        _sessionManager.CurrentSession.Should().NotBeNull("session should be loaded"); // TOR-5.3.4
+        _sessionManager.CurrentSession!.Name.Should().Be(sessionName, "correct session should be loaded"); // TOR-5.3.4
+        _sessionManager.CurrentSession.Id.Should().Be(sessionId, "session ID should match"); // TOR-5.3.4
+        _sessionManager.CurrentSession.InitialPrompt.Should().Be("Test message for ID lookup", "initial prompt should be set correctly"); // TOR-5.3.4
         
         _output?.WriteLine("✅ Session info command completed successfully with valid session ID");
         _logger.LogInformation("🎉 Session info command with valid session ID test completed successfully!");
@@ -200,7 +200,7 @@ public class SessionCliCommandAcceptanceTests : IDisposable
         var result = await sessionCommand.ExecuteAsync(["info", invalidSessionName]);
         
         // Assert
-        result.Should().Be(1, "command should return error code for invalid session name");
+        result.Should().Be(1, "command should return error code for invalid session name"); // TOR-8.2
         
         _output?.WriteLine("✅ Session info command correctly returned error for invalid session name");
         _logger.LogInformation("🎉 Session info command with invalid session name test completed successfully!");

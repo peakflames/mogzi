@@ -85,7 +85,7 @@ public class SessionListLimitAcceptanceTests : IDisposable
         
         // Assert 1: Should return exactly the configured limit number of sessions
         selections.Should().HaveCount(configuredLimit, 
-            $"should return exactly {configuredLimit} sessions as configured");
+            $"should return exactly {configuredLimit} sessions as configured"); // TOR-5.3.3
         _output?.WriteLine($"✅ Returned {selections.Count} sessions (respects configured limit)");
         
         // Assert 2: Should include our test sessions (they should be among the most recent)

@@ -23,11 +23,11 @@ public sealed class AutoSubmitAcceptanceTests : IDisposable
         // Assert
         result.ExitCode.Should().BeOneOf(-1, 1);
         result.Output.Should().Contain("Hello, tell me a joke", 
-            "piped input should appear in output");
+            "piped input should appear in output"); // TOR-2.1
         
         // Verify the message was automatically submitted (should see AI thinking/response)
         result.Output.Should().MatchRegex(@"(Thinking|Processing|✦)", 
-            "should show signs of AI processing the auto-submitted message");
+            "should show signs of AI processing the auto-submitted message"); // TOR-2.1
     }
 
     [Fact]

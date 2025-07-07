@@ -91,8 +91,8 @@ public class SessionManagementAcceptanceTests : IDisposable
         var sessionDir = Path.Combine(homeDirectory, ".mogzi", "chats", session.Id.ToString());
         var attachmentsDir = Path.Combine(sessionDir, "attachments");
         
-        Directory.Exists(sessionDir).Should().BeTrue("session directory should exist");
-        Directory.Exists(attachmentsDir).Should().BeTrue("attachments directory should exist");
+        Directory.Exists(sessionDir).Should().BeTrue("session directory should exist"); // TOR-5.3.11, TOR-5.3.12
+        Directory.Exists(attachmentsDir).Should().BeTrue("attachments directory should exist"); // TOR-5.3.11, TOR-5.3.12
         
         // Verify session.json exists
         var sessionFile = Path.Combine(sessionDir, "session.json");
@@ -155,13 +155,13 @@ public class SessionManagementAcceptanceTests : IDisposable
         reloadedMessage.Attachments.Should().HaveCount(1, "should have one attachment");
         
         var reloadedMetadata = reloadedMessage.Attachments[0];
-        reloadedMetadata.OriginalFileName.Should().Be("attachment.pdf", "original filename should be preserved");
-        reloadedMetadata.MediaType.Should().Be("application/pdf", "media type should be preserved");
-        reloadedMetadata.MessageIndex.Should().Be(0, "message index should be preserved");
-        reloadedMetadata.SizeBytes.Should().Be(documentContent.Length, "file size should be preserved");
-        reloadedMetadata.ContentHash.Should().NotBeNullOrEmpty("content hash should be preserved");
-        reloadedMetadata.StoredFileName.Should().NotBeNullOrEmpty("stored filename should be preserved");
-        reloadedMetadata.StoredFileName.Should().EndWith(".pdf", "stored filename should have correct extension");
+        reloadedMetadata.OriginalFileName.Should().Be("attachment.pdf", "original filename should be preserved"); // TOR-5.3.13
+        reloadedMetadata.MediaType.Should().Be("application/pdf", "media type should be preserved"); // TOR-5.3.13
+        reloadedMetadata.MessageIndex.Should().Be(0, "message index should be preserved"); // TOR-5.3.13
+        reloadedMetadata.SizeBytes.Should().Be(documentContent.Length, "file size should be preserved"); // TOR-5.3.13
+        reloadedMetadata.ContentHash.Should().NotBeNullOrEmpty("content hash should be preserved"); // TOR-5.3.13
+        reloadedMetadata.StoredFileName.Should().NotBeNullOrEmpty("stored filename should be preserved"); // TOR-5.3.13
+        reloadedMetadata.StoredFileName.Should().EndWith(".pdf", "stored filename should have correct extension"); // TOR-5.3.13
         
         _output?.WriteLine("✅ TOR-5.3.13: Attachment metadata preservation verified");
         _logger.LogInformation("Attachment metadata preservation test completed successfully");
@@ -496,8 +496,8 @@ public class SessionManagementAcceptanceTests : IDisposable
         var expectedSessionDir = Path.Combine(homeDirectory, ".mogzi", "chats", sessionIdString);
         var expectedSessionFile = Path.Combine(expectedSessionDir, "session.json");
         
-        Directory.Exists(expectedSessionDir).Should().BeTrue("session directory should exist in ~/.mogzi/chats/");
-        File.Exists(expectedSessionFile).Should().BeTrue("session.json should exist");
+        Directory.Exists(expectedSessionDir).Should().BeTrue("session directory should exist in ~/.mogzi/chats/"); // TOR-5.3.1
+        File.Exists(expectedSessionFile).Should().BeTrue("session.json should exist"); // TOR-5.3.1
         
         // Verify UUIDv7 timestamp ordering (created recently)
         var creationTime = session.CreatedAt;
