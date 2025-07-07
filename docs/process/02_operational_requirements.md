@@ -125,6 +125,31 @@
   - **Impl Status**: Not Implemented
   - **Verification**: Inspection
 
+- **TOR-5.3.11**: The system SHALL support attachment handling for images, PDFs, and other file types within chat messages.
+  - **Priority**: Critical
+  - **Impl Status**: Implemented
+  - **Verification**: Test, Demonstration
+
+- **TOR-5.3.12**: The system SHALL store attachments in a directory-based structure per session to maintain organization and prevent file conflicts.
+  - **Priority**: Critical
+  - **Impl Status**: Implemented
+  - **Verification**: Test, Inspection
+
+- **TOR-5.3.13**: The system SHALL preserve attachment metadata including original filename, content type, and message association within the session data.
+  - **Priority**: High
+  - **Impl Status**: Implemented
+  - **Verification**: Test, Inspection
+
+- **TOR-5.3.14**: The system SHALL use content-based hashing for attachment filenames to prevent duplicates and ensure data integrity.
+  - **Priority**: High
+  - **Impl Status**: Implemented
+  - **Verification**: Test, Analysis
+
+- **TOR-5.3.15**: The system SHALL organize session storage using a directory structure with session metadata and attachments separated for efficient access.
+  - **Priority**: High
+  - **Impl Status**: Implemented
+  - **Verification**: Test, Inspection
+
 - **TOR-5.3.8**: The system SHALL implement concurrency control mechanisms to prevent data corruption when multiple instances of the application access the same session file.
   - **Priority**: High
   - **Impl Status**: Not Implemented
@@ -223,19 +248,19 @@
 
 | Priority | Count | Percentage |
 |----------|-------|------------|
-| Critical | 12    | 43%        |
-| High     | 8     | 29%        |
-| Medium   | 7     | 25%        |
+| Critical | 15    | 45%        |
+| High     | 11    | 33%        |
+| Medium   | 7     | 21%        |
 | Low      | 1     | 3%         |
-| **Total** | **28** | **100%** |
+| **Total** | **33** | **100%** |
 
 | Implementation Status | Count | Percentage |
 |----------------------|-------|------------|
-| Implemented          | 14    | 50%        |
-| Partial              | 3     | 11%        |
-| Not Implemented      | 11    | 39%        |
+| Implemented          | 14    | 42%        |
+| Partial              | 3     | 9%         |
+| Not Implemented      | 16    | 48%        |
 | Deprecated           | 0     | 0%         |
-| **Total**            | **28** | **100%** |
+| **Total**            | **33** | **100%** |
 
 ---
 

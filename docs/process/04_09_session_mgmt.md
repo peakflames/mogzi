@@ -2,13 +2,13 @@
 
 ## 1. Overview
 
-This document outlines the design for the session management feature in the Mogzi TUI application. The goal is to provide a robust mechanism for persisting chat history across application runs, allowing users to manage multiple conversations and resume them later.
+This document outlines the design for the session management feature in the Mogzi TUI application. The goal is to provide a robust mechanism for persisting chat history across application runs, allowing users to manage multiple conversations and resume them later. This design includes comprehensive attachment handling for images, PDFs, and other file types within chat messages.
 
 ## 2. Key Components
 
 ### 2.1. Session (Domain Entity)
 
-A new domain entity, `Session`, will be created to represent a single chat conversation.
+A new domain entity, `Session`, will be created to represent a single chat conversation with attachment support.
 
 **File:** `src/Mogzi.Core/Domain/Session.cs`
 
@@ -21,57 +21,107 @@ public class Session
     public string Name { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime LastModifiedAt { get; set; }
-    public List<ChatMessage> History { get; set; } = [];
+    public List<SerializableChatMessage> History { get; set; } = [];
     public string InitialPrompt { get; set; } = string.Empty;
 }
 ```
 
-- **Id**: A UUIDv7, which is time-sortable and will be used as the filename.
+- **Id**: A UUIDv7, which is time-sortable and will be used as the directory name.
 - **Name**: A user-friendly name for the session, defaulting to the creation timestamp.
 - **CreatedAt/LastModifiedAt**: Timestamps for session management.
-- **History**: The list of `ChatMessage` objects for the conversation.
+- **History**: The list of `SerializableChatMessage` objects for the conversation with attachment metadata.
 - **InitialPrompt**: The first user message, truncated to 50 characters for display in the session list.
 
-### 2.2. SessionManager (Service)
+### 2.2. Enhanced Chat Message Serialization
 
-A new service, `SessionManager`, will be responsible for the lifecycle of chat sessions.
+The existing `SerializableChatMessage` will be enhanced to support attachment metadata.
 
-**File:** `src/Mogzi.TUI/Services/SessionManager.cs`
+**File:** `src/Mogzi.Core/Domain/ChatHistory.cs`
 
 ```csharp
-namespace Mogzi.TUI.Services;
-
-public class SessionManager
+public class SerializableChatMessage
 {
-    private readonly string _sessionsPath;
-    private readonly HistoryManager _historyManager;
-    private readonly ILogger<SessionManager> _logger;
-    private readonly SemaphoreSlim _fileLock = new(1, 1);
-    private Session _currentSession;
+    public string Role { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public string? AuthorName { get; set; }
+    public string? MessageId { get; set; }
+    public List<AttachmentMetadata> Attachments { get; set; } = [];
 
-    public SessionManager(HistoryManager historyManager, ILogger<SessionManager> logger)
+    public static SerializableChatMessage FromChatMessage(ChatMessage message, int messageIndex)
     {
-        // ... constructor logic ...
-    }
+        var serializable = new SerializableChatMessage
+        {
+            Role = message.Role.ToString().ToLower(),
+            Content = message.Text,
+            AuthorName = message.AuthorName,
+            MessageId = message.MessageId
+        };
 
-    public async Task CreateNewSessionAsync() { /* ... */ }
-    public async Task LoadSessionAsync(string sessionId) { /* ... */ }
-    public async Task SaveCurrentSessionAsync() { /* ... */ }
-    public async Task ClearCurrentSessionAsync() { /* ... */ }
-    public async Task<List<Session>> ListSessionsAsync() { /* ... */ }
-    public async Task RenameSessionAsync(string newName) { /* ... */ }
-    private async Task HandleCorruptedSessionAsync(string filePath) { /* ... */ }
+        // Process attachments from message.Contents
+        foreach (var content in message.Contents)
+        {
+            switch (content)
+            {
+                case ImageContent imageContent:
+                    serializable.Attachments.Add(new AttachmentMetadata
+                    {
+                        OriginalFileName = imageContent.Uri?.ToString() ?? "image.png",
+                        ContentType = "image/png",
+                        MessageIndex = messageIndex,
+                        // Content hash and stored filename will be set during save
+                    });
+                    break;
+                    
+                case DataContent dataContent:
+                    var extension = GetExtensionFromMimeType(dataContent.MediaType);
+                    serializable.Attachments.Add(new AttachmentMetadata
+                    {
+                        OriginalFileName = $"attachment{extension}",
+                        ContentType = dataContent.MediaType ?? "application/octet-stream",
+                        MessageIndex = messageIndex,
+                        // Content hash and stored filename will be set during save
+                    });
+                    break;
+            }
+        }
+
+        return serializable;
+    }
+}
+
+public class AttachmentMetadata
+{
+    public string OriginalFileName { get; set; } = string.Empty;
+    public string StoredFileName { get; set; } = string.Empty; // {msg-index}-{hash}.{ext}
+    public string ContentType { get; set; } = string.Empty;
+    public string ContentHash { get; set; } = string.Empty; // SHA256 hash for integrity
+    public long FileSizeBytes { get; set; }
+    public int MessageIndex { get; set; } // Index of message in session history
 }
 ```
 
-- **Responsibilities**:
-    - Creating new sessions.
-    - Loading existing sessions from disk.
-    - Persisting the current session to disk continuously with atomic file operations.
-    - Listing all available sessions.
-    - Handling corrupted session files.
-    - Supporting custom session naming.
-    - Ensuring thread-safety and cross-process concurrency control.
+### 2.3. SessionManager (Service)
+
+A new service, `SessionManager`, will be responsible for the lifecycle of chat sessions with attachment support.
+
+**File:** `src/Mogzi.TUI/Services/SessionManager.cs`
+
+**Key Responsibilities**:
+- Creating new sessions with directory structure
+- Loading existing sessions from directory-based storage
+- Persisting session metadata and attachment references
+- Managing attachment storage with content-based hashing
+- Listing all available sessions with metadata
+- Handling corrupted session files
+- Supporting custom session naming
+- Ensuring thread-safety and cross-process concurrency control
+
+**Critical Design Changes**:
+- **Directory-Based Storage**: Each session gets its own directory instead of a flat JSON file
+- **Attachment Handling**: Separate attachments subdirectory with content-based file naming
+- **Enhanced Serialization**: `SerializableChatMessage` extended to include attachment metadata
+- **Content Deduplication**: SHA256 hashing prevents duplicate attachment storage
+- **Atomic Operations**: Two-phase writes ensure data integrity
 
 ### 2.3. HistoryManager (Existing Service)
 
@@ -131,9 +181,33 @@ This atomic file operation pattern ensures that the session file is never left i
 
 ## 4. Storage
 
--   **Location**: `~/.mogzi/chats/` (The path will be resolved cross-platform).
--   **Format**: JSON. Each session will be a single `.json` file.
--   **Filename**: The `Id` of the session (a UUIDv7) followed by `.json`. Example: `018f5a8c-6b6c-7f0b-89a3-318c408f5b5b.json`.
+### 4.1. Directory Structure
+
+**Location**: `~/.mogzi/chats/` (The path will be resolved cross-platform).
+
+**Structure**: Directory-based storage with the following layout:
+```
+~/.mogzi/chats/
+└── {session-uuid}/
+    ├── session.json          # Session metadata + text content + attachment metadata
+    └── attachments/
+        ├── {msg-index}-{attachment-hash}.png
+        ├── {msg-index}-{attachment-hash}.pdf
+        └── {msg-index}-{attachment-hash}.txt
+```
+
+### 4.2. File Formats
+
+- **Session Metadata**: JSON format in `session.json` containing the `Session` object with enhanced `SerializableChatMessage` entries
+- **Attachments**: Binary files stored with content-based naming: `{message-index}-{sha256-hash}.{extension}`
+- **Directory Names**: UUIDv7 for time-ordered generation and uniqueness
+
+### 4.3. Attachment Naming Strategy
+
+- **Content-Based Hashing**: SHA256 hash of file content prevents duplicates
+- **Message Association**: Message index prefix maintains relationship to conversation
+- **Original Metadata**: Preserved in `AttachmentMetadata` within session.json
+- **Deduplication**: Identical content across messages shares the same file
 
 ## 5. Error Handling and Concurrency Control
 

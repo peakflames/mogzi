@@ -4,7 +4,7 @@ namespace Mogzi.TUI.Services;
 
 /// <summary>
 /// Service responsible for managing chat session lifecycle including creation, loading, saving, and listing sessions.
-/// Implements atomic file operations and concurrency control to ensure data integrity.
+/// Implements directory-based storage with attachment support and atomic file operations.
 /// </summary>
 public class SessionManager : IDisposable
 {
@@ -33,6 +33,36 @@ public class SessionManager : IDisposable
         _ = Directory.CreateDirectory(_sessionsPath);
 
         _logger.LogDebug("SessionManager initialized with sessions path: {SessionsPath}", _sessionsPath);
+    }
+
+    /// <summary>
+    /// Gets the session directory path for a given session ID.
+    /// </summary>
+    /// <param name="sessionId">The session identifier.</param>
+    /// <returns>The full path to the session directory.</returns>
+    private string GetSessionDirectoryPath(Guid sessionId)
+    {
+        return Path.Combine(_sessionsPath, sessionId.ToString());
+    }
+
+    /// <summary>
+    /// Gets the session.json file path for a given session ID.
+    /// </summary>
+    /// <param name="sessionId">The session identifier.</param>
+    /// <returns>The full path to the session.json file.</returns>
+    private string GetSessionFilePath(Guid sessionId)
+    {
+        return Path.Combine(GetSessionDirectoryPath(sessionId), "session.json");
+    }
+
+    /// <summary>
+    /// Gets the attachments directory path for a given session ID.
+    /// </summary>
+    /// <param name="sessionId">The session identifier.</param>
+    /// <returns>The full path to the attachments directory.</returns>
+    private string GetAttachmentsDirectoryPath(Guid sessionId)
+    {
+        return Path.Combine(GetSessionDirectoryPath(sessionId), "attachments");
     }
 
     /// <summary>
@@ -84,10 +114,15 @@ public class SessionManager : IDisposable
             throw new ArgumentException("Session ID cannot be null or empty", nameof(sessionId));
         }
 
+        if (!Guid.TryParse(sessionId, out var sessionGuid))
+        {
+            throw new ArgumentException("Invalid session ID format", nameof(sessionId));
+        }
+
         await _fileLock.WaitAsync();
         try
         {
-            var sessionFilePath = Path.Combine(_sessionsPath, $"{sessionId}.json");
+            var sessionFilePath = GetSessionFilePath(sessionGuid);
 
             if (!File.Exists(sessionFilePath))
             {
@@ -102,7 +137,23 @@ public class SessionManager : IDisposable
             {
                 _logger.LogError("Failed to deserialize session from file: {SessionFilePath}", sessionFilePath);
                 await HandleCorruptedSessionAsync(sessionFilePath);
-                await CreateNewSessionAsync();
+
+                // Create a new session without acquiring the lock again (we're already in the lock)
+                var newSessionId = Guid.CreateVersion7();
+                var now = DateTime.UtcNow;
+
+                CurrentSession = new Session
+                {
+                    Id = newSessionId,
+                    Name = now.ToString("yyyy-MM-dd HH:mm:ss UTC"),
+                    CreatedAt = now,
+                    LastModifiedAt = now,
+                    History = [],
+                    InitialPrompt = string.Empty
+                };
+
+                await SaveCurrentSessionInternalAsync();
+                _logger.LogInformation("Created new session with ID: {newSessionId}", newSessionId);
                 return;
             }
 
@@ -112,9 +163,25 @@ public class SessionManager : IDisposable
         catch (JsonException ex)
         {
             _logger.LogError(ex, "Corrupted session file detected: {SessionId}", sessionId);
-            var sessionFilePath = Path.Combine(_sessionsPath, $"{sessionId}.json");
+            var sessionFilePath = GetSessionFilePath(sessionGuid);
             await HandleCorruptedSessionAsync(sessionFilePath);
-            await CreateNewSessionAsync();
+
+            // Create a new session without acquiring the lock again (we're already in the lock)
+            var newSessionId = Guid.CreateVersion7();
+            var now = DateTime.UtcNow;
+
+            CurrentSession = new Session
+            {
+                Id = newSessionId,
+                Name = now.ToString("yyyy-MM-dd HH:mm:ss UTC"),
+                CreatedAt = now,
+                LastModifiedAt = now,
+                History = [],
+                InitialPrompt = string.Empty
+            };
+
+            await SaveCurrentSessionInternalAsync();
+            _logger.LogInformation("Created new session with ID: {newSessionId}", newSessionId);
         }
         catch (Exception ex)
         {
@@ -200,13 +267,19 @@ public class SessionManager : IDisposable
 
         try
         {
-            var sessionFiles = Directory.GetFiles(_sessionsPath, "*.json");
+            var sessionDirectories = Directory.GetDirectories(_sessionsPath);
 
-            foreach (var filePath in sessionFiles)
+            foreach (var sessionDir in sessionDirectories)
             {
                 try
                 {
-                    var jsonContent = await File.ReadAllTextAsync(filePath);
+                    var sessionFilePath = Path.Combine(sessionDir, "session.json");
+                    if (!File.Exists(sessionFilePath))
+                    {
+                        continue;
+                    }
+
+                    var jsonContent = await File.ReadAllTextAsync(sessionFilePath);
                     var session = JsonSerializer.Deserialize(jsonContent, SessionContext.Default.Session);
 
                     if (session != null)
@@ -216,13 +289,13 @@ public class SessionManager : IDisposable
                 }
                 catch (JsonException ex)
                 {
-                    _logger.LogWarning(ex, "Skipping corrupted session file: {FilePath}", filePath);
-                    // Continue processing other files
+                    _logger.LogWarning(ex, "Skipping corrupted session directory: {SessionDir}", sessionDir);
+                    // Continue processing other directories
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error reading session file: {FilePath}", filePath);
-                    // Continue processing other files
+                    _logger.LogError(ex, "Error reading session directory: {SessionDir}", sessionDir);
+                    // Continue processing other directories
                 }
             }
 
@@ -296,7 +369,9 @@ public class SessionManager : IDisposable
 
         if (CurrentSession != null)
         {
-            var serializableMessage = SerializableChatMessage.FromChatMessage(message);
+            var messageIndex = CurrentSession.History.Count;
+            var attachmentsDirectory = GetAttachmentsDirectoryPath(CurrentSession.Id);
+            var serializableMessage = SerializableChatMessage.FromChatMessage(message, messageIndex, attachmentsDirectory);
             CurrentSession.History.Add(serializableMessage);
 
             // Set initial prompt if this is the first user message
@@ -324,11 +399,15 @@ public class SessionManager : IDisposable
             return;
         }
 
-        var sessionFilePath = Path.Combine(_sessionsPath, $"{CurrentSession.Id}.json");
-        var tempFilePath = Path.Combine(_sessionsPath, $"{CurrentSession.Id}.tmp");
+        var sessionDirectoryPath = GetSessionDirectoryPath(CurrentSession.Id);
+        var sessionFilePath = GetSessionFilePath(CurrentSession.Id);
+        var tempFilePath = Path.Combine(sessionDirectoryPath, "session.tmp");
 
         try
         {
+            // Ensure session directory exists
+            _ = Directory.CreateDirectory(sessionDirectoryPath);
+
             // Serialize to JSON
             var jsonContent = JsonSerializer.Serialize(CurrentSession, SessionContext.Default.Session);
 
@@ -389,6 +468,29 @@ public class SessionManager : IDisposable
         }
 
         await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Converts the current session's history to a list of ChatMessage objects with attachments restored.
+    /// </summary>
+    /// <returns>A list of ChatMessage objects with attachments.</returns>
+    public List<ChatMessage> GetCurrentSessionMessages()
+    {
+        if (CurrentSession == null)
+        {
+            return [];
+        }
+
+        var messages = new List<ChatMessage>();
+        var attachmentsDirectory = GetAttachmentsDirectoryPath(CurrentSession.Id);
+
+        foreach (var serializableMessage in CurrentSession.History)
+        {
+            var chatMessage = serializableMessage.ToChatMessage(attachmentsDirectory);
+            messages.Add(chatMessage);
+        }
+
+        return messages;
     }
 
     /// <summary>

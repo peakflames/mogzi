@@ -31,6 +31,8 @@ public class Session
 [JsonSerializable(typeof(List<Session>))]
 [JsonSerializable(typeof(SerializableChatMessage))]
 [JsonSerializable(typeof(List<SerializableChatMessage>))]
+[JsonSerializable(typeof(AttachmentMetadata))]
+[JsonSerializable(typeof(List<AttachmentMetadata>))]
 public partial class SessionContext : JsonSerializerContext
 {
 }

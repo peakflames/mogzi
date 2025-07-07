@@ -247,27 +247,88 @@ ApplicationConfigurationRoot -> ApplicationConfiguration -> ApiProvider[], Profi
 
 **Session Entity Design:**
 ```csharp
-// Domain entity representing a chat session
+// Domain entity representing a chat session with attachment support
 public class Session
 {
     public Guid Id { get; set; } // UUIDv7 for time-ordered generation
     public string Name { get; set; } // User-friendly name, defaults to creation timestamp
     public DateTime CreatedAt { get; set; }
     public DateTime LastModifiedAt { get; set; }
-    public List<ChatMessage> History { get; set; } = [];
+    public List<SerializableChatMessage> History { get; set; } = [];
     public string InitialPrompt { get; set; } = string.Empty;
 }
+
+// Enhanced serializable chat message with attachment support
+public class SerializableChatMessage
+{
+    public string Role { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public string? AuthorName { get; set; }
+    public string? MessageId { get; set; }
+    public List<AttachmentMetadata> Attachments { get; set; } = [];
+    
+    // Factory method for converting from Microsoft.Extensions.AI.ChatMessage
+    public static SerializableChatMessage FromChatMessage(ChatMessage message, int messageIndex = 0)
+    {
+        // Handles text content and attachments from message.Contents
+        // Processes ImageContent, DataContent, and TextContent types
+        // Generates attachment metadata with content hashing
+    }
+}
+
+// Attachment metadata for session persistence
+public class AttachmentMetadata
+{
+    public string OriginalFileName { get; set; } = string.Empty;
+    public string StoredFileName { get; set; } = string.Empty; // {msg-index}-{hash}.{ext}
+    public string ContentType { get; set; } = string.Empty;
+    public string ContentHash { get; set; } = string.Empty; // SHA256 hash for integrity
+    public long FileSizeBytes { get; set; }
+    public int MessageIndex { get; set; } // Index of message in session history
+}
+```
+
+**Directory-Based Storage Architecture:**
+```
+~/.mogzi/chats/
+└── {session-uuid}/
+    ├── session.json          # Session metadata + text content + attachment metadata
+    └── attachments/
+        ├── {msg-index}-{attachment-hash}.png
+        ├── {msg-index}-{attachment-hash}.pdf
+        └── {msg-index}-{attachment-hash}.txt
 ```
 
 **SessionManager Service:**
 ```csharp
-// Service responsible for session lifecycle management
+// Service responsible for session lifecycle management with attachment support
 public class SessionManager
 {
     private readonly string _sessionsPath;
     private readonly ILogger<SessionManager> _logger;
     private readonly SemaphoreSlim _fileLock = new(1, 1);
     private Session _currentSession;
+    
+    // Directory-based session creation
+    public async Task CreateNewSessionAsync()
+    {
+        var sessionId = Guid.CreateVersion7();
+        var sessionDir = Path.Combine(_sessionsPath, sessionId.ToString());
+        var attachmentsDir = Path.Combine(sessionDir, "attachments");
+        
+        Directory.CreateDirectory(sessionDir);
+        Directory.CreateDirectory(attachmentsDir);
+        
+        _currentSession = new Session
+        {
+            Id = sessionId,
+            Name = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
+            CreatedAt = DateTime.UtcNow,
+            LastModifiedAt = DateTime.UtcNow
+        };
+        
+        await SaveCurrentSessionAsync();
+    }
     
     // Atomic file operations with concurrency control
     public async Task SaveCurrentSessionAsync()
@@ -278,9 +339,9 @@ public class SessionManager
             _currentSession.LastModifiedAt = DateTime.UtcNow;
             var json = JsonSerializer.Serialize(_currentSession, _jsonOptions);
             
-            // Use atomic file write pattern to prevent data corruption
-            var tempPath = Path.Combine(_sessionsPath, $"{_currentSession.Id}.tmp");
-            var finalPath = Path.Combine(_sessionsPath, $"{_currentSession.Id}.json");
+            var sessionDir = Path.Combine(_sessionsPath, _currentSession.Id.ToString());
+            var tempPath = Path.Combine(sessionDir, "session.tmp");
+            var finalPath = Path.Combine(sessionDir, "session.json");
             
             await File.WriteAllTextAsync(tempPath, json);
             if (File.Exists(finalPath))
@@ -293,23 +354,55 @@ public class SessionManager
         }
     }
     
-    // Custom session naming support
-    public async Task RenameSessionAsync(string newName)
+    // Attachment handling with content-based hashing
+    public async Task<AttachmentMetadata> SaveAttachmentAsync(
+        byte[] content, 
+        string originalFileName, 
+        string contentType, 
+        int messageIndex)
     {
-        if (string.IsNullOrWhiteSpace(newName))
-            throw new ArgumentException("Session name cannot be empty", nameof(newName));
+        var contentHash = ComputeSHA256Hash(content);
+        var extension = Path.GetExtension(originalFileName);
+        var storedFileName = $"{messageIndex}-{contentHash}{extension}";
+        
+        var sessionDir = Path.Combine(_sessionsPath, _currentSession.Id.ToString());
+        var attachmentsDir = Path.Combine(sessionDir, "attachments");
+        var attachmentPath = Path.Combine(attachmentsDir, storedFileName);
+        
+        // Only write if file doesn't exist (deduplication)
+        if (!File.Exists(attachmentPath))
+        {
+            await File.WriteAllBytesAsync(attachmentPath, content);
+        }
+        
+        return new AttachmentMetadata
+        {
+            OriginalFileName = originalFileName,
+            StoredFileName = storedFileName,
+            ContentType = contentType,
+            ContentHash = contentHash,
+            FileSizeBytes = content.Length,
+            MessageIndex = messageIndex
+        };
+    }
+    
+    // Load attachment content
+    public async Task<byte[]> LoadAttachmentAsync(AttachmentMetadata metadata)
+    {
+        var sessionDir = Path.Combine(_sessionsPath, _currentSession.Id.ToString());
+        var attachmentPath = Path.Combine(sessionDir, "attachments", metadata.StoredFileName);
+        
+        if (!File.Exists(attachmentPath))
+            throw new FileNotFoundException($"Attachment not found: {metadata.StoredFileName}");
             
-        await _fileLock.WaitAsync();
-        try
-        {
-            _currentSession.Name = newName;
-            _currentSession.LastModifiedAt = DateTime.UtcNow;
-            await SaveCurrentSessionAsync();
-        }
-        finally
-        {
-            _fileLock.Release();
-        }
+        return await File.ReadAllBytesAsync(attachmentPath);
+    }
+    
+    private static string ComputeSHA256Hash(byte[] content)
+    {
+        using var sha256 = SHA256.Create();
+        var hashBytes = sha256.ComputeHash(content);
+        return Convert.ToHexString(hashBytes).ToLowerInvariant();
     }
 }
 ```

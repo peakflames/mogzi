@@ -37,7 +37,7 @@ public static class ServiceConfiguration
             ? services.AddSingleton(chatClientResult.Value)
             : throw new InvalidOperationException($"Failed to create ChatClient: {string.Join(", ", chatClientResult.Errors.Select(e => e.Message))}");
 
-        _ = services.AddSingleton<ChatHistoryService>();
+
         _ = services.AddSingleton<IAppService, AppService>();
         _ = services.AddSingleton<HistoryManager>();
         _ = services.AddSingleton<SessionManager>();
