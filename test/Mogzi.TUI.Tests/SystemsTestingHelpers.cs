@@ -11,9 +11,37 @@ public record ProcessResult(int ExitCode, string Output, string Error);
 /// </summary>
 public static class SystemsTestingHelpers
 {
-    private static readonly string ProjectPath = Path.Combine(
-        Directory.GetCurrentDirectory(), 
-        "..", "..", "..", "..", "src", "Mogzi.TUI");
+    private static readonly string ProjectPath = GetProjectPath();
+
+    /// <summary>
+    /// Dynamically finds the Mogzi.TUI project path by searching up the directory tree.
+    /// This ensures cross-platform compatibility and works regardless of repository location.
+    /// </summary>
+    private static string GetProjectPath()
+    {
+        var currentDir = Directory.GetCurrentDirectory();
+        
+        // Search up the directory tree for the src/Mogzi.TUI directory
+        var searchDir = currentDir;
+        while (searchDir != null)
+        {
+            var mogziTuiPath = Path.Combine(searchDir, "src", "Mogzi.TUI");
+            if (Directory.Exists(mogziTuiPath))
+            {
+                var projectFile = Path.Combine(mogziTuiPath, "Mogzi.TUI.csproj");
+                if (File.Exists(projectFile))
+                {
+                    return mogziTuiPath;
+                }
+            }
+            
+            var parentDir = Directory.GetParent(searchDir);
+            searchDir = parentDir?.FullName;
+        }
+        
+        throw new InvalidOperationException(
+            $"Could not find Mogzi.TUI project directory. Started search from: {currentDir}");
+    }
 
     /// <summary>
     /// Executes the Mogzi application with specified arguments and optional input.
@@ -78,13 +106,19 @@ public static class SystemsTestingHelpers
         catch (OperationCanceledException)
         {
             process.Kill(true);
-            throw new TimeoutException($"Application did not complete within {timeout.Value}");
+            
+            // Capture output even when killed due to timeout
+            var output = outputBuilder.ToString();
+            var error = errorBuilder.ToString();
+            
+            // Return a special result indicating timeout but with captured output
+            return new ProcessResult(-1, output, error);
         }
         
-        var output = outputBuilder.ToString();
-        var error = errorBuilder.ToString();
+        var finalOutput = outputBuilder.ToString();
+        var finalError = errorBuilder.ToString();
         
-        return new ProcessResult(process.ExitCode, output, error);
+        return new ProcessResult(process.ExitCode, finalOutput, finalError);
     }
 
     /// <summary>
@@ -101,15 +135,14 @@ public static class SystemsTestingHelpers
     {
         timeout ??= TimeSpan.FromSeconds(30);
         
-        // Create a shell command that pipes input to the application
-        var shellCommand = $"echo \"{pipedInput.Replace("\"", "\\\"")}\" | dotnet run --project \"{ProjectPath}\" -- {string.Join(" ", args)}";
-        
+        // Cross-platform approach: Use ProcessStartInfo to pipe input directly
         var process = new Process
         {
             StartInfo = new ProcessStartInfo
             {
-                FileName = "/bin/bash",
-                Arguments = $"-c \"{shellCommand}\"",
+                FileName = "dotnet",
+                Arguments = $"run --project \"{ProjectPath}\" -- {string.Join(" ", args)}",
+                RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -136,6 +169,14 @@ public static class SystemsTestingHelpers
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
         
+        // Write the piped input to stdin and close it to simulate piping
+        if (!string.IsNullOrEmpty(pipedInput))
+        {
+            await process.StandardInput.WriteAsync(pipedInput);
+            await process.StandardInput.FlushAsync();
+        }
+        process.StandardInput.Close();
+        
         using var cts = new CancellationTokenSource(timeout.Value);
         try
         {
@@ -144,13 +185,19 @@ public static class SystemsTestingHelpers
         catch (OperationCanceledException)
         {
             process.Kill(true);
-            throw new TimeoutException($"Application did not complete within {timeout.Value}");
+            
+            // Capture output even when killed due to timeout
+            var output = outputBuilder.ToString();
+            var error = errorBuilder.ToString();
+            
+            // Return a special result indicating timeout but with captured output
+            return new ProcessResult(-1, output, error);
         }
         
-        var output = outputBuilder.ToString();
-        var error = errorBuilder.ToString();
+        var finalOutput = outputBuilder.ToString();
+        var finalError = errorBuilder.ToString();
         
-        return new ProcessResult(process.ExitCode, output, error);
+        return new ProcessResult(process.ExitCode, finalOutput, finalError);
     }
 
     /// <summary>

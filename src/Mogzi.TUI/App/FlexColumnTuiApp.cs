@@ -117,19 +117,52 @@ public sealed class FlexColumnTuiApp : IDisposable
 
             if (!string.IsNullOrEmpty(sessionId))
             {
-                try
+                var sessionLoaded = false;
+
+                // First try to load by GUID (existing behavior)
+                if (Guid.TryParse(sessionId, out _))
                 {
-                    await sessionManager.LoadSessionAsync(sessionId);
-                    _logger.LogInformation("Loaded session: {SessionId}", sessionId);
+                    try
+                    {
+                        await sessionManager.LoadSessionAsync(sessionId);
+                        sessionLoaded = true;
+                        _logger.LogInformation("Loaded session by ID: {SessionId}", sessionId);
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        _logger.LogWarning("Session not found by ID: {SessionId}", sessionId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to load session by ID: {SessionId}", sessionId);
+                    }
                 }
-                catch (FileNotFoundException)
+
+                // If GUID loading failed or sessionId is not a GUID, try loading by name
+                if (!sessionLoaded)
                 {
-                    _logger.LogWarning("Session not found: {SessionId}, creating new session", sessionId);
-                    await sessionManager.CreateNewSessionAsync();
+                    try
+                    {
+                        sessionLoaded = await sessionManager.TryLoadSessionByNameAsync(sessionId);
+                        if (sessionLoaded)
+                        {
+                            _logger.LogInformation("Loaded session by name: {SessionName}", sessionId);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("No session found with name: {SessionName}", sessionId);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to load session by name: {SessionName}", sessionId);
+                    }
                 }
-                catch (Exception ex)
+
+                // If neither GUID nor name loading succeeded, create new session
+                if (!sessionLoaded)
                 {
-                    _logger.LogError(ex, "Failed to load session: {SessionId}, creating new session", sessionId);
+                    _logger.LogInformation("Creating new session since no existing session was found for: {SessionIdentifier}", sessionId);
                     await sessionManager.CreateNewSessionAsync();
                 }
             }
@@ -177,6 +210,27 @@ public sealed class FlexColumnTuiApp : IDisposable
             // Initialize the terminal and render initial content
             _scrollbackTerminal.Initialize();
             RenderInitialContent();
+
+            // Handle auto-submit for piped input
+            if (_tuiContext.AutoSubmitPipedInput && !string.IsNullOrEmpty(_tuiContext.InputContext.CurrentInput))
+            {
+                _logger.LogInformation("Auto-submitting piped input: {Input}", _tuiContext.InputContext.CurrentInput);
+
+                // Schedule auto-submit to happen after the UI is fully initialized
+                _ = Task.Run(async () =>
+                {
+                    // Small delay to ensure UI is ready
+                    await Task.Delay(100);
+
+                    // Simulate Enter key press to submit the piped input
+                    var enterKeyInfo = new ConsoleKeyInfo('\r', ConsoleKey.Enter, false, false, false);
+                    var enterKeyArgs = new KeyPressEventArgs(enterKeyInfo);
+                    await _stateManager.HandleKeyPressAsync(enterKeyArgs);
+
+                    // Refresh the display
+                    _scrollbackTerminal.Refresh();
+                });
+            }
         }
         catch (Exception ex)
         {

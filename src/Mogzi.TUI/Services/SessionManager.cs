@@ -103,6 +103,51 @@ public class SessionManager : IDisposable
     }
 
     /// <summary>
+    /// Attempts to load a session by its user-friendly name.
+    /// Uses case-insensitive matching and returns the most recent session if multiple matches exist.
+    /// </summary>
+    /// <param name="sessionName">The session name to search for.</param>
+    /// <returns>A task representing the asynchronous operation. Returns true if a session was found and loaded.</returns>
+    public async Task<bool> TryLoadSessionByNameAsync(string sessionName)
+    {
+        if (string.IsNullOrWhiteSpace(sessionName))
+        {
+            return false;
+        }
+
+        try
+        {
+            var sessions = await ListSessionsAsync();
+
+            // Find sessions with matching names (case-insensitive, exact match)
+            var matchingSessions = sessions
+                .Where(s => string.Equals(s.Name, sessionName, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(s => s.LastModifiedAt)
+                .ToList();
+
+            if (matchingSessions.Count == 0)
+            {
+                _logger.LogDebug("No session found with name: {SessionName}", sessionName);
+                return false;
+            }
+
+            // Load the most recent matching session
+            var sessionToLoad = matchingSessions.First();
+            await LoadSessionAsync(sessionToLoad.Id.ToString());
+
+            _logger.LogInformation("Loaded session by name '{SessionName}': {SessionId}",
+                sessionName, sessionToLoad.Id);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load session by name: {SessionName}", sessionName);
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Loads an existing session by its identifier.
     /// </summary>
     /// <param name="sessionId">The session identifier (UUIDv7).</param>
@@ -153,7 +198,7 @@ public class SessionManager : IDisposable
                 };
 
                 await SaveCurrentSessionInternalAsync();
-                _logger.LogInformation("Created new session with ID: {newSessionId}", newSessionId);
+                _logger.LogInformation("Created new session with ID: {NewSessionId}", newSessionId);
                 return;
             }
 
@@ -181,7 +226,7 @@ public class SessionManager : IDisposable
             };
 
             await SaveCurrentSessionInternalAsync();
-            _logger.LogInformation("Created new session with ID: {newSessionId}", newSessionId);
+            _logger.LogInformation("Created new session with ID: {NewSessionId}", newSessionId);
         }
         catch (Exception ex)
         {

@@ -112,6 +112,11 @@ public interface ITuiContext
     Dictionary<string, string> FunctionCallToPreEditContent { get; }
 
     /// <summary>
+    /// Gets or sets whether piped input should be automatically submitted.
+    /// </summary>
+    bool AutoSubmitPipedInput { get; set; }
+
+    /// <summary>
     /// Requests a state transition to the specified state.
     /// </summary>
     /// <param name="newState">The state to transition to</param>

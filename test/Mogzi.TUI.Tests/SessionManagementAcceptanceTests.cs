@@ -640,6 +640,246 @@ public class SessionManagementAcceptanceTests : IDisposable
     }
 
     /// <summary>
+    /// Tests session loading by user-friendly name with case-insensitive matching.
+    /// Verifies that sessions can be loaded using their custom names instead of GUIDs.
+    /// </summary>
+    [Fact]
+    public async Task SessionLoading_ByName_CaseInsensitiveMatching()
+    {
+        // Arrange
+        _output?.WriteLine("🧪 Testing session loading by name with case-insensitive matching");
+        _logger.LogInformation("Testing session loading by name");
+        
+        // Create session with custom name
+        await _sessionManager.CreateNewSessionAsync();
+        var originalSessionId = _sessionManager.CurrentSession!.Id;
+        var sessionName = "Bug Investigation Session";
+        await _sessionManager.RenameSessionAsync(sessionName);
+        
+        // Add some conversation history
+        var userMessage = new ChatMessage(ChatRole.User, "I found a bug in the authentication system");
+        var assistantMessage = new ChatMessage(ChatRole.Assistant, "Let me help you investigate this bug");
+        
+        await _sessionManager.AddMessageToCurrentSessionAsync(userMessage);
+        await _sessionManager.AddMessageToCurrentSessionAsync(assistantMessage);
+        
+        // Act - Load session by name with different case variations
+        var testCases = new[]
+        {
+            "Bug Investigation Session",     // Exact match
+            "bug investigation session",     // All lowercase
+            "BUG INVESTIGATION SESSION",     // All uppercase
+            "Bug investigation Session",     // Mixed case
+            "bug Investigation session"      // Different mixed case
+        };
+        
+        foreach (var testName in testCases)
+        {
+            _output?.WriteLine($"📝 Testing case variation: '{testName}'");
+            
+            var newLogger = _serviceProvider.GetRequiredService<ILogger<SessionManager>>();
+            var newSessionManager = new SessionManager(newLogger);
+            
+            // Assert - Verify session loads successfully by name
+            var loadResult = await newSessionManager.TryLoadSessionByNameAsync(testName);
+            loadResult.Should().BeTrue($"session should load with name variation: '{testName}'");
+            
+            var loadedSession = newSessionManager.CurrentSession;
+            loadedSession.Should().NotBeNull($"session should be loaded for name: '{testName}'");
+            loadedSession!.Id.Should().Be(originalSessionId, $"loaded session should have correct ID for name: '{testName}'");
+            loadedSession.Name.Should().Be(sessionName, $"loaded session should have original name for variation: '{testName}'");
+            loadedSession.History.Should().HaveCount(2, $"conversation should be preserved for name: '{testName}'");
+        }
+        
+        _output?.WriteLine("✅ Session loading by name with case-insensitive matching verified");
+        _logger.LogInformation("Session loading by name test completed successfully");
+    }
+
+    /// <summary>
+    /// Tests session loading by name when multiple sessions have the same name.
+    /// Verifies that the most recent session is loaded when there are name collisions.
+    /// </summary>
+    [Fact]
+    public async Task SessionLoading_ByName_ReturnsLatestWhenMultipleMatches()
+    {
+        // Arrange
+        _output?.WriteLine("🧪 Testing session loading by name with multiple matches (returns latest)");
+        _logger.LogInformation("Testing session loading with name collisions");
+        
+        var sessionName = "Daily Standup Notes";
+        var sessionIds = new List<Guid>();
+        
+        // Create multiple sessions with the same name at different times
+        for (int i = 0; i < 3; i++)
+        {
+            await _sessionManager.CreateNewSessionAsync();
+            var sessionId = _sessionManager.CurrentSession!.Id;
+            sessionIds.Add(sessionId);
+            
+            await _sessionManager.RenameSessionAsync(sessionName);
+            
+            // Add unique content to identify each session
+            var message = new ChatMessage(ChatRole.User, $"This is session number {i + 1}");
+            await _sessionManager.AddMessageToCurrentSessionAsync(message);
+            
+            // Ensure different timestamps
+            await Task.Delay(100);
+        }
+        
+        // The last created session should be the most recent
+        var expectedLatestSessionId = sessionIds.Last();
+        
+        // Act - Load session by name
+        var newLogger = _serviceProvider.GetRequiredService<ILogger<SessionManager>>();
+        var newSessionManager = new SessionManager(newLogger);
+        var loadResult = await newSessionManager.TryLoadSessionByNameAsync(sessionName);
+        
+        // Assert - Verify most recent session is loaded
+        loadResult.Should().BeTrue("session should load successfully by name");
+        
+        var loadedSession = newSessionManager.CurrentSession;
+        loadedSession.Should().NotBeNull("session should be loaded");
+        loadedSession!.Id.Should().Be(expectedLatestSessionId, "should load the most recent session with matching name");
+        loadedSession.Name.Should().Be(sessionName, "loaded session should have correct name");
+        loadedSession.History.Should().HaveCount(1, "loaded session should have one message");
+        loadedSession.History[0].Content.Should().Be("This is session number 3", "should load the latest session content");
+        
+        _output?.WriteLine("✅ Session loading by name returns latest when multiple matches verified");
+        _logger.LogInformation("Session loading with name collisions test completed successfully");
+    }
+
+    /// <summary>
+    /// Tests session loading by name when no matching session exists.
+    /// Verifies that the method returns false when no session matches the provided name.
+    /// </summary>
+    [Fact]
+    public async Task SessionLoading_ByName_ReturnsFalseWhenNoMatch()
+    {
+        // Arrange
+        _output?.WriteLine("🧪 Testing session loading by name when no match exists");
+        _logger.LogInformation("Testing session loading with non-existent name");
+        
+        // Create some sessions with different names
+        var sessionNames = new[] { "Project Alpha", "Bug Fixes", "Feature Development" };
+        
+        foreach (var name in sessionNames)
+        {
+            await _sessionManager.CreateNewSessionAsync();
+            await _sessionManager.RenameSessionAsync(name);
+        }
+        
+        // Act - Try to load session with non-existent name
+        var newLogger = _serviceProvider.GetRequiredService<ILogger<SessionManager>>();
+        var newSessionManager = new SessionManager(newLogger);
+        var loadResult = await newSessionManager.TryLoadSessionByNameAsync("Non-Existent Session");
+        
+        // Assert - Verify load fails gracefully
+        loadResult.Should().BeFalse("should return false when no session matches the name");
+        newSessionManager.CurrentSession.Should().BeNull("current session should remain null when load fails");
+        
+        // Test with empty/null names
+        var emptyNameResult = await newSessionManager.TryLoadSessionByNameAsync("");
+        emptyNameResult.Should().BeFalse("should return false for empty name");
+        
+        var nullNameResult = await newSessionManager.TryLoadSessionByNameAsync(null!);
+        nullNameResult.Should().BeFalse("should return false for null name");
+        
+        var whitespaceNameResult = await newSessionManager.TryLoadSessionByNameAsync("   ");
+        whitespaceNameResult.Should().BeFalse("should return false for whitespace-only name");
+        
+        _output?.WriteLine("✅ Session loading by name returns false when no match verified");
+        _logger.LogInformation("Session loading with non-existent name test completed successfully");
+    }
+
+    /// <summary>
+    /// Tests end-to-end session loading workflow combining GUID and name-based loading.
+    /// Simulates the complete CLI argument processing workflow.
+    /// </summary>
+    [Fact]
+    public async Task SessionLoading_EndToEnd_SupportsGuidAndNameWorkflow()
+    {
+        // Arrange
+        _output?.WriteLine("🧪 Testing end-to-end session loading workflow (GUID and name)");
+        _logger.LogInformation("Testing complete session loading workflow");
+        
+        // Create session with custom name
+        await _sessionManager.CreateNewSessionAsync();
+        var sessionId = _sessionManager.CurrentSession!.Id;
+        var sessionName = "Integration Test Session";
+        await _sessionManager.RenameSessionAsync(sessionName);
+        
+        // Add conversation history
+        var userMessage = new ChatMessage(ChatRole.User, "Testing the complete workflow");
+        await _sessionManager.AddMessageToCurrentSessionAsync(userMessage);
+        
+        // Test Case 1: Load by GUID (existing behavior)
+        _output?.WriteLine("📝 Test Case 1: Loading by GUID");
+        var guidLogger = _serviceProvider.GetRequiredService<ILogger<SessionManager>>();
+        var guidSessionManager = new SessionManager(guidLogger);
+        
+        // Simulate GUID parsing and loading
+        var sessionIdString = sessionId.ToString();
+        if (Guid.TryParse(sessionIdString, out _))
+        {
+            await guidSessionManager.LoadSessionAsync(sessionIdString);
+        }
+        
+        guidSessionManager.CurrentSession.Should().NotBeNull("session should load by GUID");
+        guidSessionManager.CurrentSession!.Id.Should().Be(sessionId, "loaded session should have correct ID");
+        guidSessionManager.CurrentSession.Name.Should().Be(sessionName, "loaded session should have correct name");
+        
+        // Test Case 2: Load by name (new functionality)
+        _output?.WriteLine("📝 Test Case 2: Loading by name");
+        var nameLogger = _serviceProvider.GetRequiredService<ILogger<SessionManager>>();
+        var nameSessionManager = new SessionManager(nameLogger);
+        
+        // Simulate name-based loading (when GUID parsing fails)
+        var sessionIdentifier = sessionName;
+        var sessionLoaded = false;
+        
+        if (Guid.TryParse(sessionIdentifier, out _))
+        {
+            // This would be the GUID path, but our identifier is a name
+            sessionLoaded = false;
+        }
+        
+        if (!sessionLoaded)
+        {
+            sessionLoaded = await nameSessionManager.TryLoadSessionByNameAsync(sessionIdentifier);
+        }
+        
+        sessionLoaded.Should().BeTrue("session should load by name");
+        nameSessionManager.CurrentSession.Should().NotBeNull("session should be loaded by name");
+        nameSessionManager.CurrentSession!.Id.Should().Be(sessionId, "loaded session should have correct ID");
+        nameSessionManager.CurrentSession.Name.Should().Be(sessionName, "loaded session should have correct name");
+        
+        // Test Case 3: Invalid identifier (neither GUID nor existing name)
+        _output?.WriteLine("📝 Test Case 3: Invalid identifier");
+        var invalidLogger = _serviceProvider.GetRequiredService<ILogger<SessionManager>>();
+        var invalidSessionManager = new SessionManager(invalidLogger);
+        
+        var invalidIdentifier = "Non-Existent Session Name";
+        var invalidSessionLoaded = false;
+        
+        if (Guid.TryParse(invalidIdentifier, out _))
+        {
+            // Would try GUID loading, but this isn't a GUID
+            invalidSessionLoaded = false;
+        }
+        
+        if (!invalidSessionLoaded)
+        {
+            invalidSessionLoaded = await invalidSessionManager.TryLoadSessionByNameAsync(invalidIdentifier);
+        }
+        
+        invalidSessionLoaded.Should().BeFalse("should not load non-existent session");
+        invalidSessionManager.CurrentSession.Should().BeNull("current session should remain null");
+        
+        _output?.WriteLine("✅ End-to-end session loading workflow verified");
+        _logger.LogInformation("Complete session loading workflow test completed successfully");
+    }
+
+    /// <summary>
     /// Tests session persistence and data integrity across multiple operations.
     /// Verifies that session data remains consistent through create, modify, save, and load operations.
     /// </summary>

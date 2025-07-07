@@ -59,6 +59,12 @@ public sealed class ChatCommand : ICommand
                 var tuiContext = serviceProvider.GetRequiredService<ITuiContext>();
                 tuiContext.InputContext.CurrentInput = pipedInput;
                 tuiContext.InputContext.CursorPosition = pipedInput.Length;
+
+                // Set auto-submit flag in context if specified
+                if (autoSubmit)
+                {
+                    tuiContext.AutoSubmitPipedInput = true;
+                }
             }
 
             // Create and run the FlexColumn TUI application
@@ -97,7 +103,7 @@ public sealed class ChatCommand : ICommand
         AnsiConsole.MarkupLine("    -v, --verbosity <LEVEL>      Set the verbosity level (quiet, minimal, normal, detailed, diagnostic)");
         AnsiConsole.MarkupLine("        --config <PATH>          Path to the configuration file (default: mogzi.config.json)");
         AnsiConsole.MarkupLine("        --profile <NAME>         Configuration profile to use");
-        AnsiConsole.MarkupLine("    -s, --session <SESSION_ID>   Load a specific session by its ID");
+        AnsiConsole.MarkupLine("    -s, --session <ID_OR_NAME>   Load a specific session by its ID or name");
         AnsiConsole.MarkupLine("    -a, --auto-submit            Automatically submit piped input (default: false)");
         AnsiConsole.MarkupLine("    -ta, --tool-approvals <MODE> Override tool approval mode (readonly, all)");
         AnsiConsole.MarkupLine("    -h, --help                   Show this help message");
@@ -108,6 +114,7 @@ public sealed class ChatCommand : ICommand
         AnsiConsole.MarkupLine("   mogzi chat --verbosity normal");
         AnsiConsole.MarkupLine("   mogzi chat --profile development");
         AnsiConsole.MarkupLine("   mogzi chat --session 0197e123-4567-7890-abcd-ef1234567890");
+        AnsiConsole.MarkupLine("   mogzi chat --session \"My Project Session\"");
         AnsiConsole.MarkupLine("   mogzi chat --tool-approvals all");
         AnsiConsole.MarkupLine("   mogzi chat -ta readonly");
         AnsiConsole.MarkupLine("   echo \"Hello AI\" | mogzi chat");

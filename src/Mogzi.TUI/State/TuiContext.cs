@@ -41,6 +41,7 @@ public class TuiContext(
     public CancellationTokenSource? AiOperationCts { get; set; }
     public Dictionary<string, string> FunctionCallToToolName { get; } = [];
     public Dictionary<string, string> FunctionCallToPreEditContent { get; } = [];
+    public bool AutoSubmitPipedInput { get; set; } = false;
 
     public async Task RequestStateTransitionAsync(ChatState newState)
     {
