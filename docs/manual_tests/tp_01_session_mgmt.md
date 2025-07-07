@@ -3,7 +3,7 @@
 ## Overview
 This test procedure validates the session management functionality of Mogzi TUI application from a user perspective. It focuses on interactive chat interface usage, slash commands, and CLI arguments for session handling.
 
-⚠️ **IMPORTANT**: Some features tested here are **NOT YET IMPLEMENTED** and will fail. See individual test case warnings below.
+✅ **STATUS**: All core session management features are implemented and should pass these tests.
 
 ## Prerequisites
 - Mogzi TUI executable built and available (e.g., `dist/mogzi`)
@@ -33,6 +33,8 @@ This test procedure validates the session management functionality of Mogzi TUI 
 
 ### TC_01: Default Session Creation and Basic Chat
 **Objective**: Verify that a new session is automatically created and chat works normally.
+
+**Requirements Traced**: TOR-5.3.1, TOR-5.3.7, TOR-5.3.15
 
 **Steps**:
 1. **Start Mogzi without any arguments**:
@@ -73,6 +75,8 @@ This test procedure validates the session management functionality of Mogzi TUI 
 ### TC_02: Session Persistence Verification
 **Objective**: Verify that messages are immediately saved and persist across application restarts.
 
+**Requirements Traced**: TOR-5.3, TOR-8.2
+
 **Steps**:
 1. **Start Mogzi**:
    ```bash
@@ -111,10 +115,10 @@ This test procedure validates the session management functionality of Mogzi TUI 
 
 ---
 
-### TC_03: Session Listing with Slash Command ❌ **WILL FAIL - NOT IMPLEMENTED**
+### TC_03: Session Listing with Slash Command
 **Objective**: Verify that sessions can be listed using the `/session list` command.
 
-⚠️ **WARNING**: The `/session list` slash command is not yet implemented in the SlashCommandProcessor. This test will fail.
+**Requirements Traced**: TOR-5.3.2, TOR-5.3.3
 
 **Steps**:
 1. **Create multiple sessions by starting and chatting**:
@@ -170,6 +174,8 @@ This test procedure validates the session management functionality of Mogzi TUI 
 ### TC_04: Loading Specific Session by ID
 **Objective**: Verify that existing sessions can be loaded using the `--session` CLI argument.
 
+**Requirements Traced**: TOR-5.3.4
+
 **Steps**:
 1. **Get a session ID from the previous test**:
    ```bash
@@ -211,10 +217,10 @@ This test procedure validates the session management functionality of Mogzi TUI 
 
 ---
 
-### TC_05: Session Clearing ❌ **WILL FAIL - NOT IMPLEMENTED**
+### TC_05: Session Clearing
 **Objective**: Verify that current session can be cleared using `/session clear`.
 
-⚠️ **WARNING**: The `/session clear` slash command is not yet implemented in the SlashCommandProcessor. This test will fail.
+**Requirements Traced**: TOR-5.3.5
 
 **Steps**:
 1. **Start with an existing session that has history**:
@@ -256,10 +262,10 @@ This test procedure validates the session management functionality of Mogzi TUI 
 
 ---
 
-### TC_06: Session Renaming ❌ **WILL FAIL - NOT IMPLEMENTED**
+### TC_06: Session Renaming
 **Objective**: Verify that sessions can be renamed using `/session rename`.
 
-⚠️ **WARNING**: The `/session rename` slash command is not yet implemented in the SlashCommandProcessor. This test will fail.
+**Requirements Traced**: TOR-5.3.10
 
 **Steps**:
 1. **Start with an existing session**:
@@ -303,10 +309,10 @@ This test procedure validates the session management functionality of Mogzi TUI 
 
 ---
 
-### TC_07: Help and Command Discovery ❌ **WILL FAIL - NOT IMPLEMENTED**
+### TC_07: Help and Command Discovery
 **Objective**: Verify that users can discover session management commands through help.
 
-⚠️ **WARNING**: Session-related slash commands are not yet implemented, so they won't appear in help or autocomplete. This test will fail.
+**Requirements Traced**: TOR-2.3
 
 **Steps**:
 1. **Start Mogzi**:
@@ -336,8 +342,84 @@ This test procedure validates the session management functionality of Mogzi TUI 
 
 ---
 
+### TC_09: CLI Session List Command
+**Objective**: Verify that sessions can be listed using the `mogzi session list` CLI command.
+
+**Requirements Traced**: TOR-5.3.2, TOR-5.3.3
+
+**Steps**:
+1. **Ensure multiple sessions exist** (from previous tests):
+   ```bash
+   # Should have sessions from previous test cases
+   ls ~/.mogzi/chats/
+   ```
+
+2. **Test CLI session list command**:
+   ```bash
+   $MOGZI_EXE session list
+   ```
+
+3. **Review the output**:
+   - Verify table format with columns: Name, ID, Created, Last Modified, Initial Prompt
+   - Check that session limit is respected (default: 10 most recent)
+   - Verify contextual header shows "Available Chat Sessions (last X recently used)"
+   - Note wider column formatting for better readability
+
+**Expected Results**:
+- ✅ Shows table of available sessions
+- ✅ Displays all session metadata clearly
+- ✅ Respects sessionListLimit configuration
+- ✅ Table formatting is readable with appropriate column widths
+
+---
+
+### TC_10: CLI Session Info Command
+**Objective**: Verify that detailed session information can be retrieved using `mogzi session info`.
+
+**Requirements Traced**: TOR-5.3.2, TOR-5.3.3
+
+**Steps**:
+1. **Get a session name and ID from previous tests**:
+   ```bash
+   # List sessions to get names and IDs
+   $MOGZI_EXE session list
+   ```
+
+2. **Test session info by name**:
+   ```bash
+   $MOGZI_EXE session info "session-name-here"
+   ```
+
+3. **Test session info by full GUID**:
+   ```bash
+   $MOGZI_EXE session info "full-session-guid-here"
+   ```
+
+4. **Test session info by partial GUID**:
+   ```bash
+   # Use last 12 characters of a session ID
+   $MOGZI_EXE session info "partial-guid-here"
+   ```
+
+5. **Test invalid session**:
+   ```bash
+   $MOGZI_EXE session info "nonexistent-session"
+   ```
+
+**Expected Results**:
+- ✅ Shows detailed session information for valid lookups
+- ✅ Supports exact name matching
+- ✅ Supports full GUID matching
+- ✅ Supports partial GUID matching (EndsWith)
+- ✅ Shows helpful error message for invalid sessions
+- ✅ Displays usage instructions for starting chat with the session
+
+---
+
 ### TC_08: Error Handling and Edge Cases
 **Objective**: Verify graceful handling of invalid session operations.
+
+**Requirements Traced**: TOR-5.3.6, TOR-8.2
 
 **Steps**:
 1. **Test invalid session ID**:
@@ -373,12 +455,17 @@ After completing all test cases, verify:
 
 - [ ] Sessions are created automatically
 - [ ] Messages persist immediately and across restarts
-- [ ] Session listing works and shows accurate information
-- [ ] Sessions can be loaded by ID via CLI argument
-- [ ] Session clearing removes all history
-- [ ] Session renaming works and persists
+- [ ] Session listing works via slash command (`/session list`)
+- [ ] Session listing works via CLI command (`mogzi session list`)
+- [ ] Session info retrieval works via CLI command (`mogzi session info`)
+- [ ] Sessions can be loaded by ID via CLI argument (`--session`)
+- [ ] Session clearing removes all history (`/session clear`)
+- [ ] Session renaming works and persists (`/session rename`)
 - [ ] Help system provides adequate guidance
-- [ ] Error handling is user-friendly
+- [ ] Error handling is user-friendly for all commands
+- [ ] CLI commands support flexible session lookup (name/GUID/partial)
+- [ ] Table formatting is readable with appropriate column widths
+- [ ] Session limit configuration is respected across all interfaces
 - [ ] No data corruption or loss occurred
 - [ ] All session files in `~/.mogzi/chats/` are valid JSON
 
