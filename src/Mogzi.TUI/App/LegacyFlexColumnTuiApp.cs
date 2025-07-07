@@ -51,7 +51,7 @@ public sealed class LegacyFlexColumnTuiApp : IDisposable
         _cancellationTokenSource = new CancellationTokenSource();
 
         _keyboardHandler = new AdvancedKeyboardHandler(_serviceProvider.GetService<ILogger<AdvancedKeyboardHandler>>());
-        _slashCommandProcessor = new SlashCommandProcessor(AnsiConsole.Console, _serviceProvider.GetService<ILogger<SlashCommandProcessor>>(), _serviceProvider.GetService<ChatClient>());
+        _slashCommandProcessor = new SlashCommandProcessor(AnsiConsole.Console, _serviceProvider.GetService<ChatClient>());
         _autocompleteManager = serviceProvider.GetRequiredService<AutocompleteManager>();
         _userSelectionManager = new UserSelectionManager(_serviceProvider, _inputContext);
 

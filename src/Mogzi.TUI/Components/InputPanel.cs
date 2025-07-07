@@ -14,7 +14,6 @@ public class InputPanel : ITuiComponent
         var prompt = "[blue]>[/] ";
         var cursor = "[blink]▋[/]";
         var currentInput = context.TuiContext.InputContext.CurrentInput;
-        context.Logger.LogTrace("InputPanel rendering with input: '{CurrentInput}'", currentInput);
 
         string content;
         if (string.IsNullOrEmpty(currentInput))
@@ -45,7 +44,6 @@ public class InputPanel : ITuiComponent
 
     public Task InitializeAsync(IRenderContext context)
     {
-        context.Logger.LogTrace("InputPanel initialized");
         return Task.CompletedTask;
     }
 

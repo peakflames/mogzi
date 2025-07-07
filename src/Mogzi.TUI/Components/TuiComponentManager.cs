@@ -22,7 +22,6 @@ public class TuiComponentManager(ILogger<TuiComponentManager> logger) : ITuiComp
         }
 
         _components[component.Name] = component;
-        _logger.LogTrace("Registered component: {ComponentName}", component.Name);
     }
 
     public bool UnregisterComponent(string componentName)
@@ -31,7 +30,6 @@ public class TuiComponentManager(ILogger<TuiComponentManager> logger) : ITuiComp
 
         if (_components.Remove(componentName))
         {
-            _logger.LogTrace("Unregistered component: {ComponentName}", componentName);
             return true;
         }
 
@@ -54,8 +52,6 @@ public class TuiComponentManager(ILogger<TuiComponentManager> logger) : ITuiComp
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        _logger.LogTrace("RenderLayout: TuiContext instance ID: {ContextId}, CurrentInput: '{CurrentInput}'",
-            context.TuiContext.GetHashCode(), context.TuiContext.InputContext.CurrentInput);
 
         if (CurrentLayout == null)
         {
@@ -73,9 +69,7 @@ public class TuiComponentManager(ILogger<TuiComponentManager> logger) : ITuiComp
 
         try
         {
-            _logger.LogTrace("RenderLayout: Calling layout.Compose with {ComponentCount} components", _components.Count);
             var result = CurrentLayout.Compose(_components, context);
-            _logger.LogTrace("RenderLayout: Layout composition completed successfully");
             return result;
         }
         catch (Exception ex)
@@ -99,7 +93,6 @@ public class TuiComponentManager(ILogger<TuiComponentManager> logger) : ITuiComp
                 if (await component.HandleInputAsync(context, inputEvent))
                 {
                     handled = true;
-                    _logger.LogTrace("Input event handled by component: {ComponentName}", component.Name);
                     break; // Stop at first component that handles the input
                 }
             }
@@ -116,14 +109,12 @@ public class TuiComponentManager(ILogger<TuiComponentManager> logger) : ITuiComp
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        _logger.LogTrace("Initializing {ComponentCount} components", _components.Count);
 
         foreach (var component in _components.Values)
         {
             try
             {
                 await component.InitializeAsync(context);
-                _logger.LogTrace("Initialized component: {ComponentName}", component.Name);
             }
             catch (Exception ex)
             {
@@ -131,19 +122,16 @@ public class TuiComponentManager(ILogger<TuiComponentManager> logger) : ITuiComp
             }
         }
 
-        _logger.LogTrace("Component initialization complete");
     }
 
     public async Task DisposeComponentsAsync()
     {
-        _logger.LogTrace("Disposing {ComponentCount} components", _components.Count);
 
         foreach (var component in _components.Values)
         {
             try
             {
                 await component.DisposeAsync();
-                _logger.LogTrace("Disposed component: {ComponentName}", component.Name);
             }
             catch (Exception ex)
             {
@@ -152,7 +140,6 @@ public class TuiComponentManager(ILogger<TuiComponentManager> logger) : ITuiComp
         }
 
         _components.Clear();
-        _logger.LogTrace("Component disposal complete");
     }
 
     public void SetComponentVisibility(string componentName, bool isVisible)
@@ -162,7 +149,6 @@ public class TuiComponentManager(ILogger<TuiComponentManager> logger) : ITuiComp
         if (_components.TryGetValue(componentName, out var component))
         {
             component.IsVisible = isVisible;
-            _logger.LogTrace("Set component {ComponentName} visibility to {IsVisible}", componentName, isVisible);
         }
         else
         {
@@ -207,6 +193,5 @@ public class TuiComponentManager(ILogger<TuiComponentManager> logger) : ITuiComp
                 break;
         }
 
-        _logger.LogTrace("Updated component visibility for state: {CurrentState}", currentState);
     }
 }

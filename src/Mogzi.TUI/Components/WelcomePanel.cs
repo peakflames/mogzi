@@ -43,7 +43,6 @@ public class WelcomePanel : ITuiComponent
 
     public Task InitializeAsync(IRenderContext context)
     {
-        context.Logger.LogTrace("WelcomePanel initialized");
         return Task.CompletedTask;
     }
 

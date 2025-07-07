@@ -72,7 +72,6 @@ public class ProgressPanel : ITuiComponent
 
     public Task InitializeAsync(IRenderContext context)
     {
-        context.Logger.LogTrace("ProgressPanel initialized");
         return Task.CompletedTask;
     }
 

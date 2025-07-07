@@ -43,7 +43,6 @@ public class UserSelectionPanel : ITuiComponent
 
     public Task InitializeAsync(IRenderContext context)
     {
-        context.Logger.LogTrace("UserSelectionPanel initialized");
         return Task.CompletedTask;
     }
 

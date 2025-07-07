@@ -102,6 +102,10 @@ public class SlashCommandAcceptanceTests : IDisposable
         // Assert 4: Verify dynamic content shows selection panel
         var currentState = _stateManager.CurrentState;
         currentState.Should().NotBeNull("current state should not be null");
+        if (currentState is null)
+        {
+            Assert.Fail("current state should not be null");
+        }
         var dynamicContent = currentState.RenderDynamicContent(_tuiContext);
         var renderedText = GetRenderedText(dynamicContent);
         renderedText.Should().Contain("Select an option", 

@@ -7,7 +7,6 @@ namespace Mogzi.TUI.Infrastructure;
 public sealed class SlashCommandProcessor
 {
     private readonly Dictionary<string, SlashCommand> _commands = [];
-    private readonly ILogger<SlashCommandProcessor>? _logger;
     private readonly IAnsiConsole _console;
     private readonly ChatClient? _chatClient;
 
@@ -29,13 +28,11 @@ public sealed class SlashCommandProcessor
     /// <summary>
     /// Initializes a new instance of SlashCommandProcessor.
     /// </summary>
-    public SlashCommandProcessor(IAnsiConsole console, ILogger<SlashCommandProcessor>? logger = null, ChatClient? chatClient = null)
+    public SlashCommandProcessor(IAnsiConsole console, ChatClient? chatClient = null)
     {
         _console = console ?? throw new ArgumentNullException(nameof(console));
-        _logger = logger;
         _chatClient = chatClient;
         RegisterCommands();
-        _logger?.LogTrace("SlashCommandProcessor initialized with {Count} commands", _commands.Count);
     }
 
     /// <summary>
@@ -66,7 +63,6 @@ public sealed class SlashCommandProcessor
                 return true;
             }
 
-            _logger?.LogTrace("Executing slash command: {Command} with args: {Args}", command, args);
             output = cmd.ExecuteWithOutput?.Invoke(args) ?? "Command executed successfully";
             return true;
         }

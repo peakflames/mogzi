@@ -52,7 +52,6 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         RegisterKeyBindings();
 
-        _logger.LogTrace("FlexColumnTuiApp initialized with component architecture");
     }
 
     public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken = default)
@@ -63,7 +62,6 @@ public sealed class FlexColumnTuiApp : IDisposable
             return 1;
         }
 
-        _logger.LogTrace("FlexColumnTuiApp.RunAsync called with {ArgCount} arguments", args.Length);
         ObjectDisposedException.ThrowIf(_isDisposed, this);
 
         if (IsRunning)
@@ -112,15 +110,9 @@ public sealed class FlexColumnTuiApp : IDisposable
         try
         {
             // Register state factories
-            _logger.LogTrace("INIT STEP 2: About to call RegisterStateFactories()");
             RegisterStateFactories();
-            _logger.LogTrace("INIT STEP 3: RegisterStateFactories() completed");
 
             // Initialize state manager with context
-            _logger.LogTrace("INIT STEP 4: About to call _stateManager.InitializeAsync(_tuiContext)");
-            _logger.LogTrace("INIT STEP 4a: _stateManager is null: {IsNull}", _stateManager == null);
-            _logger.LogTrace("INIT STEP 4b: _tuiContext is null: {IsNull}", _tuiContext == null);
-
             if (_tuiContext is null)
             {
                 throw new InvalidOperationException("TuiContext is null during initialization");
@@ -133,17 +125,13 @@ public sealed class FlexColumnTuiApp : IDisposable
 
             await _stateManager.InitializeAsync(_tuiContext);
 
-            _logger.LogTrace("INIT STEP 5: _stateManager.InitializeAsync(_tuiContext) completed");
-
             // Initialize the terminal and render initial content
             _scrollbackTerminal.Initialize();
             RenderInitialContent();
-
-            _logger.LogTrace("INIT STEP 6: FlexColumn TUI application initialization complete");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "INIT ERROR: Failed to initialize FlexColumn TUI application");
+            _logger.LogError(ex, "Failed to initialize FlexColumn TUI application");
             throw;
         }
     }
@@ -178,7 +166,6 @@ public sealed class FlexColumnTuiApp : IDisposable
             _scrollbackTerminal.WriteStatic(welcomeContent);
             _scrollbackTerminal.WriteStatic(new Markup(""));
 
-            _logger.LogTrace("Welcome screen rendered to static scrollback area");
         }
         else
         {
@@ -213,7 +200,6 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private async Task<int> RunMainLoopAsync(CancellationToken cancellationToken)
     {
-        _logger.LogTrace("Starting FlexColumn Live loop");
 
         try
         {
@@ -251,15 +237,11 @@ public sealed class FlexColumnTuiApp : IDisposable
                 themeInfo
             );
 
-            _logger.LogTrace("RenderDynamicContent: TuiContext instance ID: {ContextId}, CurrentInput: '{CurrentInput}'",
-                _tuiContext.GetHashCode(), _tuiContext.InputContext.CurrentInput);
-
             // Update component visibility based on current state
             _componentManager.UpdateComponentVisibility(_stateManager.CurrentStateType, renderContext);
 
             // Render the layout using the component manager
             var result = _componentManager.RenderLayout(renderContext);
-            _logger.LogTrace("RenderDynamicContent: Layout rendered successfully");
             return result;
         }
         catch (Exception ex)
@@ -325,7 +307,6 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         _keyboardHandler.RegisterKeyBinding(ConsoleKey.L, ConsoleModifiers.Control, args =>
         {
-            _logger.LogTrace("Ctrl+L detected, clearing screen");
             _historyManager.ClearHistory();
             _scrollbackTerminal.Initialize();
             RenderInitialContent();
@@ -346,11 +327,9 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         _keyboardHandler.RegisterKeyBinding(ConsoleKey.E, ConsoleModifiers.Control, args =>
         {
-            _logger.LogTrace("Ctrl+E detected - external editor feature placeholder");
             args.Handled = true;
         });
 
-        _logger.LogTrace("FlexColumn key bindings registered");
     }
 
     /// <summary>
@@ -360,15 +339,12 @@ public sealed class FlexColumnTuiApp : IDisposable
     {
         try
         {
-            _logger.LogTrace("Interactive command requested: {Command}", command);
-
             // Activate the user selection manager for the command
             _tuiContext.UserSelectionManager.DetectAndActivate(command);
 
             if (_tuiContext.UserSelectionManager.IsSelectionModeActive)
             {
                 await _tuiContext.UserSelectionManager.UpdateSelectionsAsync();
-                _logger.LogTrace("User selection mode activated for command: {Command}", command);
             }
         }
         catch (Exception ex)
@@ -408,7 +384,6 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         try
         {
-            _logger.LogTrace("Unhandled key combination: {Key} + {Modifiers}", e.Key, e.Modifiers);
         }
         catch (Exception ex)
         {
@@ -427,20 +402,14 @@ public sealed class FlexColumnTuiApp : IDisposable
 
         try
         {
-            _logger.LogTrace("OnCharacterTyped received: {Character}", e.Character);
-            _logger.LogTrace("StateManager instance: {StateManagerInstance}, IsNull: {IsNull}",
-                _stateManager?.GetHashCode(), _stateManager == null);
-            _logger.LogTrace("About to call _stateManager.HandleCharacterTypedAsync");
             if (_stateManager is not null)
             {
                 await _stateManager.HandleCharacterTypedAsync(e);
             }
-            _logger.LogTrace("Successfully called _stateManager.HandleCharacterTypedAsync");
 
             // Only refresh if the event was handled and might have changed the UI state
             if (e.Handled)
             {
-                _logger.LogTrace("Requesting terminal refresh after character typed.");
                 _scrollbackTerminal.Refresh();
             }
         }
@@ -452,8 +421,6 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private async Task ShutdownAsync()
     {
-        _logger.LogTrace("Shutting down FlexColumn TUI application");
-
         try
         {
             await _keyboardHandler.StopAsync();
@@ -463,8 +430,6 @@ public sealed class FlexColumnTuiApp : IDisposable
         {
             _logger.LogError(ex, "Error during shutdown");
         }
-
-        _logger.LogTrace("FlexColumn TUI application shutdown complete");
     }
 
     public void Dispose()
@@ -485,7 +450,6 @@ public sealed class FlexColumnTuiApp : IDisposable
         Stopped = null;
         UnhandledError = null;
 
-        _logger?.LogTrace("FlexColumnTuiApp disposed");
 
         GC.SuppressFinalize(this);
     }
@@ -506,7 +470,6 @@ public sealed class FlexColumnTuiApp : IDisposable
             _tuiContext.CommandHistory.Clear();
             _tuiContext.CommandHistory.AddRange(userMessages);
 
-            _logger?.LogTrace("Loaded {Count} commands from history", _tuiContext.CommandHistory.Count);
         }
         catch (Exception ex)
         {

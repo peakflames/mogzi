@@ -24,10 +24,6 @@ public class FlexColumnLayout : ITuiLayout
     public IRenderable Compose(IReadOnlyDictionary<string, ITuiComponent> components, IRenderContext context)
     {
         var currentState = context.CurrentState;
-        var inputContext = context.TuiContext.InputContext;
-
-        context.Logger.LogTrace("FlexColumnLayout.Compose: TuiContext instance ID: {ContextId}, CurrentInput: '{CurrentInput}', State: {State}",
-            context.TuiContext.GetHashCode(), inputContext.CurrentInput, currentState);
 
         // Determine which components to show based on current state and input context
         var contentComponents = new List<IRenderable>
@@ -42,7 +38,6 @@ public class FlexColumnLayout : ITuiLayout
         {
             if (components.TryGetValue("WelcomePanel", out var welcomePanel) && welcomePanel.IsVisible)
             {
-                context.Logger.LogTrace("FlexColumnLayout: Adding WelcomePanel");
                 contentComponents.Add(welcomePanel.Render(context));
             }
         }
@@ -52,7 +47,6 @@ public class FlexColumnLayout : ITuiLayout
         {
             if (components.TryGetValue("ProgressPanel", out var progressPanel) && progressPanel.IsVisible)
             {
-                context.Logger.LogTrace("FlexColumnLayout: Adding ProgressPanel");
                 contentComponents.Add(progressPanel.Render(context));
             }
         }
@@ -60,12 +54,10 @@ public class FlexColumnLayout : ITuiLayout
         // Show input panel for input state
         if (currentState == ChatState.Input)
         {
-            context.Logger.LogTrace("FlexColumnLayout: Processing input state, getting input panel content");
             // Determine which input-related panels to show
             var inputPanel = GetInputPanelContent(components, context);
             if (inputPanel != null)
             {
-                context.Logger.LogTrace("FlexColumnLayout: Adding input panel content");
                 contentComponents.Add(inputPanel);
             }
             else
@@ -80,11 +72,9 @@ public class FlexColumnLayout : ITuiLayout
         // Always show footer panel
         if (components.TryGetValue("FooterPanel", out var footerPanel) && footerPanel.IsVisible)
         {
-            context.Logger.LogTrace("FlexColumnLayout: Adding FooterPanel");
             contentComponents.Add(footerPanel.Render(context));
         }
 
-        context.Logger.LogTrace("FlexColumnLayout: Composition complete with {ComponentCount} content components", contentComponents.Count);
         return new Rows(contentComponents);
     }
 
@@ -99,16 +89,12 @@ public class FlexColumnLayout : ITuiLayout
         var inputContext = context.TuiContext.InputContext;
         var inputComponents = new List<IRenderable>();
 
-        context.Logger.LogTrace("GetInputPanelContent: TuiContext instance ID: {ContextId}, CurrentInput: '{CurrentInput}', InputState: {InputState}",
-            context.TuiContext.GetHashCode(), inputContext.CurrentInput, inputContext.State);
 
         // Always show the main input panel
         if (components.TryGetValue("InputPanel", out var inputPanel) && inputPanel.IsVisible)
         {
-            context.Logger.LogTrace("GetInputPanelContent: Found InputPanel, IsVisible: {IsVisible}, calling Render", inputPanel.IsVisible);
             var renderedInput = inputPanel.Render(context);
             inputComponents.Add(renderedInput);
-            context.Logger.LogTrace("GetInputPanelContent: InputPanel rendered successfully");
         }
         else
         {
@@ -144,7 +130,6 @@ public class FlexColumnLayout : ITuiLayout
         }
 #pragma warning restore IDE0010 // Add missing cases
 
-        context.Logger.LogTrace("GetInputPanelContent: Returning {ComponentCount} input components", inputComponents.Count);
         return inputComponents.Count > 0 ? new Rows(inputComponents) : null;
     }
 }

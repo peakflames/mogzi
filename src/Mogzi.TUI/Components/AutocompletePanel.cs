@@ -45,7 +45,6 @@ public class AutocompletePanel : ITuiComponent
 
     public Task InitializeAsync(IRenderContext context)
     {
-        context.Logger.LogTrace("AutocompletePanel initialized");
         return Task.CompletedTask;
     }
 

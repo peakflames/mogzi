@@ -32,7 +32,6 @@ public class FooterPanel : ITuiComponent
 
     public Task InitializeAsync(IRenderContext context)
     {
-        context.Logger.LogTrace("FooterPanel initialized");
         return Task.CompletedTask;
     }
 
