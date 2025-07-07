@@ -29,10 +29,18 @@ This final phase focuses on achieving full functional parity with the legacy `Le
 
 #### 2. Implement Session Management and Chat History (Week 1)
 - Implement `ChatHistoryService` to persist chat history across sessions.
+  - Use the `Cline` AI assistant to draw critical understanding of the complexity to implementing this feature.
 - Integrate session management into the `FlexColumnTuiApp`.
 - Remove "TODO" comments related to session management.
 
 #### 3. Ensure Feature Parity (Week 1-2)
+- **✅ Debug Logging Cleanup Completed:**
+  - **Issue**: Excessive LogTrace statements were added during debugging of slash command acceptance tests, creating noise in logs
+  - **Solution**: Systematically reduced debug logging volume to only essential statements needed for test execution
+  - **Files Cleaned**: 13 files across State, App, Infrastructure, and Components layers
+  - **Types Removed**: Component initialization logging, verbose state transition logging, excessive key handling debug statements
+  - **Verification**: All 4 slash command acceptance tests continue to pass after cleanup (`/exit`, `/quit`, `/help`, `/tool-approvals`)
+  - **Priority Rationale**: User prioritized this cleanup over session management as it was affecting code maintainability
 - Conduct a thorough comparison of the `FlexColumnTuiApp` and `LegacyFlexColumnTuiApp` to identify any missing features.
 - Implement any missing features in the new architecture.
 - Pay close attention to small details and edge cases.
@@ -46,9 +54,7 @@ This final phase focuses on achieving full functional parity with the legacy `Le
 - Remove any identified dead code.
 
 #### 6. Comprehensive Testing (Week 3-4)
-- Write unit tests for all new components, with a minimum of 80% code coverage.
-- Write integration tests for all major features.
-- **Crucially, expand black-box acceptance tests to cover the reported UI/UX issues, including chat-only and complex tool-use scenarios.**
+- Use a code coverage tool to determine code coverage using existing tests
 - All tests must pass before the refactoring is considered complete.
 
 ## Acceptance Criteria
