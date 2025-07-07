@@ -49,6 +49,8 @@ public sealed class FlexColumnTuiApp : IDisposable
             RenderInitialContent();
         };
         _slashCommandProcessor.InteractiveCommandRequested += OnInteractiveCommandRequested;
+        _slashCommandProcessor.SessionClearRequested += OnSessionClearRequested;
+        _slashCommandProcessor.SessionRenameRequested += OnSessionRenameRequested;
 
         RegisterKeyBindings();
 
@@ -453,6 +455,47 @@ public sealed class FlexColumnTuiApp : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling interactive command: {Command}", command);
+        }
+    }
+
+    /// <summary>
+    /// Handles session clear requests from slash commands.
+    /// </summary>
+    private async void OnSessionClearRequested()
+    {
+        try
+        {
+            var sessionManager = _serviceProvider.GetRequiredService<SessionManager>();
+            await sessionManager.ClearCurrentSessionAsync();
+
+            // Clear the UI history as well
+            _historyManager.ClearHistory();
+            _scrollbackTerminal.Initialize();
+            RenderInitialContent();
+
+            _logger.LogInformation("Session history cleared successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error clearing session history");
+        }
+    }
+
+    /// <summary>
+    /// Handles session rename requests from slash commands.
+    /// </summary>
+    private async void OnSessionRenameRequested(string newName)
+    {
+        try
+        {
+            var sessionManager = _serviceProvider.GetRequiredService<SessionManager>();
+            await sessionManager.RenameSessionAsync(newName);
+
+            _logger.LogInformation("Session renamed to: {SessionName}", newName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error renaming session to: {SessionName}", newName);
         }
     }
 

@@ -1,0 +1,24 @@
+{
+  "mogziConfig": {
+    "defaultMode": "oneshot",
+    "apiProviders": [
+      {
+        "name": "openai",
+        "type": "openai",
+        "apiKey": "your-openai-api-key-here",
+        "baseUrl": ""
+      }
+    ],
+    "profiles": [
+      {
+        "default": true,
+        "name": "default",
+        "apiProvider": "openai",
+        "modelId": "gpt-4"
+      }
+    ],
+    "tool_approvals": "readonly",
+    "debug": false,
+    "sessionListLimit": 10
+  }
+}

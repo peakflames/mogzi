@@ -8,7 +8,8 @@ public static class Program
     private static readonly ICommand[] Commands =
     [
         new ChatCommand(),
-        new NonInteractiveCommand()
+        new NonInteractiveCommand(),
+        new SessionCommand()
     ];
 
     /// <summary>

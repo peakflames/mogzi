@@ -34,6 +34,13 @@ mogzi --profile sonnet
 # Resume a previous conversation
 mogzi chat --session "My Project Discussion"
 
+# List available sessions (shows most recent 10 by default)
+mogzi session list
+
+# Get detailed information about a specific session
+mogzi session info "My Project Discussion"
+
+
 # Translate a README.md to portugese in one shot
 cat README.md | mogzi run -p "Translate to portugese"
 
@@ -83,6 +90,7 @@ Before running the application, ensure you have:
    ```json
    {
        "mogziConfig": {
+           "sessionListLimit": 10,
            "apiProviders": [
                {
                     "name": "MyCompanyProvider",

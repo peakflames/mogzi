@@ -3,6 +3,7 @@ global using Microsoft.Extensions.Logging;
 global using Microsoft.Extensions.DependencyInjection;
 
 global using Mogzi.TUI.App;
+global using Mogzi.TUI.Commands;
 global using Mogzi.TUI.Components;
 global using Mogzi.TUI.Infrastructure;
 global using Mogzi.TUI.Models;
@@ -12,6 +13,8 @@ global using Mogzi.TUI.State;
 global using Mogzi.Domain;
 global using Mogzi.Services;
 global using Mogzi.PawPrints;
+
+
 
 global using Mogzi.Core.Domain;
 

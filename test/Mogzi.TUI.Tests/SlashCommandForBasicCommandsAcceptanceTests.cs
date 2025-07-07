@@ -6,7 +6,7 @@ namespace Mogzi.TUI.Tests;
 /// Uses real service configuration and DI container with no mocking approach.
 /// Focuses on feature parity with legacy implementation for failing commands: /tool-approvals, /exit, /quit, /help.
 /// </summary>
-public class SlashCommandAcceptanceTests : IDisposable
+public class SlashCommandForBasicCommandsAcceptanceTests : IDisposable
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly FlexColumnTuiApp _app;
@@ -18,11 +18,11 @@ public class SlashCommandAcceptanceTests : IDisposable
     private readonly SlashCommandProcessor _slashCommandProcessor;
     private readonly UserSelectionManager _userSelectionManager;
     private readonly ChatClient _chatClient;
-    private readonly ILogger<SlashCommandAcceptanceTests> _logger;
+    private readonly ILogger<SlashCommandForBasicCommandsAcceptanceTests> _logger;
     private readonly ITestOutputHelper? _output;
     private bool _disposed = false;
 
-    public SlashCommandAcceptanceTests(ITestOutputHelper output)
+    public SlashCommandForBasicCommandsAcceptanceTests(ITestOutputHelper output)
     {
         _output = output;
         
@@ -41,8 +41,8 @@ public class SlashCommandAcceptanceTests : IDisposable
         });
         
         // Add test-specific logger
-        services.AddSingleton<ILogger<SlashCommandAcceptanceTests>>(provider =>
-            provider.GetRequiredService<ILoggerFactory>().CreateLogger<SlashCommandAcceptanceTests>());
+        services.AddSingleton<ILogger<SlashCommandForBasicCommandsAcceptanceTests>>(provider =>
+            provider.GetRequiredService<ILoggerFactory>().CreateLogger<SlashCommandForBasicCommandsAcceptanceTests>());
         
         _serviceProvider = services.BuildServiceProvider();
         
@@ -56,7 +56,7 @@ public class SlashCommandAcceptanceTests : IDisposable
         _slashCommandProcessor = _serviceProvider.GetRequiredService<SlashCommandProcessor>();
         _userSelectionManager = _serviceProvider.GetRequiredService<UserSelectionManager>();
         _chatClient = _serviceProvider.GetRequiredService<ChatClient>();
-        _logger = _serviceProvider.GetRequiredService<ILogger<SlashCommandAcceptanceTests>>();
+        _logger = _serviceProvider.GetRequiredService<ILogger<SlashCommandForBasicCommandsAcceptanceTests>>();
         
         _logger.LogInformation("SlashCommandAcceptanceTests initialized with real service configuration");
     }

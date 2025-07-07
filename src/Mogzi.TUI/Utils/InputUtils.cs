@@ -7,6 +7,8 @@ public static class InputUtils
 {
     /// <summary>
     /// Determines if autocomplete should be shown for slash commands.
+    /// For slash commands, we check if there's a '/' at the beginning of the current line
+    /// and the cursor is positioned within a potential slash command.
     /// </summary>
     /// <param name="input">The current input text.</param>
     /// <param name="cursorPos">The current cursor position.</param>
@@ -18,9 +20,21 @@ public static class InputUtils
             return false;
         }
 
-        // Find the word at cursor position
-        var wordStart = FindWordStart(input, cursorPos);
-        return wordStart >= 0 && wordStart < input.Length && input[wordStart] == '/';
+        // For slash commands, check if the input starts with '/' and cursor is within the command
+        if (input.Length > 0 && input[0] == '/')
+        {
+            // Check if cursor is positioned within the slash command (no newlines between '/' and cursor)
+            for (var i = 0; i < Math.Min(cursorPos, input.Length); i++)
+            {
+                if (input[i] is '\n' or '\r')
+                {
+                    return false; // Found newline before cursor, not in slash command
+                }
+            }
+            return true; // Cursor is within a slash command
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -37,20 +51,44 @@ public static class InputUtils
 
     /// <summary>
     /// Finds the bounds of the slash command at the cursor position.
+    /// For slash commands, we extract from the '/' to the end of the input or until we hit a non-command character.
+    /// This allows multi-word commands like "/session list" to be treated as a single command.
     /// </summary>
     /// <param name="input">The current input text.</param>
     /// <param name="cursorPos">The current cursor position.</param>
     /// <returns>A tuple containing the start position and length of the command.</returns>
     public static (int startPos, int length) FindSlashCommandBounds(string input, int cursorPos)
     {
-        var wordStart = FindWordStart(input, cursorPos);
-        if (wordStart < 0 || wordStart >= input.Length || input[wordStart] != '/')
+        if (string.IsNullOrEmpty(input) || cursorPos < 0 || cursorPos > input.Length)
         {
             return (-1, 0);
         }
 
-        var wordEnd = FindWordEnd(input, cursorPos);
-        return (wordStart, wordEnd - wordStart);
+        // Find the start of the slash command by looking backwards for '/'
+        var startPos = -1;
+        for (var i = Math.Min(cursorPos, input.Length - 1); i >= 0; i--)
+        {
+            if (input[i] == '/')
+            {
+                startPos = i;
+                break;
+            }
+            // If we hit a newline or other non-command character, stop looking
+            if (input[i] is '\n' or '\r')
+            {
+                break;
+            }
+        }
+
+        if (startPos < 0)
+        {
+            return (-1, 0);
+        }
+
+        // For slash commands, extract from '/' to the cursor position
+        // This allows partial matching of multi-word commands
+        var length = cursorPos - startPos;
+        return (startPos, length);
     }
 
     /// <summary>
@@ -74,75 +112,5 @@ public static class InputUtils
         return (newInput, newCursorPos);
     }
 
-    /// <summary>
-    /// Finds the start of the word at the given position.
-    /// </summary>
-    /// <param name="input">The input text.</param>
-    /// <param name="pos">The position to search from.</param>
-    /// <returns>The start position of the word, or -1 if not found.</returns>
-    private static int FindWordStart(string input, int pos)
-    {
-        if (string.IsNullOrEmpty(input) || pos < 0)
-        {
-            return -1;
-        }
 
-        // Adjust position to be within bounds
-        pos = Math.Min(pos, input.Length - 1);
-
-        // If we're at a space, move back to find the previous word
-        while (pos >= 0 && char.IsWhiteSpace(input[pos]))
-        {
-            pos--;
-        }
-
-        if (pos < 0)
-        {
-            return -1;
-        }
-
-        // Find the start of the current word
-        while (pos > 0 && !char.IsWhiteSpace(input[pos - 1]))
-        {
-            pos--;
-        }
-
-        return pos;
-    }
-
-    /// <summary>
-    /// Finds the end of the word at the given position.
-    /// </summary>
-    /// <param name="input">The input text.</param>
-    /// <param name="pos">The position to search from.</param>
-    /// <returns>The end position of the word.</returns>
-    private static int FindWordEnd(string input, int pos)
-    {
-        if (string.IsNullOrEmpty(input) || pos < 0)
-        {
-            return 0;
-        }
-
-        // Adjust position to be within bounds
-        pos = Math.Min(pos, input.Length);
-
-        // If we're at the end or at a space, find the end of the previous word
-        if (pos >= input.Length || char.IsWhiteSpace(input[pos]))
-        {
-            while (pos > 0 && char.IsWhiteSpace(input[pos - 1]))
-            {
-                pos--;
-            }
-        }
-        else
-        {
-            // Find the end of the current word
-            while (pos < input.Length && !char.IsWhiteSpace(input[pos]))
-            {
-                pos++;
-            }
-        }
-
-        return pos;
-    }
 }

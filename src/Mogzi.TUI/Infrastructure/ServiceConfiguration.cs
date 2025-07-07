@@ -50,6 +50,7 @@ public static class ServiceConfiguration
 
         // Add user selection services
         _ = services.AddSingleton<IUserSelectionProvider, ToolApprovalsProvider>();
+        _ = services.AddSingleton<IUserSelectionProvider, SessionListProvider>();
         _ = services.AddSingleton<UserSelectionManager>();
 
         // Add TUI infrastructure components

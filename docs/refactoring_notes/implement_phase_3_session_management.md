@@ -61,3 +61,58 @@ Once the critical functionality is implemented and robustly tested, the remainin
 3.  **Refinement**:
     -   Refine any UI elements related to session management based on the implemented functionality.
     -   Conduct a final review of the code for this feature, checking for clarity, documentation, and adherence to coding standards.
+
+## Phase 4: CLI Commands and Display Enhancements (COMPLETED)
+
+**Status**: ✅ **COMPLETED** - January 7, 2025
+
+This phase focused on implementing comprehensive CLI commands for session management and improving the display formatting for better user experience.
+
+1.  **CLI Session Commands Implementation**:
+    -   ✅ **Implemented `SessionCommand` class** in `src/Mogzi.TUI/Commands/SessionCommand.cs`
+        - Provides `mogzi session list` command for listing available sessions
+        - Provides `mogzi session info <name_or_id>` command for detailed session information
+        - Enhanced session lookup supporting name, full GUID, and partial GUID matching
+        - Comprehensive error handling and help text
+    
+2.  **Session List Limit Integration**:
+    -   ✅ **Integrated `sessionListLimit` configuration** from `ApplicationConfiguration`
+        - Both CLI and TUI session listing now respect the configured limit (default: 10)
+        - Consistent behavior across all session listing interfaces
+        - Updated `SessionListProvider` to use the same limiting logic
+    
+3.  **Table Display Enhancements**:
+    -   ✅ **Improved table column widths** for better readability:
+        - Name: 25 characters (allows multi-word session names)
+        - ID: 15 characters (shows truncated IDs with "..." prefix)
+        - Created: 18 characters (full date and time display)
+        - Last Modified: 18 characters (full date and time display)
+        - Initial Prompt: 50 characters (prevents truncation of longer prompts)
+    
+4.  **Contextual Header Updates**:
+    -   ✅ **Updated CLI command table header** to show `"Available Chat Sessions (last X recently used)"`
+    -   ✅ **Enhanced TUI slash command display** in `UserSelectionPanel` to show contextual headers
+        - Detects when SessionListProvider is active
+        - Shows session count and "recently used" context
+        - Maintains backward compatibility with other selection providers
+    
+5.  **Testing and Validation**:
+    -   ✅ **All acceptance tests passing** for CLI session commands
+    -   ✅ **Verified slash command functionality** with updated display headers
+    -   ✅ **Session list limit functionality** working correctly across both interfaces
+    -   ✅ **Table formatting improvements** validated through test output
+
+**Key Files Modified**:
+- `src/Mogzi.TUI/Commands/SessionCommand.cs` - New CLI command implementation
+- `src/Mogzi.TUI/Components/UserSelectionPanel.cs` - Enhanced with contextual headers
+- `src/Mogzi.TUI/Services/SessionListProvider.cs` - Cleaned up unnecessary methods
+- `README.md` - Updated with correct CLI command examples
+
+**Technical Achievements**:
+- **Flexible Session Lookup**: Supports exact name matching, full GUID, and partial GUID matching
+- **Consistent UX**: Both CLI and TUI interfaces show the same session limit context
+- **Improved Readability**: Wider table columns prevent text truncation
+- **Robust Error Handling**: Comprehensive error messages and help text
+- **Architecture Separation**: CLI commands independent of TUI infrastructure while maintaining consistent behavior
+
+This phase successfully completed the user-facing session management commands and significantly improved the display quality and user experience for session listing across all interfaces.

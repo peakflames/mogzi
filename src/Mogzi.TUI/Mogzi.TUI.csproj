@@ -24,7 +24,7 @@
 
     <!-- AOT Compatibility Settings -->
     <TrimmerDefaultAction>link</TrimmerDefaultAction>
-    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+    <!-- <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings> -->
   </PropertyGroup>
 
   <ItemGroup>
