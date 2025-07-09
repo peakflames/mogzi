@@ -101,3 +101,56 @@ __Integration Validation__: All component interactions must be validated through
 This is not merely a testing strategy but a quality philosophy. All team members must understand that software quality is measured by user success, not developer convenience. Testing approaches that prioritize developer productivity over user validation are fundamentally misaligned with software quality objectives.
 
 __Rationale__: Twenty years of mission-critical software development has proven that systems-level testing consistently identifies more defects, provides better coverage, and delivers higher confidence than component-focused approaches. This philosophy ensures that testing effort is invested where it provides maximum value to users and maximum confidence in software quality.
+
+
+## Development Process
+
+1. The develop is equivalent to that of a TQL-5 defined by DO-330
+2. Process artifacts are maintained in `docs/process` directory
+3. All key feature shall have associated TORs
+4. All key feature shall be verified using Requirements-Based Testing (i.e. Black Box)
+5. Unit Tesing are only created when absolutely necessary, as deemed by the project maintainer.
+6. Git Flow branching and Pull Requests are used coordinate parallel development (i.e. `feature/add-feature-name`, `hotfix/address-issue-12`)
+
+## Requirements Trace Matrix
+
+The project includes an automated requirements trace matrix generator that tracks which requirements are covered by tests. This tool helps ensure comprehensive test coverage and maintains traceability between requirements and verification.
+
+### Generating the Trace Matrix
+
+To generate the requirements trace matrix:
+
+```bash
+# Run the trace matrix generator script
+./scripts/generate_trace_matrix.py
+```
+
+This will generate two output files:
+- `outputs/latest_rqmts_trace_matrix.md` - Markdown format for documentation
+- `outputs/latest_rqmts_trace_matrix.html` - HTML format with enhanced styling and dark theme
+
+### Viewing the HTML Report
+
+To view the HTML trace matrix in your browser:
+
+```bash
+# Start a local web server in the outputs directory
+python -m http.server -d outputs/
+
+# Then open your browser to: http://localhost:8000/latest_rqmts_trace_matrix.html
+```
+
+### Adding Test Coverage
+
+To link test cases to specific requirements, add requirement ID comments on the same line as the assertion that validates the requirement:
+
+```csharp
+[Fact]
+public void MyTestMethod_ShouldValidateRequirement()
+{
+    // Test implementation here...
+    var result = MyMethod();
+    result.Should().BeTrue("this is the reason why"); // TOR-1.1, TOR-2.3
+}
+```
+
