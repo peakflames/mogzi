@@ -29,6 +29,9 @@ public class ApplicationConfiguration
 
     [JsonPropertyName("debug")]
     public bool Debug { get; set; } = false;
+
+    [JsonPropertyName("sessionListLimit")]
+    public int SessionListLimit { get; set; } = 10;
 }
 
 public class ApiProvider

@@ -1,5 +1,4 @@
-using Mogzi.PawPrints;
-using Xunit.Abstractions;
+
 
 namespace Mogzi.TUI.Tests;
 
@@ -73,38 +72,38 @@ public class ChatWorkflowAcceptanceTests : IDisposable
         // Act & Assert - Complete workflow with progressive feedback
         
         // 1. Verify Welcome Screen
-        VerifyWelcomeScreenDisplayed();
+        VerifyWelcomeScreenDisplayed(); // TOR-2.1
         _output?.WriteLine("✅ Welcome screen displayed correctly");
         _logger.LogInformation("✅ Welcome screen displayed correctly");
         
         // 2. First User Input: "tell me a joke"
         _output?.WriteLine("📝 Testing first user input: 'tell me a joke'");
         _logger.LogInformation("📝 Testing first user input: 'tell me a joke'");
-        await SimulateCompleteUserInputAsync("tell me a joke");
-        VerifyUserMessageDisplayed("tell me a joke", messageIndex: 1);
+        await SimulateCompleteUserInputAsync("tell me a joke"); // TOR-2.1, TOR-4.1
+        VerifyUserMessageDisplayed("tell me a joke", messageIndex: 1); // TOR-1.2
         _output?.WriteLine("✅ First user message captured and displayed");
         _logger.LogInformation("✅ First user message captured and displayed");
         
-        await WaitForAssistantResponseAsync();
-        VerifyAssistantResponseDisplayed(messageIndex: 2);
+        await WaitForAssistantResponseAsync(); // TOR-1.1, TOR-5.1
+        VerifyAssistantResponseDisplayed(messageIndex: 2); // TOR-1.1
         _output?.WriteLine("✅ First assistant response received and displayed");
         _logger.LogInformation("✅ First assistant response received and displayed");
         
         // 3. Second User Input: "tell me another joke"
         _output?.WriteLine("📝 Testing second user input: 'tell me another joke'");
         _logger.LogInformation("📝 Testing second user input: 'tell me another joke'");
-        await SimulateCompleteUserInputAsync("tell me another joke");
-        VerifyUserMessageDisplayed("tell me another joke", messageIndex: 3);
+        await SimulateCompleteUserInputAsync("tell me another joke"); // TOR-2.1, TOR-4.1, TOR-5.1
+        VerifyUserMessageDisplayed("tell me another joke", messageIndex: 3); // TOR-1.2
         _output?.WriteLine("✅ Second user message captured and displayed");
         _logger.LogInformation("✅ Second user message captured and displayed");
         
-        await WaitForAssistantResponseAsync();
-        VerifyAssistantResponseDisplayed(messageIndex: 4);
+        await WaitForAssistantResponseAsync(); // TOR-1.1, TOR-5.1
+        VerifyAssistantResponseDisplayed(messageIndex: 4); // TOR-1.1
         _output?.WriteLine("✅ Second assistant response received and displayed");
         _logger.LogInformation("✅ Second assistant response received and displayed");
         
         // 4. Verify Complete Sequential Order
-        VerifyMessageSequentialOrder();
+        VerifyMessageSequentialOrder(); // TOR-1.2
         _output?.WriteLine("✅ Message sequential order verified correctly");
         _logger.LogInformation("✅ Message sequential order verified correctly");
         

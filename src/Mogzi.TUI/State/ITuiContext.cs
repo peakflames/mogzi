@@ -32,6 +32,11 @@ public interface ITuiContext
     HistoryManager HistoryManager { get; }
 
     /// <summary>
+    /// Gets the session manager for persistent session management.
+    /// </summary>
+    SessionManager SessionManager { get; }
+
+    /// <summary>
     /// Gets the autocomplete manager for handling autocomplete functionality.
     /// </summary>
     AutocompleteManager AutocompleteManager { get; }
@@ -105,6 +110,11 @@ public interface ITuiContext
     /// Gets the function call to pre-edit content mapping for diff generation.
     /// </summary>
     Dictionary<string, string> FunctionCallToPreEditContent { get; }
+
+    /// <summary>
+    /// Gets or sets whether piped input should be automatically submitted.
+    /// </summary>
+    bool AutoSubmitPipedInput { get; set; }
 
     /// <summary>
     /// Requests a state transition to the specified state.

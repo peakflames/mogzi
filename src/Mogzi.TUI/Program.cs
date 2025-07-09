@@ -8,7 +8,8 @@ public static class Program
     private static readonly ICommand[] Commands =
     [
         new ChatCommand(),
-        new NonInteractiveCommand()
+        new NonInteractiveCommand(),
+        new SessionCommand()
     ];
 
     /// <summary>
@@ -56,7 +57,7 @@ public static class Program
                 AnsiConsole.MarkupLine($"[red]Error: Unknown command '{commandName}'[/]");
                 AnsiConsole.WriteLine();
                 ShowGlobalHelp();
-                return 1;
+                return 2;
             }
 
             // Remove command name from args and pass the rest to the command
@@ -68,7 +69,7 @@ public static class Program
         catch (Exception ex)
         {
             AnsiConsole.WriteException(ex);
-            return 1;
+            return 3;
         }
     }
 

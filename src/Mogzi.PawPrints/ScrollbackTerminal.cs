@@ -153,8 +153,22 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal, IDi
         {
             try
             {
-                _console.Cursor.MoveUp(_dynamicContentLineCount - 1);
+                var linesToMoveUp = _dynamicContentLineCount - 1;
+                if (linesToMoveUp > 0)
+                {
+                    _console.Cursor.MoveUp(linesToMoveUp);
+                }
                 _console.Write("\x1b[0J");
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // In test environments, cursor positioning may fail due to invalid coordinates
+                // This is expected when running tests with redirected input/output
+                if (!_isShutdown)
+                {
+                    // Silently ignore cursor positioning errors in test environments
+                    // The test output will still be captured correctly
+                }
             }
             catch (Exception)
             {
@@ -173,8 +187,22 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal, IDi
         {
             try
             {
-                _console.Cursor.MoveUp(_updatableContentLineCount);
+                var linesToMoveUp = _updatableContentLineCount;
+                if (linesToMoveUp > 0)
+                {
+                    _console.Cursor.MoveUp(linesToMoveUp);
+                }
                 _console.Write("\x1b[0J");
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // In test environments, cursor positioning may fail due to invalid coordinates
+                // This is expected when running tests with redirected input/output
+                if (!_isShutdown)
+                {
+                    // Silently ignore cursor positioning errors in test environments
+                    // The test output will still be captured correctly
+                }
             }
             catch (Exception)
             {

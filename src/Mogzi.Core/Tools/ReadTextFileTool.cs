@@ -64,9 +64,19 @@ public class ReadTextFileTool(ApplicationConfiguration config, Action<string, Co
             }
 
             // Read text file content
-            var content = offset.HasValue || limit.HasValue
-                ? await ReadFileWithRange(absolutePath, offset, limit)
-                : await File.ReadAllTextAsync(absolutePath);
+            string content;
+            if (offset.HasValue)
+            {
+                content = await ReadFileWithRange(absolutePath, offset, limit);
+            }
+            else
+            {
+                content = await File.ReadAllTextAsync(absolutePath);
+                if (content.Length > limit)
+                {
+                    content = content[..limit.Value];
+                }
+            }
             var checksum = ComputeSha256(content);
             var lineCount = content.Split(["\r\n", "\r", "\n"], StringSplitOptions.None).Length;
 

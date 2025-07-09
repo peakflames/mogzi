@@ -27,8 +27,11 @@ public class UserSelectionPanel : ITuiComponent
             return new Markup($"{style}{prefix} {item.Text,-12} {item.Description}[/]");
         }).ToArray();
 
+        // Determine the appropriate header based on the active provider
+        var header = GetContextualHeader(inputContext);
+
         return new Panel(new Rows(selectionItems))
-            .Header("Select an option")
+            .Header(header)
             .Border(BoxBorder.Rounded)
             .BorderColor(Color.Green)
             .Padding(0, 0);
@@ -49,5 +52,22 @@ public class UserSelectionPanel : ITuiComponent
     public Task DisposeAsync()
     {
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Gets a contextual header based on the active provider.
+    /// </summary>
+    private static string GetContextualHeader(InputContext inputContext)
+    {
+        // Check if this is a session list provider
+        if (inputContext.ActiveProvider?.GetType().Name == "SessionListProvider")
+        {
+            // Try to get the session limit from the provider
+            var sessionCount = inputContext.CompletionItems.Count;
+            return $"Available Chat Sessions (last {sessionCount} recently used)";
+        }
+
+        // Default header for other providers
+        return "Select an option";
     }
 }

@@ -367,15 +367,22 @@ public class InputTuiState : ITuiState
     {
         try
         {
-            // Check for slash commands FIRST, before adding to chat history
+            // Check if this is an interactive command first
+            if (context.SlashCommandProcessor?.IsInteractiveCommand(input) == true)
+            {
+                // Handle interactive commands directly
+                context.UserSelectionManager.DetectAndActivate(input);
+
+                if (context.UserSelectionManager.IsSelectionModeActive)
+                {
+                    await context.UserSelectionManager.UpdateSelectionsAsync();
+                }
+                return;
+            }
+
+            // Check for non-interactive slash commands
             if (context.SlashCommandProcessor?.TryProcessCommand(input, out var commandOutput) == true)
             {
-                if (context.InputContext.State == InputState.UserSelection)
-                {
-                    // Command is interactive, so we don't process it as a chat message.
-                    return;
-                }
-
                 if (!string.IsNullOrEmpty(commandOutput))
                 {
                     var commandMessage = new ChatMessage(ChatRole.Assistant, commandOutput);

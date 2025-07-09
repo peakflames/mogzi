@@ -47,6 +47,8 @@ graph TD
     
     TC --> IC[InputContext]
     TC --> HM[HistoryManager]
+    TC --> SM[SessionManager]
+    SM --> HM
     TC --> AM[AutocompleteManager]
     TC --> USM[UserSelectionManager]
     TC --> SCP[SlashCommandProcessor]
@@ -238,7 +240,203 @@ ApplicationConfigurationRoot -> ApplicationConfiguration -> ApiProvider[], Profi
 - **ApiProvider**: External service configuration (OpenAI, custom endpoints)
 - **Profile**: User-specific model and provider combinations
 - **ChatHistory**: Message persistence and session management
+- **Session**: Represents a single chat session, including its metadata and history.
 - **ApiMetrics**: Token counting and usage tracking
+
+## Session Management Architecture
+
+**Session Entity Design:**
+```csharp
+// Domain entity representing a chat session with attachment support
+public class Session
+{
+    public Guid Id { get; set; } // UUIDv7 for time-ordered generation
+    public string Name { get; set; } // User-friendly name, defaults to creation timestamp
+    public DateTime CreatedAt { get; set; }
+    public DateTime LastModifiedAt { get; set; }
+    public List<SerializableChatMessage> History { get; set; } = [];
+    public string InitialPrompt { get; set; } = string.Empty;
+}
+
+// Enhanced serializable chat message with attachment support
+public class SerializableChatMessage
+{
+    public string Role { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public string? AuthorName { get; set; }
+    public string? MessageId { get; set; }
+    public List<AttachmentMetadata> Attachments { get; set; } = [];
+    
+    // Factory method for converting from Microsoft.Extensions.AI.ChatMessage
+    public static SerializableChatMessage FromChatMessage(ChatMessage message, int messageIndex = 0)
+    {
+        // Handles text content and attachments from message.Contents
+        // Processes ImageContent, DataContent, and TextContent types
+        // Generates attachment metadata with content hashing
+    }
+}
+
+// Attachment metadata for session persistence
+public class AttachmentMetadata
+{
+    public string OriginalFileName { get; set; } = string.Empty;
+    public string StoredFileName { get; set; } = string.Empty; // {msg-index}-{hash}.{ext}
+    public string ContentType { get; set; } = string.Empty;
+    public string ContentHash { get; set; } = string.Empty; // SHA256 hash for integrity
+    public long FileSizeBytes { get; set; }
+    public int MessageIndex { get; set; } // Index of message in session history
+}
+```
+
+**Directory-Based Storage Architecture:**
+```
+~/.mogzi/chats/
+└── {session-uuid}/
+    ├── session.json          # Session metadata + text content + attachment metadata
+    └── attachments/
+        ├── {msg-index}-{attachment-hash}.png
+        ├── {msg-index}-{attachment-hash}.pdf
+        └── {msg-index}-{attachment-hash}.txt
+```
+
+**SessionManager Service:**
+```csharp
+// Service responsible for session lifecycle management with attachment support
+public class SessionManager
+{
+    private readonly string _sessionsPath;
+    private readonly ILogger<SessionManager> _logger;
+    private readonly SemaphoreSlim _fileLock = new(1, 1);
+    private Session _currentSession;
+    
+    // Directory-based session creation
+    public async Task CreateNewSessionAsync()
+    {
+        var sessionId = Guid.CreateVersion7();
+        var sessionDir = Path.Combine(_sessionsPath, sessionId.ToString());
+        var attachmentsDir = Path.Combine(sessionDir, "attachments");
+        
+        Directory.CreateDirectory(sessionDir);
+        Directory.CreateDirectory(attachmentsDir);
+        
+        _currentSession = new Session
+        {
+            Id = sessionId,
+            Name = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
+            CreatedAt = DateTime.UtcNow,
+            LastModifiedAt = DateTime.UtcNow
+        };
+        
+        await SaveCurrentSessionAsync();
+    }
+    
+    // Atomic file operations with concurrency control
+    public async Task SaveCurrentSessionAsync()
+    {
+        await _fileLock.WaitAsync();
+        try
+        {
+            _currentSession.LastModifiedAt = DateTime.UtcNow;
+            var json = JsonSerializer.Serialize(_currentSession, _jsonOptions);
+            
+            var sessionDir = Path.Combine(_sessionsPath, _currentSession.Id.ToString());
+            var tempPath = Path.Combine(sessionDir, "session.tmp");
+            var finalPath = Path.Combine(sessionDir, "session.json");
+            
+            await File.WriteAllTextAsync(tempPath, json);
+            if (File.Exists(finalPath))
+                File.Delete(finalPath);
+            File.Move(tempPath, finalPath);
+        }
+        finally
+        {
+            _fileLock.Release();
+        }
+    }
+    
+    // Attachment handling with content-based hashing
+    public async Task<AttachmentMetadata> SaveAttachmentAsync(
+        byte[] content, 
+        string originalFileName, 
+        string contentType, 
+        int messageIndex)
+    {
+        var contentHash = ComputeSHA256Hash(content);
+        var extension = Path.GetExtension(originalFileName);
+        var storedFileName = $"{messageIndex}-{contentHash}{extension}";
+        
+        var sessionDir = Path.Combine(_sessionsPath, _currentSession.Id.ToString());
+        var attachmentsDir = Path.Combine(sessionDir, "attachments");
+        var attachmentPath = Path.Combine(attachmentsDir, storedFileName);
+        
+        // Only write if file doesn't exist (deduplication)
+        if (!File.Exists(attachmentPath))
+        {
+            await File.WriteAllBytesAsync(attachmentPath, content);
+        }
+        
+        return new AttachmentMetadata
+        {
+            OriginalFileName = originalFileName,
+            StoredFileName = storedFileName,
+            ContentType = contentType,
+            ContentHash = contentHash,
+            FileSizeBytes = content.Length,
+            MessageIndex = messageIndex
+        };
+    }
+    
+    // Load attachment content
+    public async Task<byte[]> LoadAttachmentAsync(AttachmentMetadata metadata)
+    {
+        var sessionDir = Path.Combine(_sessionsPath, _currentSession.Id.ToString());
+        var attachmentPath = Path.Combine(sessionDir, "attachments", metadata.StoredFileName);
+        
+        if (!File.Exists(attachmentPath))
+            throw new FileNotFoundException($"Attachment not found: {metadata.StoredFileName}");
+            
+        return await File.ReadAllBytesAsync(attachmentPath);
+    }
+    
+    private static string ComputeSHA256Hash(byte[] content)
+    {
+        using var sha256 = SHA256.Create();
+        var hashBytes = sha256.ComputeHash(content);
+        return Convert.ToHexString(hashBytes).ToLowerInvariant();
+    }
+}
+```
+
+**Concurrency Control Architecture:**
+- **File Locking**: SemaphoreSlim ensures only one thread can access the session file at a time
+- **Atomic File Operations**: Two-phase write with temporary files prevents partial writes or corruption
+- **Cross-Process Locking**: FileShare.None during file operations prevents multiple processes from modifying the same file
+- **Error Recovery**: Corrupted session detection with backup preservation
+
+**Session Persistence Flow:**
+```mermaid
+sequenceDiagram
+    participant App as Application
+    participant SM as SessionManager
+    participant FS as File System
+    
+    App->>SM: Add message to session
+    SM->>SM: Update session.LastModifiedAt
+    SM->>SM: Acquire file lock
+    SM->>SM: Serialize session to JSON
+    SM->>FS: Write to temporary file
+    SM->>FS: Delete existing file (if present)
+    SM->>FS: Move temporary to final location
+    SM->>SM: Release file lock
+    
+    Note over SM,FS: Atomic file operation ensures<br>no partial writes occur
+```
+
+**Performance Optimization:**
+- **Asynchronous I/O**: All file operations use non-blocking async methods
+- **Minimal Serialization**: Only changed fields are updated before serialization
+- **Efficient JSON**: System.Text.Json with source generation for AOT compatibility
+- **Prioritizing Reliability**: Atomic writes ensure data integrity even if performance impact occurs
 
 **Working Directory Security:**
 - **IWorkingDirectoryProvider**: Abstraction for secure path operations

@@ -65,18 +65,18 @@ public class CharacterInputAcceptanceTests : IDisposable
 
         // Assert - Verify characters appear in input context
         _tuiContext.InputContext.CurrentInput.Should().Be(testCharacters, 
-            "typed characters should appear in the input context");
+            "typed characters should appear in the input context"); // TOR-2.1, TOR-4.1
         
         // Verify cursor position is at the end
         _tuiContext.InputContext.CursorPosition.Should().Be(testCharacters.Length,
-            "cursor should be positioned at the end of the input");
+            "cursor should be positioned at the end of the input"); // TOR-2.1, TOR-4.1
 
         // Verify the input appears in the rendered output
         var renderedOutput = RenderInputPanel();
         var renderedText = ExtractTextFromRenderable(renderedOutput);
         
         renderedText.Should().Contain(testCharacters, 
-            "typed characters should appear in the rendered input panel");
+            "typed characters should appear in the rendered input panel"); // TOR-2.1, TOR-4.1
         
         _logger.LogInformation("Character input acceptance test completed successfully");
     }
@@ -99,13 +99,13 @@ public class CharacterInputAcceptanceTests : IDisposable
 
         // Assert
         _tuiContext.InputContext.CurrentInput.Should().Be(specialCharacters,
-            "special characters should appear in the input context");
+            "special characters should appear in the input context"); // TOR-7.3
         
         var renderedOutput = RenderInputPanel();
         var renderedText = ExtractTextFromRenderable(renderedOutput);
         
         // Note: Some special characters might be escaped in markup, so we check for presence
-        renderedText.Should().Contain("!@#", "special characters should appear in rendered output");
+        renderedText.Should().Contain("!@#", "special characters should appear in rendered output"); // TOR-7.3
     }
 
     [Fact]

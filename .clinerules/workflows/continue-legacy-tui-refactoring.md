@@ -15,15 +15,14 @@ This workflow prepares the AI model's context with all relevant documentation, p
 4.  Use `read_file` to read `docs/refactoring_notes/implement_phase_1.md` to understand the completed foundational work.
 5.  Use `read_file` to read `docs/refactoring_notes/implement_phase_2.md` to understand the component extraction and the lessons learned.
 6.  Use `read_file` to read `docs/refactoring_notes/implement_phase_3.md` to understand the remaining work and priorities.
+7.  Use `read_file` to read `docs/refactoring_notes/implement_phase_3_session_management.md`
+8.  Use `read_file` to read `docs/manual_tests/tp_01_session_mgmt.md`
 
 ## 2. Context Preparation: Load Key Source Code
 
 1.  Use `read_file` to read `src/Mogzi.TUI/App/FlexColumnTuiApp.cs` to understand the current, refactored application entry point.
-2.  Use `read_file` to read `src/Mogzi.TUI/App/LegacyFlexColumnTuiApp.cs` as a reference for required features and legacy implementation details.
-3.  Use `read_file` to read `src/Mogzi.PawPrints/ScrollbackTerminal.cs` as it is a key component in the rendering issues.
-4.  Use `read_file` to read `src/Mogzi.TUI/State/TuiStateManager.cs` to understand the core state machine.
-5.  Use `read_file` to read `src/Mogzi.TUI/Components/TuiComponentManager.cs` to understand component lifecycle and rendering.
-6.  Use `read_file` to read `src/Mogzi.TUI/Components/FlexColumnMediator.cs` to understand how components and services communicate.
+2.  Traverse the code with the purpose of understanding what has been implemented for the Session Management requirements and the expected design.
+
 
 ## 3. Context Preparation: Load Key Test Files
 

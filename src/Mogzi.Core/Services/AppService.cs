@@ -7,11 +7,8 @@ namespace Mogzi.Services;
 /// Initializes a new instance of the AppService class
 /// </remarks>
 /// <param name="chatClient">The chat client</param>
-/// <param name="chatHistoryService">The chat history service</param>
-public class AppService(ChatClient chatClient, ChatHistoryService chatHistoryService) : IAppService
+public class AppService(ChatClient chatClient) : IAppService
 {
-    private readonly ChatHistoryService _chatHistoryService = chatHistoryService;
-
     /// <summary>
     /// Gets the system prompt
     /// </summary>
@@ -26,60 +23,6 @@ public class AppService(ChatClient chatClient, ChatHistoryService chatHistorySer
     /// Gets the chat client
     /// </summary>
     public ChatClient ChatClient { get; } = chatClient;
-
-    /// <summary>
-    /// Creates a new chat session
-    /// </summary>
-    /// <returns>The path to the new chat session</returns>
-    public string CreateChatSession()
-    {
-        return _chatHistoryService.CreateChatSession();
-    }
-
-    /// <summary>
-    /// Loads a chat session
-    /// </summary>
-    /// <param name="sessionId">The session ID to load</param>
-    /// <param name="systemPrompt">The system prompt to inject</param>
-    /// <returns>The loaded chat history, or null if the session doesn't exist</returns>
-    public async Task<List<ChatMessage>?> LoadChatSessionAsync(string sessionId, string systemPrompt)
-    {
-        var sessionPath = Path.Combine(_chatHistoryService.GetBasePath(), sessionId);
-        if (!Directory.Exists(sessionPath))
-        {
-            return null;
-        }
-
-        return await _chatHistoryService.LoadChatHistoryAsync(sessionPath, systemPrompt);
-    }
-
-    /// <summary>
-    /// Gets all available chat sessions
-    /// </summary>
-    /// <returns>A list of chat session paths</returns>
-    public List<string> GetChatSessions()
-    {
-        return _chatHistoryService.GetChatSessions();
-    }
-
-    /// <summary>
-    /// Gets the base path for chat sessions
-    /// </summary>
-    /// <returns>The base path for chat sessions</returns>
-    public string GetChatSessionsBasePath()
-    {
-        return _chatHistoryService.GetBasePath();
-    }
-
-    /// <summary>
-    /// Saves the chat history
-    /// </summary>
-    /// <param name="sessionPath">The path to the session</param>
-    /// <param name="chatHistory">The chat history to save</param>
-    public async Task SaveChatHistoryAsync(string sessionPath, List<ChatMessage> chatHistory)
-    {
-        await _chatHistoryService.SaveChatHistoryAsync(sessionPath, chatHistory);
-    }
 
     /// <summary>
     /// Processes a chat message

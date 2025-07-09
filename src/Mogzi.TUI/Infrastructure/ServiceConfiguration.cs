@@ -37,9 +37,10 @@ public static class ServiceConfiguration
             ? services.AddSingleton(chatClientResult.Value)
             : throw new InvalidOperationException($"Failed to create ChatClient: {string.Join(", ", chatClientResult.Errors.Select(e => e.Message))}");
 
-        _ = services.AddSingleton<ChatHistoryService>();
+
         _ = services.AddSingleton<IAppService, AppService>();
         _ = services.AddSingleton<HistoryManager>();
+        _ = services.AddSingleton<SessionManager>();
 
         // Add autocomplete services
         _ = services.AddSingleton<SlashCommandProcessor>();
@@ -49,6 +50,7 @@ public static class ServiceConfiguration
 
         // Add user selection services
         _ = services.AddSingleton<IUserSelectionProvider, ToolApprovalsProvider>();
+        _ = services.AddSingleton<IUserSelectionProvider, SessionListProvider>();
         _ = services.AddSingleton<UserSelectionManager>();
 
         // Add TUI infrastructure components
@@ -68,6 +70,7 @@ public static class ServiceConfiguration
             var logger = serviceProvider.GetRequiredService<ILogger<TuiContext>>();
             var scrollbackTerminal = serviceProvider.GetRequiredService<IScrollbackTerminal>();
             var historyManager = serviceProvider.GetRequiredService<HistoryManager>();
+            var sessionManager = serviceProvider.GetRequiredService<SessionManager>();
             var autocompleteManager = serviceProvider.GetRequiredService<AutocompleteManager>();
             var userSelectionManager = serviceProvider.GetRequiredService<UserSelectionManager>();
             var slashCommandProcessor = serviceProvider.GetRequiredService<SlashCommandProcessor>();
@@ -82,6 +85,7 @@ public static class ServiceConfiguration
                 logger,
                 scrollbackTerminal,
                 historyManager,
+                sessionManager,
                 autocompleteManager,
                 userSelectionManager,
                 slashCommandProcessor,

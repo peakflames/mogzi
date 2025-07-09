@@ -49,6 +49,8 @@ public sealed class FlexColumnTuiApp : IDisposable
             RenderInitialContent();
         };
         _slashCommandProcessor.InteractiveCommandRequested += OnInteractiveCommandRequested;
+        _slashCommandProcessor.SessionClearRequested += OnSessionClearRequested;
+        _slashCommandProcessor.SessionRenameRequested += OnSessionRenameRequested;
 
         RegisterKeyBindings();
 
@@ -59,7 +61,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         if (_logger is null)
         {
             Console.WriteLine("Logger is null");
-            return 1;
+            return 7;
         }
 
         ObjectDisposedException.ThrowIf(_isDisposed, this);
@@ -94,7 +96,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         {
             _logger.LogError(ex, "Fatal error in FlexColumn TUI application");
             UnhandledError?.Invoke(ex);
-            return 1;
+            return 8;
         }
         finally
         {
@@ -104,11 +106,93 @@ public sealed class FlexColumnTuiApp : IDisposable
         }
     }
 
-#pragma warning disable IDE0060 // Remove unused parameter
     private async Task Initialize(string[] args)
     {
         try
         {
+            // Parse arguments for session management
+            var parsedArgs = ArgumentParser.Parse(args);
+            var sessionId = ArgumentParser.GetString(parsedArgs, ["session", "s"], null);
+
+            // Initialize session management
+            var sessionManager = _serviceProvider.GetRequiredService<SessionManager>();
+
+            if (!string.IsNullOrEmpty(sessionId))
+            {
+                var sessionLoaded = false;
+
+                // First try to load by GUID (existing behavior)
+                if (Guid.TryParse(sessionId, out _))
+                {
+                    try
+                    {
+                        await sessionManager.LoadSessionAsync(sessionId);
+                        sessionLoaded = true;
+                        _logger.LogInformation("Loaded session by ID: {SessionId}", sessionId);
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        _logger.LogWarning("Session not found by ID: {SessionId}", sessionId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to load session by ID: {SessionId}", sessionId);
+                    }
+                }
+
+                // If GUID loading failed or sessionId is not a GUID, try loading by name
+                if (!sessionLoaded)
+                {
+                    try
+                    {
+                        sessionLoaded = await sessionManager.TryLoadSessionByNameAsync(sessionId);
+                        if (sessionLoaded)
+                        {
+                            _logger.LogInformation("Loaded session by name: {SessionName}", sessionId);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("No session found with name: {SessionName}", sessionId);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to load session by name: {SessionName}", sessionId);
+                    }
+                }
+
+                // If neither GUID nor name loading succeeded, create new session
+                if (!sessionLoaded)
+                {
+                    _logger.LogInformation("Creating new session since no existing session was found for: {SessionIdentifier}", sessionId);
+                    await sessionManager.CreateNewSessionAsync();
+                }
+            }
+            else
+            {
+                // Create new session if no session ID provided
+                await sessionManager.CreateNewSessionAsync();
+            }
+
+            // Set the session manager on history manager for persistence
+            _historyManager.SetSessionManager(sessionManager);
+
+            // Load session messages into history manager for UI display
+            var sessionMessages = sessionManager.GetCurrentSessionMessages();
+            foreach (var message in sessionMessages)
+            {
+                // Add messages according to their actual role, but skip persistence since they're already persisted
+                if (message.Role == ChatRole.User)
+                {
+                    _historyManager.AddUserMessageWithoutPersistence(message);
+                }
+                else if (message.Role == ChatRole.Assistant)
+                {
+                    _historyManager.AddAssistantMessageWithoutPersistence(message);
+                }
+                // Note: We could add support for other roles if needed
+            }
+
             // Register state factories
             RegisterStateFactories();
 
@@ -128,6 +212,27 @@ public sealed class FlexColumnTuiApp : IDisposable
             // Initialize the terminal and render initial content
             _scrollbackTerminal.Initialize();
             RenderInitialContent();
+
+            // Handle auto-submit for piped input
+            if (_tuiContext.AutoSubmitPipedInput && !string.IsNullOrEmpty(_tuiContext.InputContext.CurrentInput))
+            {
+                _logger.LogInformation("Auto-submitting piped input: {Input}", _tuiContext.InputContext.CurrentInput);
+
+                // Schedule auto-submit to happen after the UI is fully initialized
+                _ = Task.Run(async () =>
+                {
+                    // Small delay to ensure UI is ready
+                    await Task.Delay(100);
+
+                    // Simulate Enter key press to submit the piped input
+                    var enterKeyInfo = new ConsoleKeyInfo('\r', ConsoleKey.Enter, false, false, false);
+                    var enterKeyArgs = new KeyPressEventArgs(enterKeyInfo);
+                    await _stateManager.HandleKeyPressAsync(enterKeyArgs);
+
+                    // Refresh the display
+                    _scrollbackTerminal.Refresh();
+                });
+            }
         }
         catch (Exception ex)
         {
@@ -217,7 +322,7 @@ public sealed class FlexColumnTuiApp : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in FlexColumn Live loop");
-            return 1;
+            return 9;
         }
     }
 
@@ -350,6 +455,47 @@ public sealed class FlexColumnTuiApp : IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling interactive command: {Command}", command);
+        }
+    }
+
+    /// <summary>
+    /// Handles session clear requests from slash commands.
+    /// </summary>
+    private async void OnSessionClearRequested()
+    {
+        try
+        {
+            var sessionManager = _serviceProvider.GetRequiredService<SessionManager>();
+            await sessionManager.ClearCurrentSessionAsync();
+
+            // Clear the UI history as well
+            _historyManager.ClearHistory();
+            _scrollbackTerminal.Initialize();
+            RenderInitialContent();
+
+            _logger.LogInformation("Session history cleared successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error clearing session history");
+        }
+    }
+
+    /// <summary>
+    /// Handles session rename requests from slash commands.
+    /// </summary>
+    private async void OnSessionRenameRequested(string newName)
+    {
+        try
+        {
+            var sessionManager = _serviceProvider.GetRequiredService<SessionManager>();
+            await sessionManager.RenameSessionAsync(newName);
+
+            _logger.LogInformation("Session renamed to: {SessionName}", newName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error renaming session to: {SessionName}", newName);
         }
     }
 

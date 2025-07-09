@@ -26,6 +26,16 @@ public sealed class SlashCommandProcessor
     public event Action<string>? InteractiveCommandRequested;
 
     /// <summary>
+    /// Event raised when session history should be cleared.
+    /// </summary>
+    public event Action? SessionClearRequested;
+
+    /// <summary>
+    /// Event raised when session should be renamed.
+    /// </summary>
+    public event Action<string>? SessionRenameRequested;
+
+    /// <summary>
     /// Initializes a new instance of SlashCommandProcessor.
     /// </summary>
     public SlashCommandProcessor(IAnsiConsole console, ChatClient? chatClient = null)
@@ -50,15 +60,24 @@ public sealed class SlashCommandProcessor
             return false;
         }
 
-        var parts = input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-        var command = parts[0].ToLower();
-        var args = parts.Length > 1 ? parts[1] : "";
+        var inputLower = input.ToLower();
 
-        if (_commands.TryGetValue(command, out var cmd))
+        // Try to find the longest matching command first (for multi-word commands like "/session clear")
+        var matchingCommand = _commands.Keys
+            .Where(inputLower.StartsWith)
+            .OrderByDescending(cmd => cmd.Length)
+            .FirstOrDefault();
+
+        if (matchingCommand != null)
         {
+            var cmd = _commands[matchingCommand];
+            var args = input.Length > matchingCommand.Length
+                ? input[matchingCommand.Length..].Trim()
+                : "";
+
             if (cmd.IsInteractive)
             {
-                InteractiveCommandRequested?.Invoke(command);
+                InteractiveCommandRequested?.Invoke(matchingCommand);
                 output = null; // No direct output, handled by TUI
                 return true;
             }
@@ -67,7 +86,26 @@ public sealed class SlashCommandProcessor
             return true;
         }
 
-        output = GetUnknownCommandMessage(command);
+        // If no exact match found, try single-word command for backward compatibility
+        var parts = input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        var singleCommand = parts[0].ToLower();
+
+        if (_commands.TryGetValue(singleCommand, out var singleCmd))
+        {
+            var singleArgs = parts.Length > 1 ? parts[1] : "";
+
+            if (singleCmd.IsInteractive)
+            {
+                InteractiveCommandRequested?.Invoke(singleCommand);
+                output = null; // No direct output, handled by TUI
+                return true;
+            }
+
+            output = singleCmd.ExecuteWithOutput?.Invoke(singleArgs) ?? "Command executed successfully";
+            return true;
+        }
+
+        output = GetUnknownCommandMessage(singleCommand);
         return true;
     }
 
@@ -110,6 +148,20 @@ public sealed class SlashCommandProcessor
             return false;
         }
 
+        var inputLower = input.ToLower();
+
+        // Check for multi-word commands first
+        var matchingCommand = _commands.Keys
+            .Where(inputLower.StartsWith)
+            .OrderByDescending(cmd => cmd.Length)
+            .FirstOrDefault();
+
+        if (matchingCommand != null)
+        {
+            return true;
+        }
+
+        // Fallback to single-word command check
         var parts = input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
         var command = parts[0].ToLower();
 
@@ -128,6 +180,20 @@ public sealed class SlashCommandProcessor
             return false;
         }
 
+        var inputLower = input.ToLower();
+
+        // Check for multi-word commands first
+        var matchingCommand = _commands.Keys
+            .Where(inputLower.StartsWith)
+            .OrderByDescending(cmd => cmd.Length)
+            .FirstOrDefault();
+
+        if (matchingCommand != null)
+        {
+            return _commands[matchingCommand].IsInteractive;
+        }
+
+        // Fallback to single-word command check
         var parts = input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
         var command = parts[0].ToLower();
 
@@ -145,6 +211,11 @@ public sealed class SlashCommandProcessor
         _commands["/quit"] = new SlashCommand("/quit", "Exit the application gracefully (alias for /exit)", RequestExit, GetExitOutput);
         _commands["/status"] = new SlashCommand("/status", "Show current system status and information", ShowStatus, GetStatusOutput);
         _commands["/tool-approvals"] = new SlashCommand("/tool-approvals", "Change the tool approval mode for the session", _ => { }, null, true);
+
+        // Session management commands
+        _commands["/session clear"] = new SlashCommand("/session clear", "Clear the current session history", ClearSession, GetClearSessionOutput);
+        _commands["/session list"] = new SlashCommand("/session list", "List and select from available sessions", _ => { }, null, true);
+        _commands["/session rename"] = new SlashCommand("/session rename", "Rename the current session", RenameSession, GetRenameSessionOutput);
     }
 
     /// <summary>
@@ -337,6 +408,75 @@ public sealed class SlashCommandProcessor
         }
 
         return output.ToString();
+    }
+
+    /// <summary>
+    /// Clears the current session history.
+    /// </summary>
+    private void ClearSession(string args)
+    {
+        // This will be handled by the SessionClearEvent
+        SessionClearRequested?.Invoke();
+
+        var panel = new Panel(new Markup("[green]✓[/] Session history cleared"))
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Green)
+            .Padding(1, 0);
+
+        _console.Write(panel);
+        _console.WriteLine();
+    }
+
+    /// <summary>
+    /// Renames the current session.
+    /// </summary>
+    private void RenameSession(string args)
+    {
+        if (string.IsNullOrWhiteSpace(args))
+        {
+            var panel = new Panel(new Markup("[red]Error:[/] Session name cannot be empty\nUsage: /session rename <new name>"))
+                .Border(BoxBorder.Rounded)
+                .BorderColor(Color.Red)
+                .Padding(1, 0);
+
+            _console.Write(panel);
+            _console.WriteLine();
+            return;
+        }
+
+        // This will be handled by the SessionRenameEvent
+        SessionRenameRequested?.Invoke(args.Trim());
+
+        var successPanel = new Panel(new Markup($"[green]✓[/] Session renamed to '[cyan]{args.Trim()}[/]'"))
+            .Border(BoxBorder.Rounded)
+            .BorderColor(Color.Green)
+            .Padding(1, 0);
+
+        _console.Write(successPanel);
+        _console.WriteLine();
+    }
+
+    /// <summary>
+    /// Gets clear session output as text.
+    /// </summary>
+    private string GetClearSessionOutput(string args)
+    {
+        SessionClearRequested?.Invoke();
+        return "✓ Session history cleared";
+    }
+
+    /// <summary>
+    /// Gets rename session output as text.
+    /// </summary>
+    private string GetRenameSessionOutput(string args)
+    {
+        if (string.IsNullOrWhiteSpace(args))
+        {
+            return "Error: Session name cannot be empty\nUsage: /session rename <new name>";
+        }
+
+        SessionRenameRequested?.Invoke(args.Trim());
+        return $"✓ Session renamed to '{args.Trim()}'";
     }
 
     /// <summary>
