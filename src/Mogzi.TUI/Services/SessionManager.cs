@@ -171,7 +171,6 @@ public class SessionManager : IDisposable
 
             if (!File.Exists(sessionFilePath))
             {
-                _logger.LogWarning("Session file not found: {SessionFilePath}", sessionFilePath);
                 throw new FileNotFoundException($"Session file not found: {sessionId}");
             }
 
@@ -202,8 +201,8 @@ public class SessionManager : IDisposable
                 return;
             }
 
-            _logger.LogInformation("Loaded session: {SessionId} with {MessageCount} messages",
-                CurrentSession.Id, CurrentSession.History.Count);
+            _logger.LogInformation("Loaded session '{SessionName}' (ID: {SessionId}) with {MessageCount} messages",
+                CurrentSession.Name, CurrentSession.Id, CurrentSession.History.Count);
         }
         catch (JsonException ex)
         {

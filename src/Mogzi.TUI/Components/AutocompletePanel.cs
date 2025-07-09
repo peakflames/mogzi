@@ -13,21 +13,25 @@ public class AutocompletePanel : ITuiComponent
     {
         var inputContext = context.TuiContext.InputContext;
 
-        if (!inputContext.ShowSuggestions || inputContext.Suggestions.Count == 0)
+        if (!inputContext.ShowSuggestions || inputContext.CompletionItems.Count == 0)
         {
             return new Text(string.Empty);
         }
 
-        var suggestionItems = inputContext.Suggestions.Select((suggestion, index) =>
+        var maxSuggestionLength = inputContext.CompletionItems.Any()
+            ? inputContext.CompletionItems.Max(s => s.Text.Length)
+            : 0;
+
+        var suggestionItems = inputContext.CompletionItems.Select((suggestion, index) =>
         {
             var isSelected = index == inputContext.SelectedSuggestionIndex;
             var style = isSelected ? "[blue on white]" : "[dim]";
             var prefix = isSelected ? ">" : " ";
 
-            var description = context.TuiContext.SlashCommandProcessor.GetAllCommands()
-                .GetValueOrDefault(suggestion, "");
+            var displayText = suggestion.Text.PadRight(maxSuggestionLength);
+            var description = suggestion.Description;
 
-            return new Markup($"{style}{prefix} {suggestion,-12} {description}[/]");
+            return new Markup($"{style}{prefix} {displayText}  {description}[/]");
         }).ToArray();
 
         return new Panel(new Rows(suggestionItems))

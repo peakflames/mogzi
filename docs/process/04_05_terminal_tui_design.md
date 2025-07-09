@@ -206,7 +206,48 @@ private static void ConfigureServices(IServiceCollection services)
 }
 ```
 
-## 7. Message Boundary Detection System
+## 7. Event Handler Timing Considerations
+
+### 7.1. Async Void Event Handler Timing Issues
+
+**Critical Design Principle**: Event handlers in TUI applications must carefully manage timing between UI feedback display and asynchronous operations to prevent feedback messages from being cleared before users can see them.
+
+#### Problem Pattern
+```csharp
+// ❌ PROBLEMATIC: Async void can clear UI after feedback is displayed
+private async void OnSessionClearRequested()
+{
+    await sessionManager.ClearCurrentSessionAsync();  // Async operation
+    _scrollbackTerminal.Initialize();                 // Clears feedback message
+    RenderInitialContent();                          // User never sees feedback
+}
+```
+
+#### Solution Pattern
+```csharp
+// ✅ CORRECT: Synchronous lambda for immediate UI operations
+_processor.ClearRequested += () => {
+    _historyManager.ClearHistory();
+    _scrollbackTerminal.Initialize();
+    RenderInitialContent();
+};
+
+// ✅ CORRECT: Async void without UI clearing
+private async void OnSessionClearRequested()
+{
+    await sessionManager.ClearCurrentSessionAsync();
+    _historyManager.ClearHistory();
+    // No scrollback clearing - allows feedback to persist
+}
+```
+
+#### Key Design Guidelines
+- **UI Feedback First**: Component feedback must be displayed before any UI clearing operations
+- **Synchronous UI Operations**: Use synchronous lambdas for immediate UI state changes  
+- **Async Data Operations**: Separate data persistence (async) from UI operations (sync)
+- **Timing Awareness**: Understand that `async void` runs asynchronously and can interfere with component rendering
+
+## 8. Message Boundary Detection System
 
 ### 7.1. Problem Statement
 

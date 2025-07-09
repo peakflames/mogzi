@@ -380,15 +380,25 @@ public class InputTuiState : ITuiState
                 return;
             }
 
-            // Check for non-interactive slash commands
-            if (context.SlashCommandProcessor?.TryProcessCommand(input, out var commandOutput) == true)
+            // Check for non-interactive slash commands using component-based approach
+            if (context.SlashCommandProcessor?.TryProcessCommandAsComponent(input, out var commandComponent) == true)
             {
-                if (!string.IsNullOrEmpty(commandOutput))
+                if (commandComponent != null)
                 {
-                    var commandMessage = new ChatMessage(ChatRole.Assistant, commandOutput);
                     var renderingUtils = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
                     var theme = context.ServiceProvider.GetRequiredService<IThemeInfo>();
-                    context.ScrollbackTerminal.WriteStatic(renderingUtils.RenderMessage(commandMessage, theme));
+                    var renderContext = new RenderContext(
+                        context,
+                        ChatState.Input,
+                        context.Logger,
+                        context.ServiceProvider,
+                        renderingUtils,
+                        theme
+                    );
+
+                    var componentRenderable = commandComponent.Render(renderContext);
+                    context.ScrollbackTerminal.WriteStatic(componentRenderable);
+                    context.ScrollbackTerminal.WriteStatic(new Markup(""));
                 }
                 return;
             }
@@ -595,9 +605,14 @@ public class InputTuiState : ITuiState
     {
         if (context.InputContext.CompletionItems.Count == 0)
         {
+            context.Logger.LogDebug("InputTuiState: Cannot navigate user selection - no completion items");
             return;
         }
 
+        var oldIndex = context.InputContext.SelectedSuggestionIndex;
+        var oldSelection = oldIndex >= 0 && oldIndex < context.InputContext.CompletionItems.Count
+            ? context.InputContext.CompletionItems[oldIndex].Text
+            : "none";
 
         if (up)
         {
@@ -611,6 +626,14 @@ public class InputTuiState : ITuiState
                 (context.InputContext.SelectedSuggestionIndex + 1)
                 % context.InputContext.CompletionItems.Count;
         }
+
+        var newIndex = context.InputContext.SelectedSuggestionIndex;
+        var newSelection = newIndex >= 0 && newIndex < context.InputContext.CompletionItems.Count
+            ? context.InputContext.CompletionItems[newIndex].Text
+            : "none";
+
+        context.Logger.LogDebug("InputTuiState: User selection navigation - Direction: {Direction}, Old: [{OldIndex}] '{OldSelection}', New: [{NewIndex}] '{NewSelection}'",
+            up ? "UP" : "DOWN", oldIndex, oldSelection, newIndex, newSelection);
     }
 
 }

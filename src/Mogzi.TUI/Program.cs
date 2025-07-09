@@ -133,39 +133,19 @@ public static class Program
     {
         try
         {
-            var configPath = Mogzi.Utils.ConfigurationLocator.FindConfigPath();
-            if (configPath is null)
+            var table = Utils.ProfileTableUtilities.CreateProfilesTable();
+            if (table == null)
             {
-                AnsiConsole.MarkupLine("[red]Error: Could not find mogzi.config.json in the current directory or home directory.[/]");
+                var configPath = Mogzi.Utils.ConfigurationLocator.FindConfigPath();
+                if (configPath is null)
+                {
+                    AnsiConsole.MarkupLine("[red]Error: Could not find mogzi.config.json in the current directory or home directory.[/]");
+                }
+                else
+                {
+                    AnsiConsole.MarkupLine("[yellow]No profiles found in mogzi.config.json.[/]");
+                }
                 return;
-            }
-
-            var jsonContent = File.ReadAllText(configPath);
-            var configRoot = JsonSerializer.Deserialize(jsonContent, ApplicationConfigurationContext.Default.ApplicationConfigurationRoot);
-
-            var config = configRoot?.RootConfig;
-            if (config?.Profiles == null || !config.Profiles.Any())
-            {
-                AnsiConsole.MarkupLine("[yellow]No profiles found in mogzi.config.json.[/]");
-                return;
-            }
-
-            var table = new Table()
-                .Title("Available Profiles")
-                .Border(TableBorder.Rounded)
-                .AddColumn("Name")
-                .AddColumn("Model")
-                .AddColumn("Provider")
-                .AddColumn("Default");
-
-            foreach (var profile in config.Profiles)
-            {
-                _ = table.AddRow(
-                    Markup.Escape(profile.Name ?? "-"),
-                    Markup.Escape(profile.ModelId ?? "-"),
-                    Markup.Escape(profile.ApiProvider ?? "-"),
-                    profile.Default ? ":check_mark_button:" : ""
-                );
             }
 
             AnsiConsole.Write(table);

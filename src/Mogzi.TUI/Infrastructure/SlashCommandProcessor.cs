@@ -7,7 +7,6 @@ namespace Mogzi.TUI.Infrastructure;
 public sealed class SlashCommandProcessor
 {
     private readonly Dictionary<string, SlashCommand> _commands = [];
-    private readonly IAnsiConsole _console;
     private readonly ChatClient? _chatClient;
 
     /// <summary>
@@ -38,9 +37,8 @@ public sealed class SlashCommandProcessor
     /// <summary>
     /// Initializes a new instance of SlashCommandProcessor.
     /// </summary>
-    public SlashCommandProcessor(IAnsiConsole console, ChatClient? chatClient = null)
+    public SlashCommandProcessor(ChatClient? chatClient = null)
     {
-        _console = console ?? throw new ArgumentNullException(nameof(console));
         _chatClient = chatClient;
         RegisterCommands();
     }
@@ -82,7 +80,15 @@ public sealed class SlashCommandProcessor
                 return true;
             }
 
-            output = cmd.ExecuteWithOutput?.Invoke(args) ?? "Command executed successfully";
+            // For legacy support, execute component and return simple success message
+            if (cmd.ExecuteWithComponent != null)
+            {
+                _ = cmd.ExecuteWithComponent.Invoke(args);
+                output = "Command executed successfully";
+                return true;
+            }
+
+            output = "Command executed successfully";
             return true;
         }
 
@@ -101,12 +107,97 @@ public sealed class SlashCommandProcessor
                 return true;
             }
 
-            output = singleCmd.ExecuteWithOutput?.Invoke(singleArgs) ?? "Command executed successfully";
+            // For legacy support, execute component and return simple success message
+            if (singleCmd.ExecuteWithComponent != null)
+            {
+                _ = singleCmd.ExecuteWithComponent.Invoke(singleArgs);
+                output = "Command executed successfully";
+                return true;
+            }
+
+            output = "Command executed successfully";
             return true;
         }
 
         output = GetUnknownCommandMessage(singleCommand);
         return true;
+    }
+
+    /// <summary>
+    /// Attempts to process a slash command and return an ITuiComponent.
+    /// </summary>
+    /// <param name="input">The input string to process.</param>
+    /// <param name="component">The ITuiComponent from the command, if any.</param>
+    /// <returns>True if the input was a slash command and was processed, false otherwise.</returns>
+    public bool TryProcessCommandAsComponent(string input, out ITuiComponent? component)
+    {
+        component = null;
+
+        if (string.IsNullOrWhiteSpace(input) || !input.StartsWith("/"))
+        {
+            return false;
+        }
+
+        var inputLower = input.ToLower();
+
+        // Try to find the longest matching command first (for multi-word commands like "/session clear")
+        var matchingCommand = _commands.Keys
+            .Where(inputLower.StartsWith)
+            .OrderByDescending(cmd => cmd.Length)
+            .FirstOrDefault();
+
+        if (matchingCommand != null)
+        {
+            var cmd = _commands[matchingCommand];
+            var args = input.Length > matchingCommand.Length
+                ? input[matchingCommand.Length..].Trim()
+                : "";
+
+            if (cmd.IsInteractive)
+            {
+                InteractiveCommandRequested?.Invoke(matchingCommand);
+                component = null; // No direct component, handled by TUI
+                return true;
+            }
+
+            // Try to get component first
+            if (cmd.ExecuteWithComponent != null)
+            {
+                component = cmd.ExecuteWithComponent.Invoke(args);
+                return true;
+            }
+
+            // No component available for this command
+            return true;
+        }
+
+        // If no exact match found, try single-word command for backward compatibility
+        var parts = input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        var singleCommand = parts[0].ToLower();
+
+        if (_commands.TryGetValue(singleCommand, out var singleCmd))
+        {
+            var singleArgs = parts.Length > 1 ? parts[1] : "";
+
+            if (singleCmd.IsInteractive)
+            {
+                InteractiveCommandRequested?.Invoke(singleCommand);
+                component = null; // No direct component, handled by TUI
+                return true;
+            }
+
+            // Try to get component first
+            if (singleCmd.ExecuteWithComponent != null)
+            {
+                component = singleCmd.ExecuteWithComponent.Invoke(singleArgs);
+                return true;
+            }
+
+            // No component available for this command
+            return true;
+        }
+
+        return false; // Unknown command
     }
 
     /// <summary>
@@ -205,131 +296,17 @@ public sealed class SlashCommandProcessor
     /// </summary>
     private void RegisterCommands()
     {
-        _commands["/help"] = new SlashCommand("/help", "Show available commands and usage information", ShowHelp, GetHelpOutput);
-        _commands["/clear"] = new SlashCommand("/clear", "Clear the current chat history", ClearHistory, GetClearOutput);
-        _commands["/exit"] = new SlashCommand("/exit", "Exit the application gracefully", RequestExit, GetExitOutput);
-        _commands["/quit"] = new SlashCommand("/quit", "Exit the application gracefully (alias for /exit)", RequestExit, GetExitOutput);
-        _commands["/status"] = new SlashCommand("/status", "Show current system status and information", ShowStatus, GetStatusOutput);
-        _commands["/tool-approvals"] = new SlashCommand("/tool-approvals", "Change the tool approval mode for the session", _ => { }, null, true);
+        _commands["/help"] = new SlashCommand("/help", "Show available commands and usage information", GetHelpComponent);
+        _commands["/clear"] = new SlashCommand("/clear", "Clear the current chat history", GetClearComponent);
+        _commands["/exit"] = new SlashCommand("/exit", "Exit the application gracefully", GetExitComponent);
+        _commands["/quit"] = new SlashCommand("/quit", "Exit the application gracefully (alias for /exit)", GetExitComponent);
+        _commands["/status"] = new SlashCommand("/status", "Show current system status and information", GetStatusComponent);
+        _commands["/tool-approvals"] = new SlashCommand("/tool-approvals", "Change the tool approval mode for the session", null, true);
 
         // Session management commands
-        _commands["/session clear"] = new SlashCommand("/session clear", "Clear the current session history", ClearSession, GetClearSessionOutput);
-        _commands["/session list"] = new SlashCommand("/session list", "List and select from available sessions", _ => { }, null, true);
-        _commands["/session rename"] = new SlashCommand("/session rename", "Rename the current session", RenameSession, GetRenameSessionOutput);
-    }
-
-    /// <summary>
-    /// Shows the help information with all available commands.
-    /// </summary>
-    private void ShowHelp(string args)
-    {
-        var table = new Table();
-        _ = table.AddColumn(new TableColumn("Command").Centered());
-        _ = table.AddColumn("Description");
-        table.Border = TableBorder.Rounded;
-        _ = table.BorderColor(Color.Blue);
-
-        foreach (var cmd in _commands.Values.OrderBy(c => c.Name))
-        {
-            _ = table.AddRow(
-                new Markup($"[blue]{cmd.Name}[/]"),
-                new Markup(cmd.Description)
-            );
-        }
-
-        var panel = new Panel(table)
-            .Header(new PanelHeader(" Available Commands "))
-            .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Blue)
-            .Padding(1, 0);
-
-        _console.Write(panel);
-        _console.WriteLine();
-
-        // Add usage tips
-        var tips = new Panel(new Rows(
-            new Markup("[yellow]Tips:[/]"),
-            new Markup("• Type [blue]/[/] and press Tab for command suggestions"),
-            new Markup("• Use [blue]Ctrl+C[/] to exit at any time"),
-            new Markup("• Use [blue]Ctrl+L[/] to clear the screen")
-        ))
-        .Header(" Usage Tips ")
-        .Border(BoxBorder.Rounded)
-        .BorderColor(Color.Yellow)
-        .Padding(1, 0);
-
-        _console.Write(tips);
-        _console.WriteLine();
-    }
-
-    /// <summary>
-    /// Clears the chat history.
-    /// </summary>
-    private void ClearHistory(string args)
-    {
-        ClearHistoryRequested?.Invoke();
-
-        var panel = new Panel(new Markup("[green]✓[/] Chat history cleared"))
-            .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Green)
-            .Padding(1, 0);
-
-        _console.Write(panel);
-        _console.WriteLine();
-    }
-
-    /// <summary>
-    /// Requests application exit.
-    /// </summary>
-    private void RequestExit(string args)
-    {
-        var panel = new Panel(new Markup("[yellow]Goodbye![/] Exiting Mogzi..."))
-            .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Yellow)
-            .Padding(1, 0);
-
-        _console.Write(panel);
-        _console.WriteLine();
-
-        ExitRequested?.Invoke();
-    }
-
-    /// <summary>
-    /// Shows current system status.
-    /// </summary>
-    private void ShowStatus(string args)
-    {
-        var statusTable = new Table();
-        _ = statusTable.AddColumn("Property");
-        _ = statusTable.AddColumn("Value");
-        statusTable.Border = TableBorder.Rounded;
-        _ = statusTable.BorderColor(Color.Cyan1);
-
-        _ = statusTable.AddRow("Application", "[green]Mogzi TUI[/]");
-        _ = statusTable.AddRow("Version", $"[blue]{GetApplicationVersion()}[/]");
-        _ = statusTable.AddRow("Status", "[green]Running[/]");
-        _ = statusTable.AddRow("Working Directory", $"[dim]{Environment.CurrentDirectory}[/]");
-        _ = statusTable.AddRow("Platform", $"[dim]{Environment.OSVersion.Platform}[/]");
-        _ = statusTable.AddRow("Runtime", $"[dim].NET {Environment.Version}[/]");
-
-        if (_chatClient != null)
-        {
-            _ = statusTable.AddRow("", ""); // Empty row for spacing
-            _ = statusTable.AddRow("[bold]Configuration[/]", "");
-            _ = statusTable.AddRow("Active Profile", $"[yellow]{_chatClient.ActiveProfile.Name}[/]");
-            _ = statusTable.AddRow("Model", $"[cyan]{_chatClient.ActiveProfile.ModelId}[/]");
-            _ = statusTable.AddRow("API Provider", $"[magenta]{_chatClient.ActiveApiProvider.Name}[/]");
-            _ = statusTable.AddRow("Tool Approvals", $"[orange3]{_chatClient.Config.ToolApprovals}[/]");
-        }
-
-        var panel = new Panel(statusTable)
-            .Header(" System Status ")
-            .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Cyan1)
-            .Padding(1, 0);
-
-        _console.Write(panel);
-        _console.WriteLine();
+        _commands["/session clear"] = new SlashCommand("/session clear", "Clear the current session history", GetSessionClearComponent);
+        _commands["/session list"] = new SlashCommand("/session list", "List and select from available sessions", null, true);
+        _commands["/session rename"] = new SlashCommand("/session rename", "Rename the current session", GetSessionRenameComponent);
     }
 
     /// <summary>
@@ -341,161 +318,64 @@ public sealed class SlashCommandProcessor
     }
 
     /// <summary>
-    /// Gets help output as text.
+    /// Gets help component for display.
     /// </summary>
-    private string GetHelpOutput(string args)
+    private ITuiComponent GetHelpComponent(string args)
     {
-        var commands = _commands.Values.OrderBy(c => c.Name).ToList();
-        var output = new StringBuilder();
-
-        _ = output.AppendLine("Available Commands:");
-        _ = output.AppendLine();
-
-        foreach (var cmd in commands)
-        {
-            _ = output.AppendLine($"{cmd.Name} - {cmd.Description}");
-        }
-
-        _ = output.AppendLine();
-        _ = output.AppendLine("Tips:");
-        _ = output.AppendLine("• Type / and press Tab for command suggestions");
-        _ = output.AppendLine("• Use Ctrl+C to exit at any time");
-        _ = output.AppendLine("• Use Ctrl+L to clear the screen");
-
-        return output.ToString();
+        return new HelpPanel(GetAllCommands());
     }
 
     /// <summary>
-    /// Gets clear output as text.
+    /// Gets status component for display.
     /// </summary>
-    private string GetClearOutput(string args)
+    private ITuiComponent GetStatusComponent(string args)
+    {
+        return new StatusPanel(_chatClient);
+    }
+
+    /// <summary>
+    /// Gets clear component for display.
+    /// </summary>
+    private ITuiComponent GetClearComponent(string args)
     {
         ClearHistoryRequested?.Invoke();
-        return "✓ Chat history cleared";
+        return new ClearPanel();
     }
 
     /// <summary>
-    /// Gets exit output as text.
+    /// Gets exit component for display.
     /// </summary>
-    private string GetExitOutput(string args)
+    private ITuiComponent GetExitComponent(string args)
     {
         ExitRequested?.Invoke();
-        return "Goodbye! Exiting Mogzi...";
+        return new ExitPanel();
     }
 
     /// <summary>
-    /// Gets status output as text.
+    /// Gets session clear component for display.
     /// </summary>
-    private string GetStatusOutput(string args)
+    private ITuiComponent GetSessionClearComponent(string args)
     {
-        var output = new StringBuilder();
-        _ = output.AppendLine("[bold]System Status:[/]");
-        _ = output.AppendLine($"[dim]Application:[/] [green]Mogzi TUI[/]");
-        _ = output.AppendLine($"[dim]Version:[/] [green]{GetApplicationVersion()}[/]");
-        _ = output.AppendLine($"[dim]Status:[/] [green]Running[/]");
-        _ = output.AppendLine($"[dim]Working Directory:[/] [green]{Environment.CurrentDirectory}[/]");
-        _ = output.AppendLine($"[dim]Platform:[/] [green]{Environment.OSVersion.Platform}[/]");
-        _ = output.AppendLine($"[dim]Runtime:[/] [green].NET {Environment.Version}[/]");
-
-        if (_chatClient != null)
-        {
-            _ = output.AppendLine();
-            _ = output.AppendLine("[bold]Configuration:[/]");
-            _ = output.AppendLine($"[dim]Active Profile:[/] [cyan]{_chatClient.ActiveProfile.Name}[/]");
-            _ = output.AppendLine($"[dim]Model:[/] [cyan]{_chatClient.ActiveProfile.ModelId}[/]");
-            _ = output.AppendLine($"[dim]API Provider:[/] [cyan]{_chatClient.ActiveApiProvider.Name}[/]");
-            _ = output.AppendLine($"[dim]Tool Approvals:[/] [cyan]{_chatClient.Config.ToolApprovals}[/]");
-        }
-
-        return output.ToString();
-    }
-
-    /// <summary>
-    /// Clears the current session history.
-    /// </summary>
-    private void ClearSession(string args)
-    {
-        // This will be handled by the SessionClearEvent
         SessionClearRequested?.Invoke();
-
-        var panel = new Panel(new Markup("[green]✓[/] Session history cleared"))
-            .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Green)
-            .Padding(1, 0);
-
-        _console.Write(panel);
-        _console.WriteLine();
+        return new SessionClearPanel();
     }
 
     /// <summary>
-    /// Renames the current session.
+    /// Gets session rename component for display.
     /// </summary>
-    private void RenameSession(string args)
+    private ITuiComponent GetSessionRenameComponent(string args)
     {
         if (string.IsNullOrWhiteSpace(args))
         {
-            var panel = new Panel(new Markup("[red]Error:[/] Session name cannot be empty\nUsage: /session rename <new name>"))
-                .Border(BoxBorder.Rounded)
-                .BorderColor(Color.Red)
-                .Padding(1, 0);
-
-            _console.Write(panel);
-            _console.WriteLine();
-            return;
-        }
-
-        // This will be handled by the SessionRenameEvent
-        SessionRenameRequested?.Invoke(args.Trim());
-
-        var successPanel = new Panel(new Markup($"[green]✓[/] Session renamed to '[cyan]{args.Trim()}[/]'"))
-            .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Green)
-            .Padding(1, 0);
-
-        _console.Write(successPanel);
-        _console.WriteLine();
-    }
-
-    /// <summary>
-    /// Gets clear session output as text.
-    /// </summary>
-    private string GetClearSessionOutput(string args)
-    {
-        SessionClearRequested?.Invoke();
-        return "✓ Session history cleared";
-    }
-
-    /// <summary>
-    /// Gets rename session output as text.
-    /// </summary>
-    private string GetRenameSessionOutput(string args)
-    {
-        if (string.IsNullOrWhiteSpace(args))
-        {
-            return "Error: Session name cannot be empty\nUsage: /session rename <new name>";
+            // For error cases, we could create an error panel, but for now return a simple message
+            // This matches the existing behavior but with component styling
+            return new SessionRenamePanel("Error: Session name cannot be empty");
         }
 
         SessionRenameRequested?.Invoke(args.Trim());
-        return $"✓ Session renamed to '{args.Trim()}'";
+        return new SessionRenamePanel(args.Trim());
     }
 
-    /// <summary>
-    /// Gets the application version from the assembly.
-    /// </summary>
-    /// <returns>The application version string.</returns>
-    private static string GetApplicationVersion()
-    {
-        try
-        {
-            var assembly = Assembly.GetExecutingAssembly();
-            var version = assembly.GetName().Version;
-            return version?.ToString() ?? "UNKNOWN";
-        }
-        catch
-        {
-            return "UNKNOWN";
-        }
-    }
 }
 
 /// <summary>
@@ -503,7 +383,6 @@ public sealed class SlashCommandProcessor
 /// </summary>
 /// <param name="Name">The command name (including the / prefix).</param>
 /// <param name="Description">A description of what the command does.</param>
-/// <param name="Execute">The action to execute when the command is invoked.</param>
-/// <param name="ExecuteWithOutput">The function to execute when the command is invoked, returning output.</param>
+/// <param name="ExecuteWithComponent">The function to execute when the command is invoked, returning an ITuiComponent.</param>
 /// <param name="IsInteractive">Whether the command requires interactive handling by the TUI.</param>
-public sealed record SlashCommand(string Name, string Description, Action<string> Execute, Func<string, string>? ExecuteWithOutput = null, bool IsInteractive = false);
+public sealed record SlashCommand(string Name, string Description, Func<string, ITuiComponent>? ExecuteWithComponent = null, bool IsInteractive = false);

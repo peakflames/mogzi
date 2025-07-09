@@ -18,7 +18,22 @@
 
 __Root Cause Protocol:__
 
-- After completing root cause analysis of test failures, prefer to prsent the results making it clear if it is a application or test issue to the user and use the `ask_followup_question` tool for the user's confirmation
+- After completing root cause analysis of test failures, prefer to present the results making it clear if it is a application or test issue to the user and use the `ask_followup_question` tool for the user's confirmation
+
+## TUI Event Handler Timing
+
+**CRITICAL**: `async void` event handlers can clear UI feedback before users see it. Use synchronous lambdas for immediate UI operations.
+
+```csharp
+// ✅ CORRECT: Synchronous for UI operations
+_processor.ClearRequested += () => { ClearUI(); };
+
+// ⚠️ CAUTION: Async void may interfere with component feedback
+private async void OnClearRequested() { 
+    await ClearData(); 
+    ClearUI(); // This may clear feedback too early
+}
+```
 
 ## Context Window Usage Rule
 

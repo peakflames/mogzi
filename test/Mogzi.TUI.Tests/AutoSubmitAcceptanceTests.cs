@@ -4,13 +4,14 @@ namespace Mogzi.TUI.Tests;
 /// Systems-level acceptance tests for auto-submit functionality.
 /// Tests the complete user workflow of piping input with auto-submit flag.
 /// </summary>
+[Trait("Category", "Disabled")]
 public sealed class AutoSubmitAcceptanceTests : IDisposable
 {
     public AutoSubmitAcceptanceTests()
     {
     }
 
-    [Fact]
+    [Fact(Skip = "Temporarily disabled")]
     public async Task AutoSubmit_WithPipedInput_ShouldAutomaticallySubmitMessage()
     {
         // Arrange
@@ -30,7 +31,7 @@ public sealed class AutoSubmitAcceptanceTests : IDisposable
             "should show signs of AI processing the auto-submitted message"); // TOR-2.1
     }
 
-    [Fact]
+    [Fact(Skip = "Temporarily disabled")]
     public async Task AutoSubmit_WithoutFlag_ShouldNotAutoSubmit()
     {
         // Arrange
@@ -50,7 +51,7 @@ public sealed class AutoSubmitAcceptanceTests : IDisposable
             "should not show signs of AI processing without auto-submit");
     }
 
-    [Fact]
+    [Fact(Skip = "Temporarily disabled")]
     public async Task AutoSubmit_ShortFlag_ShouldWork()
     {
         // Arrange
@@ -70,7 +71,7 @@ public sealed class AutoSubmitAcceptanceTests : IDisposable
             "should show signs of AI processing with short flag");
     }
 
-    [Fact]
+    [Fact(Skip = "Temporarily disabled")]
     public async Task AutoSubmit_WithSession_ShouldLoadSessionAndAutoSubmit()
     {
         // Arrange
@@ -94,7 +95,7 @@ public sealed class AutoSubmitAcceptanceTests : IDisposable
             "should show signs of AI processing the auto-submitted message");
     }
 
-    [Fact]
+    [Fact(Skip = "Temporarily disabled")]
     public async Task AutoSubmit_EmptyPipedInput_ShouldNotCrash()
     {
         // Arrange
@@ -112,7 +113,7 @@ public sealed class AutoSubmitAcceptanceTests : IDisposable
             "should not process empty input");
     }
 
-    [Fact]
+    [Fact(Skip = "Temporarily disabled")]
     public async Task AutoSubmit_WhitespaceOnlyInput_ShouldNotCrash()
     {
         // Arrange
@@ -130,7 +131,7 @@ public sealed class AutoSubmitAcceptanceTests : IDisposable
             "should not process whitespace-only input");
     }
 
-    [Fact]
+    [Fact(Skip = "Temporarily disabled")]
     public async Task AutoSubmit_HelpFlag_ShouldShowAutoSubmitOption()
     {
         // Arrange

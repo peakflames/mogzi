@@ -468,10 +468,9 @@ public sealed class FlexColumnTuiApp : IDisposable
             var sessionManager = _serviceProvider.GetRequiredService<SessionManager>();
             await sessionManager.ClearCurrentSessionAsync();
 
-            // Clear the UI history as well
+            // Clear the UI history as well, but don't re-initialize the scrollback immediately
+            // This allows the feedback message to be displayed
             _historyManager.ClearHistory();
-            _scrollbackTerminal.Initialize();
-            RenderInitialContent();
 
             _logger.LogInformation("Session history cleared successfully");
         }

@@ -51,7 +51,8 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
             var renderingUtilities = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
             context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(displayMessage));
 
-            if (context.SlashCommandProcessor.TryProcessCommand(input, out var commandOutput))
+            // Process slash commands using component-based approach
+            if (context.SlashCommandProcessor.TryProcessCommandAsComponent(input, out var commandComponent))
             {
                 if (context.InputContext.State == InputState.UserSelection)
                 {
@@ -59,11 +60,21 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
                     return;
                 }
 
-                if (!string.IsNullOrEmpty(commandOutput))
+                if (commandComponent != null)
                 {
-                    var commandMessage = new ChatMessage(ChatRole.Assistant, commandOutput);
-                    context.HistoryManager.AddAssistantMessage(commandMessage);
-                    context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(commandMessage));
+                    // Render the component directly to the scrollback terminal
+                    var renderContext = new RenderContext(
+                        context,
+                        ChatState.Input,
+                        _logger!,
+                        context.ServiceProvider,
+                        renderingUtilities,
+                        _themeInfo
+                    );
+
+                    var componentRenderable = commandComponent.Render(renderContext);
+                    context.ScrollbackTerminal.WriteStatic(componentRenderable);
+                    context.ScrollbackTerminal.WriteStatic(new Markup(""));
                 }
                 return;
             }
