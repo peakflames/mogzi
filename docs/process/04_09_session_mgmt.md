@@ -231,13 +231,43 @@ This atomic file operation pattern ensures that the session file is never left i
 
 ### 3.4. Renaming Sessions (`/session rename`)
 
-1.  The `SlashCommandProcessor` detects the `/session rename <new_name>` command.
-2.  It calls `await _sessionManager.RenameSessionAsync(newName)`.
-3.  `SessionManager` acquires the file lock.
-4.  It updates the `Name` property of the current session.
-5.  It calls `SaveCurrentSessionAsync()` to persist the change.
-6.  It releases the file lock.
-7.  The UI component displays a confirmation message to the user.
+The `/session rename` command implements the **Input Continuation Command Pattern** for improved user experience:
+
+**Enhanced UX Flow:**
+1.  User types `/session r` and sees autocomplete suggestion for `/session rename`
+2.  User presses Tab or Enter to accept the suggestion
+3.  `SlashCommandProcessor.RequiresInputContinuation()` returns `true` for `/session rename`
+4.  Input field is populated with `/session rename ` (with trailing space)
+5.  Cursor is positioned after the space, ready for user to type the new name
+6.  User types the desired session name (e.g., "my-project-session")
+7.  User presses Enter to submit the complete command: `/session rename my-project-session`
+
+**Backend Processing:**
+1.  The `SlashCommandProcessor` detects the complete `/session rename <new_name>` command.
+2.  It extracts the new name from the command arguments.
+3.  It calls `await _sessionManager.RenameSessionAsync(newName)`.
+4.  `SessionManager` acquires the file lock.
+5.  It updates the `Name` property of the current session.
+6.  It calls `SaveCurrentSessionAsync()` to persist the change.
+7.  It releases the file lock.
+8.  The UI component displays a confirmation message to the user.
+
+**Command Configuration:**
+```csharp
+// In SlashCommandProcessor.cs
+_commands["/session rename"] = new SlashCommand(
+    "/session rename", 
+    "Rename the current session", 
+    GetSessionRenameComponent, 
+    RequiresInputContinuation: true  // Enables input continuation pattern
+);
+```
+
+**Key UX Benefits:**
+- **Seamless Workflow**: No interruption between command selection and name input
+- **Clear Intent**: User sees the full command structure before typing the name
+- **Consistent Behavior**: Follows the same pattern as other input continuation commands
+- **Reduced Friction**: Single continuous input flow instead of separate command/argument steps
 
 ## 4. Storage
 

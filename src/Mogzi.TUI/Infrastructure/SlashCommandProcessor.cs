@@ -292,6 +292,38 @@ public sealed class SlashCommandProcessor
     }
 
     /// <summary>
+    /// Checks if the given input is a command that requires input continuation.
+    /// </summary>
+    /// <param name="input">The input string to check.</param>
+    /// <returns>True if the input is a command that requires input continuation, false otherwise.</returns>
+    public bool RequiresInputContinuation(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input) || !input.StartsWith("/"))
+        {
+            return false;
+        }
+
+        var inputLower = input.ToLower();
+
+        // Check for multi-word commands first
+        var matchingCommand = _commands.Keys
+            .Where(inputLower.StartsWith)
+            .OrderByDescending(cmd => cmd.Length)
+            .FirstOrDefault();
+
+        if (matchingCommand != null)
+        {
+            return _commands[matchingCommand].RequiresInputContinuation;
+        }
+
+        // Fallback to single-word command check
+        var parts = input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        var command = parts[0].ToLower();
+
+        return _commands.TryGetValue(command, out var cmd) && cmd.RequiresInputContinuation;
+    }
+
+    /// <summary>
     /// Registers all available slash commands.
     /// </summary>
     private void RegisterCommands()
@@ -306,7 +338,7 @@ public sealed class SlashCommandProcessor
         // Session management commands
         _commands["/session clear"] = new SlashCommand("/session clear", "Clear the current session history", GetSessionClearComponent);
         _commands["/session list"] = new SlashCommand("/session list", "List and select from available sessions", null, true);
-        _commands["/session rename"] = new SlashCommand("/session rename", "Rename the current session", GetSessionRenameComponent);
+        _commands["/session rename"] = new SlashCommand("/session rename", "Rename the current session", GetSessionRenameComponent, RequiresInputContinuation: true);
     }
 
     /// <summary>
@@ -385,4 +417,5 @@ public sealed class SlashCommandProcessor
 /// <param name="Description">A description of what the command does.</param>
 /// <param name="ExecuteWithComponent">The function to execute when the command is invoked, returning an ITuiComponent.</param>
 /// <param name="IsInteractive">Whether the command requires interactive handling by the TUI.</param>
-public sealed record SlashCommand(string Name, string Description, Func<string, ITuiComponent>? ExecuteWithComponent = null, bool IsInteractive = false);
+/// <param name="RequiresInputContinuation">Whether the command should populate the input field for continued typing instead of executing immediately.</param>
+public sealed record SlashCommand(string Name, string Description, Func<string, ITuiComponent>? ExecuteWithComponent = null, bool IsInteractive = false, bool RequiresInputContinuation = false);

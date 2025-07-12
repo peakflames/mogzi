@@ -583,11 +583,25 @@ public class InputTuiState : ITuiState
     {
         context.AutocompleteManager.AcceptSuggestion(context.InputContext);
 
-        // If the completed input is a valid slash command, submit it immediately
+        // If the completed input is a valid slash command, check if it needs special handling
         var trimmedInput = context.InputContext.CurrentInput.Trim();
         if (context.SlashCommandProcessor?.IsValidCommand(trimmedInput) == true)
         {
-            // Update the input to the trimmed version (remove trailing space)
+            // Check if this command requires input continuation
+            if (context.SlashCommandProcessor.RequiresInputContinuation(trimmedInput))
+            {
+                // Populate the input field with the command and a space, ready for user to continue typing
+                context.InputContext.CurrentInput = trimmedInput + " ";
+                context.InputContext.CursorPosition = context.InputContext.CurrentInput.Length;
+
+                // Clear autocomplete state to return to normal input mode
+                context.InputContext.ClearAutocomplete();
+
+                context.Logger.LogTrace("Populated input field with '{Command} ' for user to continue typing", trimmedInput);
+                return;
+            }
+
+            // For other commands, update the input to the trimmed version and submit immediately
             context.InputContext.CurrentInput = trimmedInput;
             context.InputContext.CursorPosition = trimmedInput.Length;
 

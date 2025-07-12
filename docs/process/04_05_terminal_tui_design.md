@@ -421,4 +421,165 @@ The system is designed for extensibility:
 - **Message Formatting**: Message factory pattern supports different formatting strategies
 - **Validation Rules**: Content validation can be customized per message type
 
+## 9. Input Continuation Command Pattern
+
+### 9.1. Problem Statement
+
+Certain slash commands require additional user input after being selected from autocomplete suggestions. For example, `/session rename` needs the user to provide a new session name. The original implementation had a brittle, hardcoded solution that was not extensible for future commands with similar requirements.
+
+### 9.2. Solution Architecture
+
+A generic **Input Continuation Command Pattern** was implemented to handle commands that need to populate the input field for continued typing instead of executing immediately.
+
+#### Command Configuration
+
+```csharp
+// Enhanced SlashCommand record with input continuation flag
+public sealed record SlashCommand(
+    string Name, 
+    string Description, 
+    Func<string, ITuiComponent>? ExecuteWithComponent = null, 
+    bool IsInteractive = false, 
+    bool RequiresInputContinuation = false  // New flag
+);
+
+// Command registration with input continuation
+_commands["/session rename"] = new SlashCommand(
+    "/session rename", 
+    "Rename the current session", 
+    GetSessionRenameComponent, 
+    RequiresInputContinuation: true
+);
+```
+
+#### Generic Detection Logic
+
+```csharp
+// Generic method to check if command requires input continuation
+public bool RequiresInputContinuation(string input)
+{
+    if (string.IsNullOrWhiteSpace(input) || !input.StartsWith("/"))
+        return false;
+
+    var inputLower = input.ToLower();
+
+    // Check for multi-word commands first
+    var matchingCommand = _commands.Keys
+        .Where(inputLower.StartsWith)
+        .OrderByDescending(cmd => cmd.Length)
+        .FirstOrDefault();
+
+    if (matchingCommand != null)
+        return _commands[matchingCommand].RequiresInputContinuation;
+
+    // Fallback to single-word command check
+    var parts = input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+    var command = parts[0].ToLower();
+
+    return _commands.TryGetValue(command, out var cmd) && cmd.RequiresInputContinuation;
+}
+```
+
+### 9.3. Autocomplete Integration
+
+The pattern integrates seamlessly with the existing autocomplete system in `InputTuiState`:
+
+```csharp
+private async Task AcceptAutocompleteSuggestion(ITuiContext context)
+{
+    context.AutocompleteManager.AcceptSuggestion(context.InputContext);
+
+    var trimmedInput = context.InputContext.CurrentInput.Trim();
+    if (context.SlashCommandProcessor?.IsValidCommand(trimmedInput) == true)
+    {
+        // Generic check for input continuation requirement
+        if (context.SlashCommandProcessor.RequiresInputContinuation(trimmedInput))
+        {
+            // Populate input field with command + space for continued typing
+            context.InputContext.CurrentInput = trimmedInput + " ";
+            context.InputContext.CursorPosition = context.InputContext.CurrentInput.Length;
+            context.InputContext.ClearAutocomplete();
+            
+            context.Logger.LogTrace("Populated input field with '{Command} ' for user to continue typing", trimmedInput);
+            return;
+        }
+
+        // For other commands, submit immediately
+        context.InputContext.CurrentInput = trimmedInput;
+        context.InputContext.CursorPosition = trimmedInput.Length;
+        await SubmitCurrentInput(context);
+    }
+}
+```
+
+### 9.4. User Experience Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Autocomplete as AutocompleteSystem
+    participant Processor as SlashCommandProcessor
+    participant Input as InputTuiState
+
+    User->>Autocomplete: Types "/session r"
+    Autocomplete->>User: Shows "/session rename" suggestion
+    User->>Input: Presses Enter/Tab to accept
+    Input->>Processor: RequiresInputContinuation("/session rename")?
+    Processor-->>Input: true
+    Input->>Input: Set input to "/session rename "
+    Input->>User: Cursor positioned after space
+    User->>Input: Types "new-session-name"
+    User->>Input: Presses Enter to submit
+    Input->>Processor: Execute "/session rename new-session-name"
+```
+
+### 9.5. Extensibility Benefits
+
+This pattern provides several key advantages:
+
+- **Declarative Configuration**: New input continuation commands can be added by simply setting the `RequiresInputContinuation` flag
+- **No Code Duplication**: The logic is generic and reusable for any command type
+- **Consistent UX**: All input continuation commands behave identically
+- **Maintainable**: Changes to the pattern affect all commands uniformly
+
+#### Adding New Input Continuation Commands
+
+```csharp
+// Example: Adding a new command that requires input continuation
+_commands["/config set"] = new SlashCommand(
+    "/config set", 
+    "Set a configuration value", 
+    GetConfigSetComponent, 
+    RequiresInputContinuation: true
+);
+
+// No additional code changes needed - the pattern handles it automatically
+```
+
+### 9.6. Command Type Classification
+
+The system now supports three distinct command types:
+
+1. **Immediate Commands**: Execute immediately when selected (e.g., `/help`, `/clear`)
+2. **Interactive Commands**: Show selection UI for user choice (e.g., `/session list`, `/tool-approvals`)
+3. **Input Continuation Commands**: Populate input field for additional typing (e.g., `/session rename`)
+
+### 9.7. Testing Strategy
+
+The pattern is validated through existing acceptance tests that verify:
+
+- Commands marked with `RequiresInputContinuation: true` populate the input field correctly
+- The cursor is positioned appropriately for continued typing
+- Autocomplete state is cleared to return to normal input mode
+- The final command with arguments executes properly when submitted
+
+### 9.8. Future Enhancements
+
+The pattern can be extended to support:
+
+- **Custom Input Prompts**: Different placeholder text for different command types
+- **Input Validation**: Real-time validation of continued input
+- **Multi-Step Commands**: Commands requiring multiple input phases
+- **Context-Aware Suggestions**: Autocomplete for command arguments
+
 This modular and decoupled design provides a robust foundation for the Mogzi TUI, enabling future extensions and features to be added with minimal friction.
