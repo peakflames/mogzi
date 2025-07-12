@@ -33,7 +33,11 @@ public class AppService(ChatClient chatClient) : IAppService
     public IAsyncEnumerable<ChatResponseUpdate> ProcessChatMessageAsync(List<ChatMessage> chatHistory, CancellationToken cancellationToken)
     {
         // Ensure the first message is the system prompt with the current value
-        if (chatHistory.Count > 0 && chatHistory[0].Role == ChatRole.System)
+        if (chatHistory.Count == 0 || chatHistory[0].Role != ChatRole.System)
+        {
+            chatHistory.Insert(0, new ChatMessage(ChatRole.System, ChatClient.SystemPrompt));
+        }
+        else
         {
             // Update the system message with the current system prompt
             chatHistory[0] = new ChatMessage(ChatRole.System, ChatClient.SystemPrompt);
