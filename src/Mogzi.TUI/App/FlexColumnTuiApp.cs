@@ -190,6 +190,10 @@ public sealed class FlexColumnTuiApp : IDisposable
                 {
                     _historyManager.AddAssistantMessageWithoutPersistence(message);
                 }
+                else if (message.Role == ChatRole.Tool)
+                {
+                    _historyManager.AddToolMessageWithoutPersistence(message);
+                }
                 // Note: We could add support for other roles if needed
             }
 
@@ -365,12 +369,14 @@ public sealed class FlexColumnTuiApp : IDisposable
             {
                 MessageType.User => "[dim]>[/] ",
                 MessageType.Assistant => "✦ ",
+                MessageType.Tool => "◉ ",
                 _ => ""
             };
             var color = messageType switch
             {
                 MessageType.User => "dim",
                 MessageType.Assistant => "skyblue1",
+                MessageType.Tool => "orange1",
                 _ => "white"
             };
 
@@ -385,37 +391,45 @@ public sealed class FlexColumnTuiApp : IDisposable
         // Handle function calls and results for tool execution display
         if (message.Contents != null && message.Contents.Count > 0)
         {
-            foreach (var content in message.Contents)
+            // Check if this message contains function results (Tool role messages)
+            var functionResults = message.Contents.OfType<FunctionResultContent>().ToList();
+            var functionCalls = message.Contents.OfType<FunctionCallContent>().ToList();
+
+            if (functionResults.Count > 0)
             {
-                if (content is FunctionCallContent functionCall)
+                // This is a Tool message with function results - create comprehensive tool displays
+                foreach (var functionResult in functionResults)
                 {
-                    // Create tool display for function call
-                    var toolDisplay = ToolExecutionDisplay.CreateToolDisplay(
-                        functionCall.Name ?? "Unknown Tool",
-                        ToolExecutionStatus.Success,
-                        GetToolDescription(functionCall),
-                        diff: null,
-                        result: null
-                    );
-                    components.Add(toolDisplay);
-                }
-                else if (content is FunctionResultContent functionResult)
-                {
-                    // Parse the tool result and create enhanced display
                     var toolResponseParser = _serviceProvider.GetRequiredService<ToolResponseParser>();
                     var result = functionResult.Result?.ToString() ?? "";
 
-                    // Try to get tool name from the result or use a default
+                    // Try to get tool name from the result
                     var toolName = ExtractToolNameFromResult(result) ?? "Tool";
                     var toolInfo = toolResponseParser.ParseToolResponse(toolName, result);
 
-                    // Create tool display for function result
+                    // Create comprehensive tool display with result
                     var toolDisplay = ToolExecutionDisplay.CreateToolDisplay(
                         toolInfo.ToolName,
                         toolInfo.Status,
                         toolInfo.Description,
                         diff: null,
                         result: toolInfo.Summary ?? result
+                    );
+                    components.Add(toolDisplay);
+                }
+            }
+            else if (functionCalls.Count > 0)
+            {
+                // This is an Assistant message with function calls - create simple tool displays
+                foreach (var functionCall in functionCalls)
+                {
+                    // Create tool display for function call (without result)
+                    var toolDisplay = ToolExecutionDisplay.CreateToolDisplay(
+                        functionCall.Name ?? "Unknown Tool",
+                        ToolExecutionStatus.Success,
+                        GetToolDescription(functionCall),
+                        diff: null,
+                        result: null
                     );
                     components.Add(toolDisplay);
                 }
@@ -517,6 +531,10 @@ public sealed class FlexColumnTuiApp : IDisposable
         else if (message.Role == ChatRole.Assistant)
         {
             return MessageType.Assistant;
+        }
+        else if (message.Role == ChatRole.Tool)
+        {
+            return MessageType.Tool;
         }
         else
         {

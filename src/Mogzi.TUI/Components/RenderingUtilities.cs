@@ -87,6 +87,10 @@ public class RenderingUtilities(ILogger<RenderingUtilities> logger) : IRendering
                 themeInfo?.AssistantMessagePrefix ?? "✦ ",
                 themeInfo?.AssistantMessageColor ?? "skyblue1"
             ),
+            MessageType.Tool => (
+                "◉ ",
+                "orange1"
+            ),
             _ => (
                 "",
                 themeInfo?.SystemMessageColor ?? "white"
@@ -137,6 +141,10 @@ public class RenderingUtilities(ILogger<RenderingUtilities> logger) : IRendering
         else if (message.Role == ChatRole.Assistant)
         {
             return MessageType.Assistant;
+        }
+        else if (message.Role == ChatRole.Tool)
+        {
+            return MessageType.Tool;
         }
         else
         {

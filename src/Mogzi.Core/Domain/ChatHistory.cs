@@ -204,6 +204,13 @@ public class SerializableChatMessage
             contents.Add(functionResultContent);
         }
 
+        // CRITICAL: Set role based on content type
+        // If this message contains function results, it should be a Tool message regardless of stored role
+        if (FunctionResults.Count > 0 && FunctionCalls.Count == 0)
+        {
+            role = ChatRole.Tool;
+        }
+
         var message = new ChatMessage(role, contents)
         {
             AuthorName = AuthorName,

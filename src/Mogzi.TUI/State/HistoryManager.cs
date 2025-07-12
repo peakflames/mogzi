@@ -35,6 +35,16 @@ public class HistoryManager(ITuiMediator mediator)
         NotifyStateChanged();
     }
 
+    /// <summary>
+    /// Adds a tool message without persisting to session manager.
+    /// Used when loading existing session messages.
+    /// </summary>
+    public void AddToolMessageWithoutPersistence(ChatMessage message)
+    {
+        _completedMessages.Add(message);
+        NotifyStateChanged();
+    }
+
     public void AddUserMessage(ChatMessage message)
     {
         _completedMessages.Add(message);

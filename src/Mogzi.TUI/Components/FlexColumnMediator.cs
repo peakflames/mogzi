@@ -481,7 +481,7 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
         {
             ContentType.Text => new ChatMessage(ChatRole.Assistant, responseUpdate.Text ?? ""),
             ContentType.FunctionCall => new ChatMessage(ChatRole.Assistant, responseUpdate.Contents ?? []),
-            ContentType.FunctionResult => new ChatMessage(ChatRole.Assistant, responseUpdate.Contents ?? []),
+            ContentType.FunctionResult => new ChatMessage(ChatRole.Tool, responseUpdate.Contents ?? []),
             _ => new ChatMessage(ChatRole.Assistant, "")
         };
     }
