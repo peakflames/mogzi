@@ -250,31 +250,28 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private void RenderInitialContent()
     {
+        // Always render welcome screen first, regardless of whether we have chat history
+        // This ensures the welcome message is displayed at startup for both new and loaded sessions
+        var welcomePanel = _serviceProvider.GetRequiredService<WelcomePanel>();
+        var renderingUtilities = _serviceProvider.GetRequiredService<IRenderingUtilities>();
+        var themeInfo = _serviceProvider.GetRequiredService<IThemeInfo>();
+        var renderContext = new RenderContext(
+            _tuiContext,
+            _stateManager.CurrentStateType,
+            _logger,
+            _serviceProvider,
+            renderingUtilities,
+            themeInfo
+        );
+
+        var welcomeContent = welcomePanel.Render(renderContext);
+        _scrollbackTerminal.WriteStatic(welcomeContent);
+        _scrollbackTerminal.WriteStatic(new Markup(""));
+
+        // If we have existing chat history, load it after the welcome message
         var chatHistory = _historyManager.GetCurrentChatHistory();
-        if (!chatHistory.Any())
+        if (chatHistory.Any())
         {
-            // Render welcome screen to static area to prevent it from being overwritten by dynamic content
-            // This ensures the welcome message persists in the scrollback history
-            var welcomePanel = _serviceProvider.GetRequiredService<WelcomePanel>();
-            var renderingUtilities = _serviceProvider.GetRequiredService<IRenderingUtilities>();
-            var themeInfo = _serviceProvider.GetRequiredService<IThemeInfo>();
-            var renderContext = new RenderContext(
-                _tuiContext,
-                _stateManager.CurrentStateType,
-                _logger,
-                _serviceProvider,
-                renderingUtilities,
-                themeInfo
-            );
-
-            var welcomeContent = welcomePanel.Render(renderContext);
-            _scrollbackTerminal.WriteStatic(welcomeContent);
-            _scrollbackTerminal.WriteStatic(new Markup(""));
-
-        }
-        else
-        {
-            // Load existing chat history into static scrollback area
             _scrollbackTerminal.WriteStatic(new Markup($"[dim]Loading {chatHistory.Count} messages from existing chat history[/]"));
             _scrollbackTerminal.WriteStatic(new Markup(""));
             RenderHistory();
