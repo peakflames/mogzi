@@ -31,12 +31,78 @@ public class SessionListProvider(SessionManager sessionManager, ChatClient chatC
         foreach (var session in recentSessions)
         {
             var displayName = session.Name;
-            var description = $"Created: {session.CreatedAt:yyyy-MM-dd HH:mm} | Messages: {session.History.Count}";
+            var description = FormatSessionDescription(session);
 
             selections.Add(new CompletionItem(displayName, description));
         }
 
         return selections;
+    }
+
+    /// <summary>
+    /// Formats a well-spaced, colorful description for a session entry with fixed-width columns.
+    /// </summary>
+    private static string FormatSessionDescription(Session session)
+    {
+        // Format the creation date in a more readable way
+        var createdDate = session.CreatedAt.ToString("MMM dd, yyyy");
+        var createdTime = session.CreatedAt.ToString("HH:mm");
+
+        // Get message count with appropriate color coding
+        var messageCount = session.History.Count;
+        var messageColor = messageCount switch
+        {
+            0 => "dim",
+            < 5 => "yellow",
+            < 20 => "green",
+            _ => "blue"
+        };
+
+        // Calculate how recent the session is
+        var daysSinceCreated = (DateTime.Now - session.CreatedAt).Days;
+        var ageText = daysSinceCreated switch
+        {
+            0 => "[green]Today[/]",
+            1 => "[yellow]Yesterday[/]",
+            < 7 => $"[orange3]{daysSinceCreated} days ago[/]",
+            < 30 => $"[grey]{daysSinceCreated} days ago[/]",
+            _ => $"[dim]{createdDate}[/]"
+        };
+
+        // Format message count with better spacing
+        var messageText = messageCount == 0
+            ? $"[dim]No messages[/]"
+            : $"[{messageColor}]{messageCount} message{(messageCount == 1 ? "" : "s")}[/]";
+
+        // Create fixed-width columns with proper alignment
+        // Age column: 15 chars, Message column: 15 chars, Time column: 8 chars
+        var ageColumn = PadMarkupText(ageText, 15);
+        var messageColumn = PadMarkupText(messageText, 15);
+        var timeColumn = $"[grey]{createdTime}[/]";
+
+        // Use bullet separators between columns
+        var bulletSeparator = " [dim]•[/] ";
+
+        return $"{ageColumn}{bulletSeparator}{messageColumn}{bulletSeparator}{timeColumn}";
+    }
+
+    /// <summary>
+    /// Pads markup text to a specific width, accounting for markup tags that don't contribute to display width.
+    /// </summary>
+    private static string PadMarkupText(string markupText, int targetWidth)
+    {
+        // Calculate the display width by removing markup tags
+        var displayText = System.Text.RegularExpressions.Regex.Replace(markupText, @"\[/?[^\]]*\]", "");
+        var displayWidth = displayText.Length;
+
+        if (displayWidth >= targetWidth)
+        {
+            return markupText;
+        }
+
+        // Add padding spaces to reach target width
+        var paddingNeeded = targetWidth - displayWidth;
+        return markupText + new string(' ', paddingNeeded);
     }
 
     public async Task OnSelectionAsync(string selection)

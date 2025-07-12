@@ -21,10 +21,14 @@ public class UserSelectionPanel : ITuiComponent
         var selectionItems = inputContext.CompletionItems.Select((item, index) =>
         {
             var isSelected = index == inputContext.SelectedSuggestionIndex;
-            var style = isSelected ? "[blue on white]" : "[dim]";
-            var prefix = isSelected ? ">" : " ";
+            var style = isSelected ? "[navyblue on white]" : "[dim]";
+            var prefix = isSelected ? "▶" : " ";
 
-            return new Markup($"{style}{prefix} {item.Text,-12} {item.Description}[/]");
+            // Add generous spacing and better formatting with fixed-width columns
+            var sessionName = item.Text.PadRight(22); // More space for session names
+            var extraSpacing = "      "; // Even more spacing between name and description
+
+            return new Markup($"{style}{prefix}  {sessionName}{extraSpacing}{item.Description}[/]");
         }).ToArray();
 
         // Determine the appropriate header based on the active provider
@@ -34,7 +38,7 @@ public class UserSelectionPanel : ITuiComponent
             .Header(header)
             .Border(BoxBorder.Rounded)
             .BorderColor(Color.Green)
-            .Padding(0, 0);
+            .Padding(1, 0, 1, 0); // Add left and right padding for more breathing room
     }
 
     public Task<bool> HandleInputAsync(IRenderContext context, object inputEvent)

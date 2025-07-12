@@ -2,6 +2,7 @@
 
 ## [0.13.8] - IN PROG
 
+- Add session name to footer and improve session list
 - Default session names to a randomly generated creative name in the format "color_creature"
 - corrected how streaming assistant responses are stored in session
 - Refactored TUI application codebase to use proper state management system with state machine pattern for improved maintainability and separation of concerns

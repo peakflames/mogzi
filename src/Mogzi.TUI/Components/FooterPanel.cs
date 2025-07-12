@@ -18,7 +18,10 @@ public class FooterPanel : ITuiComponent
             context.TuiContext.AppService,
             context.TuiContext.HistoryManager.GetCurrentChatHistory());
 
-        var content = $"[skyblue2]{currentDir}[/]  [rosybrown]{modelInfo}[/] [dim]({tokenInfo})[/]";
+        // Get the current session name
+        var sessionName = context.TuiContext.SessionManager.CurrentSession?.Name ?? "no session";
+
+        var content = $"[skyblue2]{currentDir}[/]   [yellow]session: {sessionName}[/]  [rosybrown]{modelInfo}[/] [dim]({tokenInfo})[/]";
 
         return new Panel(new Markup(content))
             .NoBorder();
