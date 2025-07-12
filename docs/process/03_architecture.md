@@ -258,7 +258,7 @@ public class Session
     public string InitialPrompt { get; set; } = string.Empty;
 }
 
-// Enhanced serializable chat message with attachment support
+// Enhanced serializable chat message with function call/result support
 public class SerializableChatMessage
 {
     public string Role { get; set; } = string.Empty;
@@ -266,14 +266,32 @@ public class SerializableChatMessage
     public string? AuthorName { get; set; }
     public string? MessageId { get; set; }
     public List<AttachmentMetadata> Attachments { get; set; } = [];
+    public List<FunctionCall> FunctionCalls { get; set; } = [];
+    public List<FunctionResult> FunctionResults { get; set; } = [];
     
     // Factory method for converting from Microsoft.Extensions.AI.ChatMessage
     public static SerializableChatMessage FromChatMessage(ChatMessage message, int messageIndex = 0)
     {
-        // Handles text content and attachments from message.Contents
-        // Processes ImageContent, DataContent, and TextContent types
+        // Handles text content, attachments, and function calls/results from message.Contents
+        // Processes ImageContent, DataContent, TextContent, FunctionCallContent, and FunctionResultContent types
         // Generates attachment metadata with content hashing
+        // Preserves function call/result data for tool execution replay
     }
+}
+
+// Function call metadata for tool execution persistence
+public class FunctionCall
+{
+    public string CallId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public Dictionary<string, object?> Arguments { get; set; } = [];
+}
+
+// Function result metadata for tool execution persistence
+public class FunctionResult
+{
+    public string CallId { get; set; } = string.Empty;
+    public object? Result { get; set; }
 }
 
 // Attachment metadata for session persistence
@@ -287,6 +305,183 @@ public class AttachmentMetadata
     public int MessageIndex { get; set; } // Index of message in session history
 }
 ```
+
+## Message Boundary Detection System
+
+**Streaming Response Architecture:**
+The Message Boundary Detection System creates separate ChatMessage objects for different content types to ensure proper message sequencing in scrollback history and chat persistence. This system addresses the challenge of maintaining clean UI boundaries while preserving complete chat history for AI context.
+
+```csharp
+// Content type classification for message boundary detection
+private enum ContentType
+{
+    None,           // No content or unknown
+    Text,           // Regular assistant text response
+    FunctionCall,   // Tool invocation
+    FunctionResult  // Tool execution result
+}
+
+// Message boundary decision logic
+private static bool ShouldStartNewMessage(ContentType currentType, ContentType newType, ChatMessage? currentMessage)
+{
+    // Always start a new message if we don't have one
+    if (currentMessage == null) return true;
+    
+    // Start new message when content type changes
+    // This creates boundaries between: Text → Tool → Text sequences
+    if (currentType != newType) return true;
+    
+    // For function calls/results, always create separate messages
+    // This ensures each tool invocation and result is a distinct history entry
+    if (newType is ContentType.FunctionCall or ContentType.FunctionResult) return true;
+    
+    // Continue with current message for same content type
+    return false;
+}
+```
+
+**Pending/Completed Message Architecture:**
+```csharp
+// HistoryManager with deferred persistence for streaming
+public class HistoryManager
+{
+    private readonly List<ChatMessage> _completedMessages = [];
+    private readonly List<ChatMessage> _pendingMessages = [];
+    
+    // Adds assistant message to pending during streaming (not persisted)
+    public void AddPendingAssistantMessage(ChatMessage message);
+    
+    // Updates last pending message during streaming updates (not persisted)
+    public void UpdateLastPendingMessage(ChatMessage message);
+    
+    // Finalizes streaming by moving pending to completed and persisting
+    public async Task FinalizeStreamingAsync()
+    {
+        var pendingToMove = _pendingMessages.ToList();
+        _pendingMessages.Clear();
+        
+        foreach (var message in pendingToMove)
+        {
+            _completedMessages.Add(message);
+            await PersistMessageAsync(message);
+        }
+    }
+    
+    // Gets all messages (completed + pending) for UI display during streaming
+    public List<ChatMessage> GetAllMessagesForDisplay();
+    
+    // Gets current chat history for AI processing (includes pending)
+    public List<ChatMessage> GetCurrentChatHistory();
+}
+```
+
+**Streaming Workflow with Message Boundaries:**
+```mermaid
+sequenceDiagram
+    participant User
+    participant FlexColumnMediator
+    participant HistoryManager
+    participant SessionManager
+    participant ScrollbackTerminal
+    participant ToolExecutionDisplay
+
+    User->>FlexColumnMediator: Submit message
+    FlexColumnMediator->>HistoryManager: AddUserMessage()
+    HistoryManager->>SessionManager: PersistMessageAsync()
+    
+    loop Streaming Response Processing
+        FlexColumnMediator->>FlexColumnMediator: DetermineContentType(responseUpdate)
+        
+        alt Content Type Transition Detected
+            FlexColumnMediator->>HistoryManager: FinalizeCurrentMessage()
+            FlexColumnMediator->>ScrollbackTerminal: WriteStatic(finalizedMessage, isUpdatable: false)
+            FlexColumnMediator->>HistoryManager: AddPendingAssistantMessage(newMessage)
+            
+            alt Text Content
+                FlexColumnMediator->>ScrollbackTerminal: WriteStatic(newMessage, isUpdatable: true)
+            else Function Call/Result
+                FlexColumnMediator->>ToolExecutionDisplay: CreateToolDisplay()
+                FlexColumnMediator->>ScrollbackTerminal: WriteStatic(toolDisplay)
+            end
+        else Continue Current Message
+            FlexColumnMediator->>HistoryManager: UpdateLastPendingMessage()
+            FlexColumnMediator->>ScrollbackTerminal: WriteStatic(updatedMessage, isUpdatable: true)
+        end
+    end
+    
+    FlexColumnMediator->>HistoryManager: FinalizeStreamingAsync()
+    HistoryManager->>SessionManager: PersistMessageAsync() for each completed message
+    FlexColumnMediator->>ScrollbackTerminal: WriteStatic(finalMessage, isUpdatable: false)
+```
+
+**Session Loading and Tool Execution Display:**
+```csharp
+// Enhanced RenderMessage method for loaded sessions
+private IRenderable RenderMessage(ChatMessage message)
+{
+    var components = new List<IRenderable>();
+
+    // Handle text content
+    if (!string.IsNullOrEmpty(message.Text))
+    {
+        // Render text with role-based styling
+        components.Add(CreateTextRenderable(message));
+    }
+
+    // Handle function calls and results for tool execution display
+    if (message.Contents != null && message.Contents.Count > 0)
+    {
+        foreach (var content in message.Contents)
+        {
+            if (content is FunctionCallContent functionCall)
+            {
+                // Create tool display for function call
+                var toolDisplay = ToolExecutionDisplay.CreateToolDisplay(
+                    functionCall.Name ?? "Unknown Tool",
+                    ToolExecutionStatus.Success,
+                    GetToolDescription(functionCall),
+                    diff: null,
+                    result: null
+                );
+                components.Add(toolDisplay);
+            }
+            else if (content is FunctionResultContent functionResult)
+            {
+                // Parse tool result and create enhanced display
+                var toolResponseParser = _serviceProvider.GetRequiredService<ToolResponseParser>();
+                var result = functionResult.Result?.ToString() ?? "";
+                var toolName = ExtractToolNameFromResult(result) ?? "Tool";
+                var toolInfo = toolResponseParser.ParseToolResponse(toolName, result);
+
+                var toolDisplay = ToolExecutionDisplay.CreateToolDisplay(
+                    toolInfo.ToolName,
+                    toolInfo.Status,
+                    toolInfo.Description,
+                    diff: null,
+                    result: toolInfo.Summary ?? result
+                );
+                components.Add(toolDisplay);
+            }
+        }
+    }
+
+    // Return appropriate renderable based on content
+    return components.Count switch
+    {
+        0 => new Text(string.Empty),
+        1 => components[0],
+        _ => new Rows(components)
+    };
+}
+```
+
+**Key Architectural Benefits:**
+- **Clean Message Boundaries**: Separate messages for text, function calls, and results maintain UI clarity
+- **Complete History Preservation**: All content types preserved for AI context and session replay
+- **Deferred Persistence**: Only final, consolidated messages are persisted to prevent streaming artifacts
+- **Tool Execution Replay**: Function calls and results are properly displayed when sessions are loaded
+- **UI Consistency**: Same tool execution display components used for live and loaded sessions
+- **Performance Optimization**: Pending messages avoid unnecessary I/O during streaming
 
 **Directory-Based Storage Architecture:**
 ```

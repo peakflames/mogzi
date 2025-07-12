@@ -358,31 +358,157 @@ public sealed class FlexColumnTuiApp : IDisposable
 
     private IRenderable RenderMessage(ChatMessage message)
     {
-        if (string.IsNullOrEmpty(message.Text))
+        var components = new List<IRenderable>();
+
+        // Handle text content
+        if (!string.IsNullOrEmpty(message.Text))
+        {
+            var messageType = GetMessageType(message);
+            var prefix = messageType switch
+            {
+                MessageType.User => "[dim]>[/] ",
+                MessageType.Assistant => "✦ ",
+                _ => ""
+            };
+            var color = messageType switch
+            {
+                MessageType.User => "dim",
+                MessageType.Assistant => "skyblue1",
+                _ => "white"
+            };
+
+            // Strip system environment context from user messages for display
+            var displayText = message.Role == ChatRole.User
+                ? Mogzi.Utils.MessageUtils.StripSystemEnvironment(message.Text)
+                : message.Text;
+
+            components.Add(new Markup($"[{color}]{prefix}{displayText}[/]"));
+        }
+
+        // Handle function calls and results for tool execution display
+        if (message.Contents != null && message.Contents.Count > 0)
+        {
+            foreach (var content in message.Contents)
+            {
+                if (content is FunctionCallContent functionCall)
+                {
+                    // Create tool display for function call
+                    var toolDisplay = ToolExecutionDisplay.CreateToolDisplay(
+                        functionCall.Name ?? "Unknown Tool",
+                        ToolExecutionStatus.Success,
+                        GetToolDescription(functionCall),
+                        diff: null,
+                        result: null
+                    );
+                    components.Add(toolDisplay);
+                }
+                else if (content is FunctionResultContent functionResult)
+                {
+                    // Parse the tool result and create enhanced display
+                    var toolResponseParser = _serviceProvider.GetRequiredService<ToolResponseParser>();
+                    var result = functionResult.Result?.ToString() ?? "";
+
+                    // Try to get tool name from the result or use a default
+                    var toolName = ExtractToolNameFromResult(result) ?? "Tool";
+                    var toolInfo = toolResponseParser.ParseToolResponse(toolName, result);
+
+                    // Create tool display for function result
+                    var toolDisplay = ToolExecutionDisplay.CreateToolDisplay(
+                        toolInfo.ToolName,
+                        toolInfo.Status,
+                        toolInfo.Description,
+                        diff: null,
+                        result: toolInfo.Summary ?? result
+                    );
+                    components.Add(toolDisplay);
+                }
+            }
+        }
+
+        // Return appropriate renderable based on what we have
+        if (components.Count == 0)
         {
             return new Text(string.Empty);
         }
-
-        var messageType = GetMessageType(message);
-        var prefix = messageType switch
+        else if (components.Count == 1)
         {
-            MessageType.User => "[dim]>[/] ",
-            MessageType.Assistant => "✦ ",
-            _ => ""
-        };
-        var color = messageType switch
+            return components[0];
+        }
+        else
         {
-            MessageType.User => "dim",
-            MessageType.Assistant => "skyblue1",
-            _ => "white"
+            return new Rows(components);
+        }
+    }
+
+    /// <summary>
+    /// Gets a description for a function call based on its arguments.
+    /// </summary>
+    private static string? GetToolDescription(FunctionCallContent functionCall)
+    {
+        if (functionCall.Arguments == null || functionCall.Arguments.Count == 0)
+        {
+            return null;
+        }
+
+        // Extract key argument for display
+        var toolName = functionCall.Name?.ToLowerInvariant() ?? "";
+        var keyArguments = toolName switch
+        {
+            "read_text_file" or "read_file" => new[] { "absolute_path", "file_path", "path" },
+            "write_file" or "write_to_file" => ["file_path", "path"],
+            "execute_command" or "shell" => ["command"],
+            "list_directory" or "ls" => ["path", "directory"],
+            _ => ["path", "file_path", "command", "query"]
         };
 
-        // Strip system environment context from user messages for display
-        var displayText = message.Role == ChatRole.User
-            ? Mogzi.Utils.MessageUtils.StripSystemEnvironment(message.Text)
-            : message.Text;
+        foreach (var key in keyArguments)
+        {
+            if (functionCall.Arguments.TryGetValue(key, out var value) && value != null)
+            {
+                var valueStr = value.ToString() ?? "";
 
-        return new Markup($"[{color}]{prefix}{displayText}[/]");
+                // For file paths, show just the filename
+                if (key.Contains("path") || key.Contains("file"))
+                {
+                    valueStr = Path.GetFileName(valueStr);
+                    if (string.IsNullOrEmpty(valueStr))
+                    {
+                        valueStr = value.ToString() ?? "";
+                    }
+                }
+
+                // Truncate if too long
+                if (valueStr.Length > 50)
+                {
+                    valueStr = valueStr[..47] + "...";
+                }
+
+                return valueStr;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Extracts tool name from XML tool result.
+    /// </summary>
+    private static string? ExtractToolNameFromResult(string result)
+    {
+        if (string.IsNullOrEmpty(result))
+        {
+            return null;
+        }
+
+        try
+        {
+            var toolNameMatch = System.Text.RegularExpressions.Regex.Match(result, @"tool_name=""([^""]+)""");
+            return toolNameMatch.Success ? toolNameMatch.Groups[1].Value : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private MessageType GetMessageType(ChatMessage message)

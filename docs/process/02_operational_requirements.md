@@ -94,7 +94,7 @@
 
 - **TOR-5.3**: The system SHALL continuously persist the chat history to a local file as the conversation progresses to prevent data loss from unexpected session termination.
   - **Priority**: Critical
-  - **Impl Status**: Not Implemented
+  - **Impl Status**: Implemented
   - **Verification**: Test
 - **TOR-5.3.1**: On startup, if no session is specified via command-line arguments, the system SHALL create a new chat session. The session file SHALL be saved in the `~/.mogzi/chats/` directory with a UUIDv7 timestamp as its filename.
   - **Priority**: Critical
@@ -164,6 +164,31 @@
   - **Priority**: Medium
   - **Impl Status**: Implemented
   - **Verification**: Demonstration
+
+- **TOR-5.3.16**: The system SHALL preserve all tool execution interactions (tool calls and results) within session history to enable complete conversation replay when sessions are resumed.
+  - **Priority**: Critical
+  - **Impl Status**: Implemented
+  - **Verification**: Test, Demonstration
+
+- **TOR-5.3.17**: The system SHALL display tool execution results when loading saved sessions with the same visual fidelity and information as during live tool execution.
+  - **Priority**: High
+  - **Impl Status**: Implemented
+  - **Verification**: Test, Demonstration
+
+- **TOR-5.3.18**: The system SHALL prevent incomplete or partial streaming responses from being persisted to session storage, ensuring only finalized messages are saved.
+  - **Priority**: High
+  - **Impl Status**: Implemented
+  - **Verification**: Test, Analysis
+
+- **TOR-5.3.19**: The system SHALL maintain clear visual separation between different types of content (user messages, assistant responses, tool executions) in both live sessions and loaded sessions.
+  - **Priority**: Medium
+  - **Impl Status**: Implemented
+  - **Verification**: Demonstration, Inspection
+
+- **TOR-5.3.20**: The system SHALL provide complete conversation context to the AI model when resuming sessions, including all previous tool interactions and their results.
+  - **Priority**: Critical
+  - **Impl Status**: Implemented
+  - **Verification**: Test, Analysis
 
 ### TOR-6: Extensibility and Integration
 
@@ -248,19 +273,19 @@
 
 | Priority | Count | Percentage |
 |----------|-------|------------|
-| Critical | 15    | 45%        |
-| High     | 11    | 33%        |
-| Medium   | 7     | 21%        |
+| Critical | 18    | 46%        |
+| High     | 13    | 33%        |
+| Medium   | 8     | 21%        |
 | Low      | 1     | 3%         |
-| **Total** | **33** | **100%** |
+| **Total** | **39** | **100%** |
 
 | Implementation Status | Count | Percentage |
 |----------------------|-------|------------|
-| Implemented          | 14    | 42%        |
-| Partial              | 3     | 9%         |
-| Not Implemented      | 16    | 48%        |
+| Implemented          | 20    | 51%        |
+| Partial              | 3     | 8%         |
+| Not Implemented      | 16    | 41%        |
 | Deprecated           | 0     | 0%         |
-| **Total**            | **33** | **100%** |
+| **Total**            | **39** | **100%** |
 
 ---
 

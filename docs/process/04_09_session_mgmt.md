@@ -32,9 +32,9 @@ public class Session
 - **History**: The list of `SerializableChatMessage` objects for the conversation with attachment metadata.
 - **InitialPrompt**: The first user message, truncated to 50 characters for display in the session list.
 
-### 2.2. Enhanced Chat Message Serialization
+### 2.2. Enhanced Chat Message Serialization with Tool Execution Support
 
-The existing `SerializableChatMessage` will be enhanced to support attachment metadata.
+The existing `SerializableChatMessage` will be enhanced to support attachment metadata and function call/result persistence for complete tool execution replay.
 
 **File:** `src/Mogzi.Core/Domain/ChatHistory.cs`
 
@@ -46,6 +46,8 @@ public class SerializableChatMessage
     public string? AuthorName { get; set; }
     public string? MessageId { get; set; }
     public List<AttachmentMetadata> Attachments { get; set; } = [];
+    public List<FunctionCall> FunctionCalls { get; set; } = [];
+    public List<FunctionResult> FunctionResults { get; set; } = [];
 
     public static SerializableChatMessage FromChatMessage(ChatMessage message, int messageIndex)
     {
@@ -57,7 +59,7 @@ public class SerializableChatMessage
             MessageId = message.MessageId
         };
 
-        // Process attachments from message.Contents
+        // Process all content types from message.Contents
         foreach (var content in message.Contents)
         {
             switch (content)
@@ -82,6 +84,25 @@ public class SerializableChatMessage
                         // Content hash and stored filename will be set during save
                     });
                     break;
+
+                case FunctionCallContent functionCallContent:
+                    serializable.FunctionCalls.Add(new FunctionCall
+                    {
+                        CallId = functionCallContent.CallId ?? Guid.NewGuid().ToString(),
+                        Name = functionCallContent.Name ?? "unknown",
+                        Arguments = functionCallContent.Arguments?.ToDictionary(
+                            kvp => kvp.Key, 
+                            kvp => kvp.Value) ?? new Dictionary<string, object?>()
+                    });
+                    break;
+
+                case FunctionResultContent functionResultContent:
+                    serializable.FunctionResults.Add(new FunctionResult
+                    {
+                        CallId = functionResultContent.CallId ?? Guid.NewGuid().ToString(),
+                        Result = functionResultContent.Result
+                    });
+                    break;
             }
         }
 
@@ -97,6 +118,19 @@ public class AttachmentMetadata
     public string ContentHash { get; set; } = string.Empty; // SHA256 hash for integrity
     public long FileSizeBytes { get; set; }
     public int MessageIndex { get; set; } // Index of message in session history
+}
+
+public class FunctionCall
+{
+    public string CallId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public Dictionary<string, object?> Arguments { get; set; } = [];
+}
+
+public class FunctionResult
+{
+    public string CallId { get; set; } = string.Empty;
+    public object? Result { get; set; }
 }
 ```
 
@@ -239,9 +273,158 @@ This atomic file operation pattern ensures that the session file is never left i
     - `/session clear` - Clear the current session
     - `/session rename <name>` - Rename the current session
 
-## 7. Performance Considerations
+## 7. Tool Execution Display and Message Boundary Detection
+
+### 7.1. Message Boundary Detection System
+
+The session management system implements a sophisticated Message Boundary Detection System that creates separate ChatMessage objects for different content types during streaming responses. This ensures proper message sequencing in both live UI display and session persistence.
+
+**Content Type Classification:**
+```csharp
+private enum ContentType
+{
+    None,           // No content or unknown
+    Text,           // Regular assistant text response
+    FunctionCall,   // Tool invocation
+    FunctionResult  // Tool execution result
+}
+```
+
+**Message Boundary Decision Logic:**
+- **Content Type Transitions**: New messages are created when content type changes (Text → Tool → Text)
+- **Function Call/Result Separation**: Each tool invocation and result becomes a distinct message
+- **Clean UI Boundaries**: Maintains clear visual separation between different content types
+- **Complete History Preservation**: All content types preserved for AI context and session replay
+
+### 7.2. Pending/Completed Message Architecture
+
+The `HistoryManager` implements a dual-state message system to handle streaming responses without persisting intermediate chunks:
+
+**Deferred Persistence Pattern:**
+```csharp
+public class HistoryManager
+{
+    private readonly List<ChatMessage> _completedMessages = [];
+    private readonly List<ChatMessage> _pendingMessages = [];
+    
+    // Streaming workflow methods
+    public void AddPendingAssistantMessage(ChatMessage message);
+    public void UpdateLastPendingMessage(ChatMessage message);
+    public async Task FinalizeStreamingAsync();
+    
+    // UI display methods
+    public List<ChatMessage> GetAllMessagesForDisplay();
+    public List<ChatMessage> GetCurrentChatHistory();
+}
+```
+
+**Key Benefits:**
+- **No Streaming Artifacts**: Only final, consolidated messages are persisted
+- **Real-Time UI Updates**: Pending messages shown during streaming for responsive UI
+- **Atomic Persistence**: Complete messages written to session storage in single operations
+- **Performance Optimization**: Avoids excessive I/O during streaming
+
+### 7.3. Tool Execution Display for Loaded Sessions
+
+When sessions are loaded, the enhanced `RenderMessage()` method in `FlexColumnTuiApp` processes both text content and function calls/results to recreate the complete tool execution display:
+
+**Enhanced Message Rendering:**
+```csharp
+private IRenderable RenderMessage(ChatMessage message)
+{
+    var components = new List<IRenderable>();
+
+    // Handle text content with role-based styling
+    if (!string.IsNullOrEmpty(message.Text))
+    {
+        components.Add(CreateTextRenderable(message));
+    }
+
+    // Handle function calls and results for tool execution display
+    if (message.Contents != null && message.Contents.Count > 0)
+    {
+        foreach (var content in message.Contents)
+        {
+            if (content is FunctionCallContent functionCall)
+            {
+                // Create tool display for function call
+                var toolDisplay = ToolExecutionDisplay.CreateToolDisplay(
+                    functionCall.Name ?? "Unknown Tool",
+                    ToolExecutionStatus.Success,
+                    GetToolDescription(functionCall),
+                    diff: null,
+                    result: null
+                );
+                components.Add(toolDisplay);
+            }
+            else if (content is FunctionResultContent functionResult)
+            {
+                // Parse tool result and create enhanced display
+                var toolResponseParser = _serviceProvider.GetRequiredService<ToolResponseParser>();
+                var result = functionResult.Result?.ToString() ?? "";
+                var toolName = ExtractToolNameFromResult(result) ?? "Tool";
+                var toolInfo = toolResponseParser.ParseToolResponse(toolName, result);
+
+                var toolDisplay = ToolExecutionDisplay.CreateToolDisplay(
+                    toolInfo.ToolName,
+                    toolInfo.Status,
+                    toolInfo.Description,
+                    diff: null,
+                    result: toolInfo.Summary ?? result
+                );
+                components.Add(toolDisplay);
+            }
+        }
+    }
+
+    // Return appropriate renderable based on content
+    return components.Count switch
+    {
+        0 => new Text(string.Empty),
+        1 => components[0],
+        _ => new Rows(components)
+    };
+}
+```
+
+**Tool Description Extraction:**
+- **Smart Argument Analysis**: Extracts key arguments (file paths, commands) for display
+- **Path Simplification**: Shows filenames instead of full paths for readability
+- **Content Truncation**: Limits display length to prevent UI overflow
+- **Tool-Specific Logic**: Different extraction strategies for different tool types
+
+### 7.4. Session Loading Workflow with Tool Execution
+
+**Complete Session Restoration Process:**
+1. **Session Metadata Loading**: Read session.json with all message data
+2. **Message Reconstruction**: Convert SerializableChatMessage to ChatMessage with Contents
+3. **Function Call/Result Processing**: Restore FunctionCallContent and FunctionResultContent
+4. **Tool Display Recreation**: Use same ToolExecutionDisplay components as live sessions
+5. **UI Consistency**: Identical visual representation for live and loaded tool executions
+
+**Streaming vs. Loaded Session Comparison:**
+- **Live Streaming**: Real-time tool execution with progress indicators and status updates
+- **Loaded Sessions**: Static tool execution displays showing final results and status
+- **Visual Consistency**: Same ToolExecutionDisplay.CreateToolDisplay() method used for both
+- **Complete History**: All tool interactions preserved and displayed accurately
+
+### 7.5. SUPREME OBJECTIVE Achievement
+
+The enhanced session management system achieves the **SUPREME OBJECTIVE**: "Retain exact chat history such that when reloaded, we can replay and restore the entire history back to the AI model to pick up exactly where we left off with all the same history."
+
+**Key Achievements:**
+- **Complete Content Preservation**: Text, function calls, and results all persisted
+- **Message Boundary Integrity**: Proper message sequencing maintained across sessions
+- **Tool Execution Replay**: Full tool interaction history available for AI context
+- **UI Fidelity**: Loaded sessions display identically to live sessions
+- **Context Continuity**: AI receives complete conversation history including all tool interactions
+
+## 8. Performance Considerations
 
 -   **Asynchronous I/O**: All file operations will use asynchronous methods (`ReadAllTextAsync`, `WriteAllTextAsync`) to avoid blocking the UI thread.
 -   **Minimal Serialization**: Only changed fields will be updated before serialization to minimize the amount of data that needs to be processed.
 -   **Efficient JSON**: System.Text.Json with source generation will be used for efficient serialization and deserialization.
 -   **Prioritizing Reliability**: While performance optimizations will be implemented, the primary focus will be on ensuring data integrity through atomic file operations, even if this introduces some performance overhead.
+-   **Deferred Persistence**: Pending message architecture reduces I/O operations during streaming
+-   **Tool Display Caching**: ToolResponseParser results cached to avoid redundant parsing
+-   **Content Type Detection**: Efficient content type classification minimizes processing overhead

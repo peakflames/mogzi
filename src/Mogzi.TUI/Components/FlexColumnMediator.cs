@@ -312,6 +312,27 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
                     context.HistoryManager.UpdateLastPendingMessage(currentMessage);
                     context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(currentMessage), isUpdatable: true);
                 }
+                else if (updateContentType == ContentType.FunctionCall && currentMessage != null)
+                {
+                    // Update Function Call Message
+                    // For function call content, we update the message with the complete function call data
+                    _logger?.LogInformation($"ChatMsg[Tool, 'Executing {ExtractToolNameFromContents(responseUpdate.Contents)}...'");
+                    currentMessage = new ChatMessage(ChatRole.Assistant, responseUpdate.Contents ?? []);
+
+                    // Update pending message - DO NOT persist immediately
+                    context.HistoryManager.UpdateLastPendingMessage(currentMessage);
+                }
+                else if (updateContentType == ContentType.FunctionResult && currentMessage != null)
+                {
+                    // Update Function Result Message
+                    // For function result content, we update the message with the complete function result data
+                    var toolName = ExtractToolNameFromContents(responseUpdate.Contents) ?? "Unknown Tool";
+                    _logger?.LogInformation($"ChatMsg[Tool, '{toolName} completed'");
+                    currentMessage = new ChatMessage(ChatRole.Assistant, responseUpdate.Contents ?? []);
+
+                    // Update pending message - DO NOT persist immediately
+                    context.HistoryManager.UpdateLastPendingMessage(currentMessage);
+                }
 
                 // Tool Execution Handling
                 // Tool execution is handled in parallel to message creation.
@@ -874,6 +895,20 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
             // If XML parsing fails, return null
             return null;
         }
+    }
+
+    /// <summary>
+    /// Extracts tool name from function call contents for logging purposes.
+    /// </summary>
+    private static string? ExtractToolNameFromContents(IList<AIContent>? contents)
+    {
+        if (contents == null)
+        {
+            return null;
+        }
+
+        var functionCall = contents.OfType<FunctionCallContent>().FirstOrDefault();
+        return functionCall?.Name ?? "Unknown Tool";
     }
 
 

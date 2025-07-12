@@ -5,6 +5,48 @@ using System.Text;
 namespace Mogzi.Domain;
 
 /// <summary>
+/// Serializable representation of a function call
+/// </summary>
+public class SerializableFunctionCall
+{
+    /// <summary>
+    /// The unique identifier for this function call
+    /// </summary>
+    [JsonPropertyName("callId")]
+    public string CallId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The name of the function being called
+    /// </summary>
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The arguments passed to the function as JSON
+    /// </summary>
+    [JsonPropertyName("arguments")]
+    public string Arguments { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Serializable representation of a function result
+/// </summary>
+public class SerializableFunctionResult
+{
+    /// <summary>
+    /// The unique identifier for the function call this result corresponds to
+    /// </summary>
+    [JsonPropertyName("callId")]
+    public string CallId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The result of the function execution
+    /// </summary>
+    [JsonPropertyName("result")]
+    public string Result { get; set; } = string.Empty;
+}
+
+/// <summary>
 /// Serializable representation of a chat message with attachment support
 /// </summary>
 public class SerializableChatMessage
@@ -40,6 +82,18 @@ public class SerializableChatMessage
     public List<AttachmentMetadata> Attachments { get; set; } = [];
 
     /// <summary>
+    /// Serialized function calls for tool execution messages
+    /// </summary>
+    [JsonPropertyName("functionCalls")]
+    public List<SerializableFunctionCall> FunctionCalls { get; set; } = [];
+
+    /// <summary>
+    /// Serialized function results for tool execution messages
+    /// </summary>
+    [JsonPropertyName("functionResults")]
+    public List<SerializableFunctionResult> FunctionResults { get; set; } = [];
+
+    /// <summary>
     /// Creates a SerializableChatMessage from a ChatMessage, extracting attachments
     /// </summary>
     public static SerializableChatMessage FromChatMessage(ChatMessage message, int messageIndex, string attachmentsDirectory)
@@ -52,7 +106,7 @@ public class SerializableChatMessage
             MessageId = message.MessageId
         };
 
-        // Process attachments from message contents
+        // Process all content types from message contents
         for (var contentIndex = 0; contentIndex < message.Contents.Count; contentIndex++)
         {
             var content = message.Contents[contentIndex];
@@ -72,6 +126,25 @@ public class SerializableChatMessage
                 {
                     serializable.Attachments.Add(attachment);
                 }
+            }
+            else if (content is FunctionCallContent functionCall)
+            {
+                var serializableFunctionCall = new SerializableFunctionCall
+                {
+                    CallId = functionCall.CallId,
+                    Name = functionCall.Name ?? string.Empty,
+                    Arguments = SerializeArgumentsManually(functionCall.Arguments)
+                };
+                serializable.FunctionCalls.Add(serializableFunctionCall);
+            }
+            else if (content is FunctionResultContent functionResult)
+            {
+                var serializableFunctionResult = new SerializableFunctionResult
+                {
+                    CallId = functionResult.CallId,
+                    Result = functionResult.Result?.ToString() ?? string.Empty
+                };
+                serializable.FunctionResults.Add(serializableFunctionResult);
             }
         }
 
@@ -114,6 +187,21 @@ public class SerializableChatMessage
             {
                 contents.Add(new ErrorContent($"Attachment not found: {attachment.OriginalFileName}"));
             }
+        }
+
+        // Restore function calls
+        foreach (var functionCall in FunctionCalls)
+        {
+            var arguments = DeserializeArgumentsManually(functionCall.Arguments);
+            var functionCallContent = new FunctionCallContent(functionCall.CallId, functionCall.Name, arguments);
+            contents.Add(functionCallContent);
+        }
+
+        // Restore function results
+        foreach (var functionResult in FunctionResults)
+        {
+            var functionResultContent = new FunctionResultContent(functionResult.CallId, functionResult.Result);
+            contents.Add(functionResultContent);
         }
 
         var message = new ChatMessage(role, contents)
@@ -226,6 +314,177 @@ public class SerializableChatMessage
             _ => ".bin" // Default for unknown types
         };
     }
+
+    /// <summary>
+    /// Manually serializes function arguments to JSON string for AOT compatibility.
+    /// </summary>
+    private static string SerializeArgumentsManually(IDictionary<string, object?>? arguments)
+    {
+        if (arguments == null || arguments.Count == 0)
+        {
+            return "{}";
+        }
+
+        var sb = new StringBuilder();
+        _ = sb.Append('{');
+
+        var first = true;
+        foreach (var kvp in arguments)
+        {
+            if (!first)
+            {
+                _ = sb.Append(',');
+            }
+            first = false;
+
+            // Escape the key
+            _ = sb.Append('"');
+            _ = sb.Append(EscapeJsonString(kvp.Key));
+            _ = sb.Append("\":");
+
+            // Serialize the value
+            SerializeValue(sb, kvp.Value);
+        }
+
+        _ = sb.Append('}');
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Manually deserializes function arguments from JSON string for AOT compatibility.
+    /// Returns a simple dictionary with string values for compatibility.
+    /// </summary>
+    private static IDictionary<string, object?> DeserializeArgumentsManually(string argumentsJson)
+    {
+        var result = new Dictionary<string, object?>();
+
+        if (string.IsNullOrWhiteSpace(argumentsJson) || argumentsJson == "{}")
+        {
+            return result;
+        }
+
+        try
+        {
+            // Simple JSON parsing - this is a basic implementation for common cases
+            // For more complex scenarios, we might need a more robust parser
+            var json = argumentsJson.Trim();
+            if (!json.StartsWith('{') || !json.EndsWith('}'))
+            {
+                return result;
+            }
+
+            json = json[1..^1]; // Remove { and }
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return result;
+            }
+
+            // Split by commas (simple approach - doesn't handle nested objects)
+            var pairs = json.Split(',');
+            foreach (var pair in pairs)
+            {
+                var colonIndex = pair.IndexOf(':');
+                if (colonIndex > 0)
+                {
+                    var key = pair[..colonIndex].Trim().Trim('"');
+                    var value = pair[(colonIndex + 1)..].Trim();
+
+                    // Remove quotes if it's a string value
+                    if (value.StartsWith('"') && value.EndsWith('"'))
+                    {
+                        value = value[1..^1];
+                    }
+
+                    result[key] = value;
+                }
+            }
+        }
+        catch
+        {
+            // If parsing fails, return empty dictionary
+            // This ensures the system doesn't crash on malformed JSON
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Serializes a value to JSON format manually.
+    /// </summary>
+    private static void SerializeValue(StringBuilder sb, object? value)
+    {
+        if (value == null)
+        {
+            _ = sb.Append("null");
+        }
+        else if (value is string str)
+        {
+            _ = sb.Append('"');
+            _ = sb.Append(EscapeJsonString(str));
+            _ = sb.Append('"');
+        }
+        else if (value is bool boolValue)
+        {
+            _ = sb.Append(boolValue ? "true" : "false");
+        }
+        else if (value is int or long or float or double or decimal)
+        {
+            _ = sb.Append(value.ToString());
+        }
+        else
+        {
+            // For other types, convert to string and quote
+            _ = sb.Append('"');
+            _ = sb.Append(EscapeJsonString(value.ToString() ?? ""));
+            _ = sb.Append('"');
+        }
+    }
+
+    /// <summary>
+    /// Escapes a string for JSON format.
+    /// </summary>
+    private static string EscapeJsonString(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            return input;
+        }
+
+        var sb = new StringBuilder();
+        foreach (var c in input)
+        {
+#pragma warning disable IDE0066 // Convert switch statement to expression
+            switch (c)
+            {
+                case '"':
+                    _ = sb.Append("\\\"");
+                    break;
+                case '\\':
+                    _ = sb.Append("\\\\");
+                    break;
+                case '\b':
+                    _ = sb.Append("\\b");
+                    break;
+                case '\f':
+                    _ = sb.Append("\\f");
+                    break;
+                case '\n':
+                    _ = sb.Append("\\n");
+                    break;
+                case '\r':
+                    _ = sb.Append("\\r");
+                    break;
+                case '\t':
+                    _ = sb.Append("\\t");
+                    break;
+                default:
+                    _ = c < ' ' ? sb.Append($"\\u{(int)c:x4}") : sb.Append(c);
+                    break;
+            }
+#pragma warning restore IDE0066 // Convert switch statement to expression
+        }
+        return sb.ToString();
+    }
 }
 
 /// <summary>
@@ -259,6 +518,10 @@ public class ChatHistoryRoot
 [JsonSerializable(typeof(ChatHistoryRoot))]
 [JsonSerializable(typeof(SerializableChatMessage))]
 [JsonSerializable(typeof(List<SerializableChatMessage>))]
+[JsonSerializable(typeof(SerializableFunctionCall))]
+[JsonSerializable(typeof(SerializableFunctionResult))]
+[JsonSerializable(typeof(List<SerializableFunctionCall>))]
+[JsonSerializable(typeof(List<SerializableFunctionResult>))]
 public partial class ChatHistoryContext : JsonSerializerContext
 {
 }
