@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.13.8] - IN PROG
+## [0.14.0] - 2025-07-12
 
 - Add session name to footer and improve session list
 - Default session names to a randomly generated creative name in the format "color_creature"
