@@ -2,6 +2,7 @@
 
 ## [0.13.8] - IN PROG
 
+- corrected how streaming assistant responses are stored in session
 - Refactored TUI application codebase to use proper state management system with state machine pattern for improved maintainability and separation of concerns
 - Added session management with persistent chat history across application runs
 - Implemented CLI session loading via `--session` argument supporting both session IDs and user-friendly names

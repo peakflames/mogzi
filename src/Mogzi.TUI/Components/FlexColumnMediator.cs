@@ -288,7 +288,9 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
                     // Start new message for the new content type
                     _logger?.LogTrace("=== STARTING NEW MESSAGE: {ContentType} ===", updateContentType);
                     currentMessage = CreateMessageForContentType(responseUpdate, updateContentType);
-                    context.HistoryManager.AddAssistantMessage(currentMessage);
+
+                    // Use pending messages during streaming - DO NOT persist immediately
+                    context.HistoryManager.AddPendingAssistantMessage(currentMessage);
 
                     // Only render text messages to scrollback (tool messages are handled separately)
                     if (updateContentType == ContentType.Text)
@@ -305,7 +307,9 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
                     var newText = currentMessage.Text + responseUpdate.Text;
                     _logger?.LogInformation($"ChatMsg[Assistant, '{newText}'");
                     currentMessage = new ChatMessage(ChatRole.Assistant, newText);
-                    context.HistoryManager.UpdateLastMessage(currentMessage);
+
+                    // Update pending message - DO NOT persist immediately
+                    context.HistoryManager.UpdateLastPendingMessage(currentMessage);
                     context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(currentMessage), isUpdatable: true);
                 }
 
@@ -339,6 +343,11 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
             // Ensure the last message is finalized as non-updatable for permanent scrollback
             if (currentMessage != null && HasMeaningfulContent(currentMessage))
             {
+                // Finalize streaming by moving pending messages to completed and persisting them
+                // This ensures only final, consolidated messages are saved to the session file
+                _logger?.LogTrace("=== FINALIZING STREAMING - MOVING PENDING TO COMPLETED ===");
+                await context.HistoryManager.FinalizeStreamingAsync();
+
                 _logger?.LogTrace("=== FINALIZING FINAL MESSAGE: {ContentType} ===", currentContentType);
                 context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(currentMessage), isUpdatable: false);
             }

@@ -55,6 +55,28 @@ public class HistoryManager(ITuiMediator mediator)
         NotifyStateChanged();
     }
 
+    /// <summary>
+    /// Adds an assistant message to pending (for streaming). Does not persist until moved to completed.
+    /// </summary>
+    public void AddPendingAssistantMessage(ChatMessage message)
+    {
+        _pendingMessages.Add(message);
+        NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Updates the last pending message (for streaming updates). Does not persist.
+    /// </summary>
+    public void UpdateLastPendingMessage(ChatMessage message)
+    {
+        if (_pendingMessages.Any())
+        {
+            _pendingMessages.RemoveAt(_pendingMessages.Count - 1);
+        }
+        _pendingMessages.Add(message);
+        NotifyStateChanged();
+    }
+
     public void UpdateLastMessage(ChatMessage message)
     {
         if (_completedMessages.Any())
@@ -81,8 +103,42 @@ public class HistoryManager(ITuiMediator mediator)
         if (_pendingMessages.Remove(message))
         {
             _completedMessages.Add(message);
+
+            // Persist the completed message
+            _ = PersistMessageAsync(message);
+
             NotifyStateChanged();
         }
+    }
+
+    /// <summary>
+    /// Finalizes streaming by moving all pending messages to completed and persisting them.
+    /// This consolidates streaming chunks into final messages before persistence.
+    /// </summary>
+    public async Task FinalizeStreamingAsync()
+    {
+        // Move all pending messages to completed and persist them
+        var pendingToMove = _pendingMessages.ToList();
+        _pendingMessages.Clear();
+
+        foreach (var message in pendingToMove)
+        {
+            _completedMessages.Add(message);
+            await PersistMessageAsync(message);
+        }
+
+        NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Gets all messages (completed + pending) for UI display during streaming.
+    /// </summary>
+    public List<ChatMessage> GetAllMessagesForDisplay()
+    {
+        var allMessages = new List<ChatMessage>();
+        allMessages.AddRange(_completedMessages);
+        allMessages.AddRange(_pendingMessages);
+        return allMessages;
     }
 
     public List<ChatMessage> GetCompletedMessages()
@@ -97,9 +153,12 @@ public class HistoryManager(ITuiMediator mediator)
 
     public List<ChatMessage> GetCurrentChatHistory()
     {
-        // In a real implementation, this would be more complex,
-        // including pending messages, system prompts, etc.
-        return [.. _completedMessages];
+        // For AI processing, include both completed and pending messages
+        // This ensures the AI has full context during streaming
+        var allMessages = new List<ChatMessage>();
+        allMessages.AddRange(_completedMessages);
+        allMessages.AddRange(_pendingMessages);
+        return allMessages;
     }
 
     public void ClearHistory()
