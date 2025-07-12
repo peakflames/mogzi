@@ -1,6 +1,7 @@
 global using Microsoft.Extensions.AI;
 global using Microsoft.Extensions.Logging;
 global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.DependencyInjection.Extensions;
 
 global using Mogzi.TUI.App;
 global using Mogzi.TUI.Commands;
@@ -30,5 +31,3 @@ global using System.Security.Cryptography;
 global using System.Text.RegularExpressions;
 
 global using Xunit.Abstractions;
-
-

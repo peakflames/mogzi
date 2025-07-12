@@ -1,3 +1,4 @@
+global using Mogzi.Core.Utils;
 global using Mogzi.Domain;
 global using Mogzi.Domain.Diff;
 global using Mogzi.PawPrints;
@@ -13,6 +14,7 @@ global using Mogzi.TUI.Models;
 global using Mogzi.TUI.Services;
 global using Mogzi.TUI.State;
 global using Mogzi.TUI.Utils;
+
 
 global using Microsoft.Extensions.AI;
 global using Microsoft.Extensions.DependencyInjection;

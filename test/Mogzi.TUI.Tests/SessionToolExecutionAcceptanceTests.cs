@@ -8,6 +8,7 @@ namespace Mogzi.TUI.Tests;
 /// Uses real service configuration and DI container with no mocking approach.
 /// Follows the systems-first testing philosophy with complete user workflows.
 /// </summary>
+[Collection("Sequential_Session_Tests")]
 public class SessionToolExecutionAcceptanceTests : SessionTestBase
 {
     public SessionToolExecutionAcceptanceTests(ITestOutputHelper output) 

@@ -41,7 +41,7 @@ public partial class ChatClient
     private GrepTool GrepTool { get; init; }
     private ShellTool ShellTool { get; init; }
 
-    private ChatClient(IChatClient chatClient, ApplicationConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
+    private ChatClient(IChatClient chatClient, IWorkingDirectoryProvider workingDirectoryProvider, ApplicationConfiguration config, Profile activeProfile, ApiProvider activeApiProvider, string mode, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)
     {
         ChatClientMEAI = chatClient;
         Config = config;
@@ -65,20 +65,20 @@ public partial class ChatClient
         Hostname = System.Net.Dns.GetHostName();
 
         // Initialize working directory provider
-        WorkingDirectoryProvider = new DefaultWorkingDirectoryProvider();
+        WorkingDirectoryProvider = workingDirectoryProvider;
 
         // SystemPrompt is now a computed property, so we don't need to set it here
 
         SystemTools = new SystemTools(config, llmResponseDetailsCallback);
-        DiffPatchTools = new DiffPatchTools(config, llmResponseDetailsCallback);
-        ReadTextFileTool = new ReadTextFileTool(config, llmResponseDetailsCallback);
-        ReadImageFileTool = new ReadImageFileTool(config, llmResponseDetailsCallback);
-        // ReadPdfFileTool = new ReadPdfFileTool(config, llmResponseDetailsCallback); // Not Native AOT yet
-        WriteFileTool = new WriteFileTool(config, llmResponseDetailsCallback);
-        EditTool = new EditTool(config, llmResponseDetailsCallback);
-        LSTool = new LSTool(config, llmResponseDetailsCallback);
-        GrepTool = new GrepTool(config, llmResponseDetailsCallback);
-        ShellTool = new ShellTool(config, llmResponseDetailsCallback);
+        DiffPatchTools = new DiffPatchTools(config, llmResponseDetailsCallback, workingDirectoryProvider);
+        ReadTextFileTool = new ReadTextFileTool(config, llmResponseDetailsCallback, workingDirectoryProvider);
+        ReadImageFileTool = new ReadImageFileTool(config, llmResponseDetailsCallback, workingDirectoryProvider);
+        // ReadPdfFileTool = new ReadPdfFileTool(config, llmResponseDetailsCallback, workingDirectoryProvider); // Not Native AOT yet
+        WriteFileTool = new WriteFileTool(config, llmResponseDetailsCallback, workingDirectoryProvider);
+        EditTool = new EditTool(config, llmResponseDetailsCallback, workingDirectoryProvider);
+        LSTool = new LSTool(config, llmResponseDetailsCallback, workingDirectoryProvider);
+        GrepTool = new GrepTool(config, llmResponseDetailsCallback, workingDirectoryProvider);
+        ShellTool = new ShellTool(config, llmResponseDetailsCallback, workingDirectoryProvider);
 
         var allTools = new List<AITool>();
         allTools.AddRange(SystemTools.GetTools().Cast<AITool>());
@@ -99,14 +99,14 @@ public partial class ChatClient
     }
 
 
-    public static Result<ChatClient> Create(string? configFilePath = null, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string, ConsoleColor>? llmResponseDetailsCallback = null, bool debug = false)
+    public static Result<ChatClient> Create(IWorkingDirectoryProvider workingDirectoryProvider, string? configFilePath = null, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string, ConsoleColor>? llmResponseDetailsCallback = null, bool debug = false)
     {
-        var result = Create(null, configFilePath, profileName, toolApprovals, mode, llmResponseDetailsCallback, debug);
+        var result = Create(null, workingDirectoryProvider, configFilePath, profileName, toolApprovals, mode, llmResponseDetailsCallback, debug);
         return result;
     }
 
 
-    public static Result<ChatClient> Create(IChatClient? chatClient, string? configFilePath = null, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string, ConsoleColor>? llmResponseDetailsCallback = null, bool debug = false)
+    public static Result<ChatClient> Create(IChatClient? chatClient, IWorkingDirectoryProvider workingDirectoryProvider, string? configFilePath = null, string? profileName = null, string? toolApprovals = null, string? mode = "oneshot", Action<string, ConsoleColor>? llmResponseDetailsCallback = null, bool debug = false)
     {
         configFilePath ??= Utils.ConfigurationLocator.FindConfigPath();
         if (configFilePath is null)
@@ -204,7 +204,7 @@ public partial class ChatClient
         }
 
 
-        return new ChatClient(chatClient, rootConfig, profile, apiProvider, mode ?? "oneshot", llmResponseDetailsCallback);
+        return new ChatClient(chatClient, workingDirectoryProvider, rootConfig, profile, apiProvider, mode ?? "oneshot", llmResponseDetailsCallback);
     }
 
 }

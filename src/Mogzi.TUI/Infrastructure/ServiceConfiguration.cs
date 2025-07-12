@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
 namespace Mogzi.TUI.Infrastructure;
 
 /// <summary>
@@ -18,24 +20,28 @@ public static class ServiceConfiguration
         });
 
         // Add Spectre.Console
-        _ = services.AddSingleton(AnsiConsole.Console);
+        services.TryAddSingleton(AnsiConsole.Console);
 
         // Add core services
-        _ = services.AddSingleton<IWorkingDirectoryProvider, DefaultWorkingDirectoryProvider>();
+        services.TryAddSingleton<IWorkingDirectoryProvider, DefaultWorkingDirectoryProvider>();
 
-        // Create ChatClient - this will be configured per command based on settings
-        var chatClientResult = ChatClient.Create(
-            configPath, // Let Create handle finding the default path
-            profileName, // Use specified profile or default
-            toolApprovals, // Use specified tool approvals override
-            "chat",
-            (details, color) => { },
-            false
-        );
+        services.TryAddSingleton(serviceProvider =>
+        {
+            // Create ChatClient - this will be configured per command based on settings
+            var chatClientResult = ChatClient.Create(
+                serviceProvider.GetRequiredService<IWorkingDirectoryProvider>(),
+                configPath, // Let Create handle finding the default path,
+                profileName, // Use specified profile or default
+                toolApprovals, // Use specified tool approvals override
+                "chat",
+                (details, color) => { },
+                false
+            );
 
-        _ = chatClientResult.IsSuccess
-            ? services.AddSingleton(chatClientResult.Value)
-            : throw new InvalidOperationException($"Failed to create ChatClient: {string.Join(", ", chatClientResult.Errors.Select(e => e.Message))}");
+            return chatClientResult.IsSuccess
+                ? chatClientResult.Value
+                : throw new InvalidOperationException($"Failed to create ChatClient: {string.Join(", ", chatClientResult.Errors.Select(e => e.Message))}");
+        });
 
 
         _ = services.AddSingleton<IAppService, AppService>();

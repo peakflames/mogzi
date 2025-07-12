@@ -27,7 +27,7 @@ public class Session
 ```
 
 - **Id**: A UUIDv7, which is time-sortable and will be used as the directory name.
-- **Name**: A user-friendly name for the session, defaulting to the creation timestamp.
+- **Name**: A user-friendly name for the session, defaulting to a randomly generated creative name in the format "color_creature" (e.g., "emerald_dragon", "crimson_beholder", "sapphire_elf").
 - **CreatedAt/LastModifiedAt**: Timestamps for session management.
 - **History**: The list of `SerializableChatMessage` objects for the conversation with attachment metadata.
 - **InitialPrompt**: The first user message, truncated to 50 characters for display in the session list.
@@ -134,7 +134,33 @@ public class FunctionResult
 }
 ```
 
-### 2.3. SessionManager (Service)
+### 2.3. SessionNameGenerator (Utility)
+
+A utility class for generating creative session names using random color and creature combinations.
+
+**File:** `src/Mogzi.Core/Utils/SessionNameGenerator.cs`
+
+**Key Features**:
+- **Random Name Generation**: Combines colors and creatures to create unique, memorable session names
+- **Extensive Vocabularies**: Large lists of colors (78 entries) and creatures (300+ entries) for maximum variety
+- **Consistent Format**: All names follow the "color_creature" pattern with lowercase and underscore separator
+- **Thread-Safe**: Uses static readonly arrays and thread-safe Random instance
+- **D&D-Enhanced**: Includes real animals, mythical creatures, D&D races, and monsters for epic combinations
+- **Creative Combinations**: Examples include "emerald_dragon", "crimson_beholder", "sapphire_elf", "obsidian_tarrasque"
+
+**Creature Categories**:
+- **Real Animals**: Traditional animals from aardvark to zebra
+- **Mythical Creatures**: Classic fantasy beings like basilisk, chimera, griffin, phoenix
+- **D&D Races**: Player character races including dwarf, elf, tiefling, dragonborn
+- **D&D Monsters**: Iconic creatures like beholder, mindflayer, owlbear, tarrasque
+
+**Usage**:
+```csharp
+string sessionName = SessionNameGenerator.GenerateName();
+// Examples: "sapphire_tiger", "violet_phoenix", "copper_beholder", "crimson_elf"
+```
+
+### 2.4. SessionManager (Service)
 
 A new service, `SessionManager`, will be responsible for the lifecycle of chat sessions with attachment support.
 

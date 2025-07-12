@@ -1,5 +1,3 @@
-
-
 namespace Mogzi.TUI.Services;
 
 /// <summary>
@@ -80,7 +78,7 @@ public class SessionManager : IDisposable
             CurrentSession = new Session
             {
                 Id = sessionId,
-                Name = now.ToString("yyyy-MM-dd HH:mm:ss UTC"),
+                Name = SessionNameGenerator.GenerateName(),
                 CreatedAt = now,
                 LastModifiedAt = now,
                 History = [],
@@ -189,7 +187,7 @@ public class SessionManager : IDisposable
                 CurrentSession = new Session
                 {
                     Id = newSessionId,
-                    Name = now.ToString("yyyy-MM-dd HH:mm:ss UTC"),
+                    Name = SessionNameGenerator.GenerateName(),
                     CreatedAt = now,
                     LastModifiedAt = now,
                     History = [],
@@ -217,7 +215,7 @@ public class SessionManager : IDisposable
             CurrentSession = new Session
             {
                 Id = newSessionId,
-                Name = now.ToString("yyyy-MM-dd HH:mm:ss UTC"),
+                Name = SessionNameGenerator.GenerateName(),
                 CreatedAt = now,
                 LastModifiedAt = now,
                 History = [],

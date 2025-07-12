@@ -1,5 +1,11 @@
 namespace Mogzi.TUI.Tests;
 
+[CollectionDefinition("Sequential_Session_Tests")]
+public class MySequentialTestsCollection
+{
+    // This class definition is intentionally empty
+}
+
 /// <summary>
 /// Base class for session-related acceptance tests that provides common session management functionality.
 /// Implements proper test isolation by cleaning up test sessions between tests.
@@ -12,31 +18,34 @@ public abstract class SessionTestBase : IDisposable
     protected readonly ILogger _logger;
     protected readonly ITestOutputHelper? _output;
     protected bool _disposed = false;
-    
+
     // Static semaphore to ensure only one test cleans up sessions at a time
     private static readonly SemaphoreSlim _cleanupSemaphore = new(1, 1);
 
     protected SessionTestBase(ITestOutputHelper output, string loggerCategoryName)
     {
         _output = output;
-        
+
         // Use the user's mogzi.config.json with the "testing" profile
         var configPath = GetUserConfigPath();
-        
+
         // Build service collection with real dependencies (no mocking except where specified)
         var services = new ServiceCollection();
+        services.AddSingleton<IWorkingDirectoryProvider, TestWorkingDirectoryProvider>();
+
+
         ServiceConfiguration.ConfigureServices(services, configPath, "testing", "readonly");
-        
+
         // Add test-specific logger
         services.AddSingleton<ILogger>(provider =>
             provider.GetRequiredService<ILoggerFactory>().CreateLogger(loggerCategoryName));
-        
+
         _serviceProvider = services.BuildServiceProvider();
-        
+
         // Get required services from DI container
         _sessionManager = _serviceProvider.GetRequiredService<SessionManager>();
         _logger = _serviceProvider.GetRequiredService<ILogger>();
-        
+
         _logger.LogInformation("{TestClass} initialized with real service configuration", loggerCategoryName);
     }
 
@@ -53,7 +62,7 @@ public abstract class SessionTestBase : IDisposable
         {
             var allSessions = await _sessionManager.ListSessionsAsync();
             var testSessions = allSessions.Where(s => s.Name.StartsWith("Test")).ToList();
-            
+
             foreach (var session in testSessions)
             {
                 try
@@ -62,7 +71,7 @@ public abstract class SessionTestBase : IDisposable
                     var sessionPath = Path.Combine(
                         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                         ".mogzi", "chats", session.Id.ToString());
-                    
+
                     if (Directory.Exists(sessionPath))
                     {
                         Directory.Delete(sessionPath, true);
@@ -74,11 +83,11 @@ public abstract class SessionTestBase : IDisposable
                     _logger.LogWarning(ex, "Failed to clean up test session {SessionId}", session.Id);
                 }
             }
-            
+
             if (testSessions.Count > 0)
             {
                 _logger.LogInformation("Cleaned up {SessionCount} test sessions for test isolation", testSessions.Count);
-                
+
                 // Small delay to ensure file system operations complete
                 await Task.Delay(100);
             }
@@ -110,12 +119,12 @@ public abstract class SessionTestBase : IDisposable
             return;
 
         _disposed = true;
-        
+
         try
         {
             // Clean up any test sessions created during tests - must be synchronous to ensure cleanup completes
             ClearAllTestSessionsAsync().GetAwaiter().GetResult();
-            
+
             if (_serviceProvider is IDisposable disposableProvider)
             {
                 disposableProvider.Dispose();
@@ -125,7 +134,7 @@ public abstract class SessionTestBase : IDisposable
         {
             _logger?.LogWarning(ex, "Error during test cleanup");
         }
-        
+
         GC.SuppressFinalize(this);
     }
 }
