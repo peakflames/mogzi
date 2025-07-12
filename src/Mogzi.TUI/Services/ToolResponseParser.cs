@@ -48,7 +48,7 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
     /// <returns>A unified diff if file changes are detected</returns>
     public UnifiedDiff? ExtractFileDiff(string toolName, string response, string? originalContent, string? newContent, string? filePath)
     {
-        _logger?.LogDebug("ExtractFileDiff called - ToolName: '{ToolName}', FilePath: '{FilePath}', HasOriginal: {HasOriginal}, HasNew: {HasNew}", 
+        _logger?.LogTrace("ExtractFileDiff called - ToolName: '{ToolName}', FilePath: '{FilePath}', HasOriginal: {HasOriginal}, HasNew: {HasNew}",
             toolName, filePath, originalContent != null, newContent != null);
 
         // Handle different tool types appropriately
@@ -57,31 +57,26 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
         // For WriteFileTool - don't generate diffs, content will be shown directly
         if (IsWriteFileTool(normalizedToolName))
         {
-            _logger?.LogDebug("WriteFileTool detected - skipping diff generation");
+            _logger?.LogTrace("WriteFileTool detected - skipping diff generation");
             return null;
         }
 
         // For EditTool - generate diff to show old vs new replacement
         if (IsEditTool(normalizedToolName))
         {
-            _logger?.LogDebug("EditTool detected - generating replacement diff");
+            _logger?.LogTrace("EditTool detected - generating replacement diff");
             return GenerateEditToolDiff(originalContent, newContent, filePath);
         }
 
         // For DiffPatchTools - extract diff from response or generate if needed
         if (IsDiffPatchTool(normalizedToolName))
         {
-            _logger?.LogDebug("DiffPatchTool detected - extracting or generating diff");
+            _logger?.LogTrace("DiffPatchTool detected - extracting or generating diff");
             return ExtractOrGeneratePatchDiff(response, originalContent, newContent, filePath);
         }
 
-        _logger?.LogDebug("Unknown tool type - no diff generated");
+        _logger?.LogTrace("Unknown tool type - no diff generated");
         return null;
-    }
-
-    private static UnifiedDiff CreateSimpleDiff(string originalContent, string newContent, string originalPath, string modifiedPath)
-    {
-        return UnifiedDiffGenerator.GenerateDiff(originalContent, newContent, originalPath, modifiedPath);
     }
 
     private void ParseXmlResponse(ToolResponseInfo info, string xmlResponse)
@@ -210,13 +205,13 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
         {
             // Enable logging in UnifiedDiffGenerator for debugging
             UnifiedDiffGenerator.SetLogger(_logger);
-            
+
             var diff = UnifiedDiffGenerator.GenerateDiff(
-                originalContent, 
-                newContent, 
-                $"a/{Path.GetFileName(filePath)}", 
+                originalContent,
+                newContent,
+                $"a/{Path.GetFileName(filePath)}",
                 $"b/{Path.GetFileName(filePath)}");
-            
+
             return diff;
         }
         catch (Exception ex)
@@ -241,28 +236,28 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
                 var patchContent = patchNode.InnerText?.Trim();
                 if (!string.IsNullOrEmpty(patchContent))
                 {
-                    _logger?.LogDebug("Found patch content in response, parsing...");
+                    _logger?.LogTrace("Found patch content in response, parsing...");
                     return ParseUnifiedDiffFromResponse(patchContent);
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger?.LogDebug(ex, "Could not extract patch from response XML");
+            _logger?.LogTrace(ex, "Could not extract patch from response XML");
         }
 
         // Fallback: generate diff if we have content
         if (originalContent != null && newContent != null && !string.IsNullOrEmpty(filePath))
         {
-            _logger?.LogDebug("Generating fallback diff for DiffPatchTool");
+            _logger?.LogTrace("Generating fallback diff for DiffPatchTool");
             return UnifiedDiffGenerator.GenerateDiff(
-                originalContent, 
-                newContent, 
-                $"a/{Path.GetFileName(filePath)}", 
+                originalContent,
+                newContent,
+                $"a/{Path.GetFileName(filePath)}",
                 $"b/{Path.GetFileName(filePath)}");
         }
 
-        _logger?.LogDebug("No diff generated for DiffPatchTool");
+        _logger?.LogTrace("No diff generated for DiffPatchTool");
         return null;
     }
 
@@ -296,13 +291,13 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
                 {
                     if (currentHunkLines.Count > 0)
                     {
-                        hunks.Add(new DiffHunk 
-                        { 
-                            Lines = currentHunkLines, 
-                            OriginalStart = originalStart, 
-                            OriginalLength = originalLength, 
-                            ModifiedStart = modifiedStart, 
-                            ModifiedLength = modifiedLength 
+                        hunks.Add(new DiffHunk
+                        {
+                            Lines = currentHunkLines,
+                            OriginalStart = originalStart,
+                            OriginalLength = originalLength,
+                            ModifiedStart = modifiedStart,
+                            ModifiedLength = modifiedLength
                         });
                         currentHunkLines = [];
                     }
@@ -310,7 +305,7 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
                     var match = System.Text.RegularExpressions.Regex.Match(line, @"^@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@");
                     if (!match.Success)
                     {
-                        _logger?.LogDebug("Failed to parse hunk header: {Line}", line);
+                        _logger?.LogTrace("Failed to parse hunk header: {Line}", line);
                         return null;
                     }
 
@@ -337,19 +332,19 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
 
             if (currentHunkLines.Count > 0)
             {
-                hunks.Add(new DiffHunk 
-                { 
-                    Lines = currentHunkLines, 
-                    OriginalStart = originalStart, 
-                    OriginalLength = originalLength, 
-                    ModifiedStart = modifiedStart, 
-                    ModifiedLength = modifiedLength 
+                hunks.Add(new DiffHunk
+                {
+                    Lines = currentHunkLines,
+                    OriginalStart = originalStart,
+                    OriginalLength = originalLength,
+                    ModifiedStart = modifiedStart,
+                    ModifiedLength = modifiedLength
                 });
             }
 
             if (originalFile == null || modifiedFile == null)
             {
-                _logger?.LogDebug("Patch did not contain file headers");
+                _logger?.LogTrace("Patch did not contain file headers");
                 return null;
             }
 
@@ -357,15 +352,9 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
         }
         catch (Exception ex)
         {
-            _logger?.LogDebug(ex, "Error parsing unified diff from response");
+            _logger?.LogTrace(ex, "Error parsing unified diff from response");
             return null;
         }
-    }
-
-    private static bool IsFileModificationTool(string toolName)
-    {
-        var normalizedToolName = toolName.ToLowerInvariant();
-        return IsWriteFileTool(normalizedToolName) || IsEditTool(normalizedToolName) || IsDiffPatchTool(normalizedToolName);
     }
 }
 

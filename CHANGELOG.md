@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.14.0] - 2025-07-12
+
+- Add session name to footer and improve session list
+- Default session names to a randomly generated creative name in the format "color_creature"
+- corrected how streaming assistant responses are stored in session
+- Refactored TUI application codebase to use proper state management system with state machine pattern for improved maintainability and separation of concerns
+- Added session management with persistent chat history across application runs
+- Implemented CLI session loading via `--session` argument supporting both session IDs and user-friendly names
+- Added pipe support for integrating with shell workflows and continuing existing sessions
+- Enhanced session organization with directory-based storage and attachment support
+- **Added comprehensive CLI session management commands**:
+  - `mogzi session list` - Lists available sessions with configurable limit (default: 10 most recent)
+  - Enhanced session lookup supporting exact name matching, full GUID, and partial GUID matching
+  - Improved table display with wider columns for better readability
+  - Contextual headers showing "Available Chat Sessions (last X recently used)" for both CLI and TUI interfaces
+  - Consistent session list limiting across all interfaces respecting `sessionListLimit` configuration
+
+
 ## [0.13.7] - 2025-07-03
 
 - instruct mogzi to prefer to use the `replace_in_file` tool over the git-style edit tools until we can build more confidence in them

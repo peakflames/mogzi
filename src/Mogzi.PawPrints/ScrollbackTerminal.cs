@@ -1,11 +1,17 @@
 namespace Mogzi.PawPrints;
 
-public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal
+public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal, IDisposable
 {
     private readonly IAnsiConsole _console = console;
     private readonly Lock _lock = new();
+    private readonly ManualResetEventSlim _refreshSignal = new(false);
+    // Dynamic content: Temporary UI elements like progress bars that get cleared frequently
     private int _dynamicContentLineCount = 0;
+
+    // Updatable content: Streaming text content that gets replaced during real-time updates
+    // Used for assistant messages that are built character-by-character during streaming responses
     private int _updatableContentLineCount = 0;
+    private bool _isDisposed = false;
     private bool _isShutdown = false;
 
     public void Initialize()
@@ -15,6 +21,16 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal
         _console.Cursor.Hide();
     }
 
+    /// <summary>
+    /// Writes content to the scrollback terminal.
+    /// 
+    /// Content Types:
+    /// - Static Content (isUpdatable=false): Permanent content like user messages, final assistant messages, tool results
+    /// - Updatable Content (isUpdatable=true): Streaming content that gets replaced during real-time updates (assistant messages during streaming)
+    /// - Dynamic Content: Handled separately via StartDynamicDisplayAsync for temporary progress indicators
+    /// </summary>
+    /// <param name="content">The content to write</param>
+    /// <param name="isUpdatable">True for streaming content that can be replaced, false for permanent scrollback content</param>
     public void WriteStatic(IRenderable content, bool isUpdatable = false)
     {
         if (_isShutdown)
@@ -24,8 +40,15 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal
 
         lock (_lock)
         {
+            // Clear dynamic content before writing static content to prevent interference
             ClearDynamicContent();
-            ClearUpdatableContent();
+
+            // When writing permanent static content, clear any previous streaming content
+            // When writing streaming content, we'll clear it below after measuring
+            if (!isUpdatable)
+            {
+                ClearUpdatableContent();
+            }
 
             var writer = new StringWriter();
             var measuringConsole = AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(writer), ColorSystem = ColorSystemSupport.NoColors });
@@ -35,6 +58,8 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal
 
             if (isUpdatable)
             {
+                // For streaming content, clear the previous streaming version first, then track new line count
+                ClearUpdatableContent();
                 _updatableContentLineCount = lineCount;
             }
 
@@ -45,25 +70,24 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal
 
     public async Task StartDynamicDisplayAsync(Func<IRenderable> dynamicContentProvider, CancellationToken cancellationToken)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        while (!cancellationToken.IsCancellationRequested && !_isDisposed)
         {
-            if (_isShutdown)
-            {
-                break;
-            }
-
             var dynamicContent = dynamicContentProvider();
             UpdateDynamic(dynamicContent);
 
             try
             {
-                await Task.Delay(50, cancellationToken);
+                // Wait for either the delay to complete or a refresh to be signaled
+                _ = _refreshSignal.Wait(50, cancellationToken);
+                _refreshSignal.Reset(); // Reset the signal after waiting
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException)
             {
                 break;
             }
         }
+
+        await Task.CompletedTask;
     }
 
     public void Shutdown()
@@ -80,6 +104,26 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal
             ClearDynamicContent();
         }
         _console.Cursor.Show();
+    }
+
+    public void Refresh()
+    {
+        if (!_isDisposed)
+        {
+            // This is a non-blocking call to signal the event.
+            _refreshSignal.Set();
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+        _isDisposed = true;
+        _refreshSignal.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     private void UpdateDynamic(IRenderable content)
@@ -109,8 +153,22 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal
         {
             try
             {
-                _console.Cursor.MoveUp(_dynamicContentLineCount - 1);
+                var linesToMoveUp = _dynamicContentLineCount - 1;
+                if (linesToMoveUp > 0)
+                {
+                    _console.Cursor.MoveUp(linesToMoveUp);
+                }
                 _console.Write("\x1b[0J");
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // In test environments, cursor positioning may fail due to invalid coordinates
+                // This is expected when running tests with redirected input/output
+                if (!_isShutdown)
+                {
+                    // Silently ignore cursor positioning errors in test environments
+                    // The test output will still be captured correctly
+                }
             }
             catch (Exception)
             {
@@ -129,8 +187,22 @@ public class ScrollbackTerminal(IAnsiConsole console) : IScrollbackTerminal
         {
             try
             {
-                _console.Cursor.MoveUp(_updatableContentLineCount);
+                var linesToMoveUp = _updatableContentLineCount;
+                if (linesToMoveUp > 0)
+                {
+                    _console.Cursor.MoveUp(linesToMoveUp);
+                }
                 _console.Write("\x1b[0J");
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // In test environments, cursor positioning may fail due to invalid coordinates
+                // This is expected when running tests with redirected input/output
+                if (!_isShutdown)
+                {
+                    // Silently ignore cursor positioning errors in test environments
+                    // The test output will still be captured correctly
+                }
             }
             catch (Exception)
             {

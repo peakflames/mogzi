@@ -80,7 +80,9 @@ When requested to perform tasks like fixing bugs, adding features, refactoring, 
 """;
     }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     public static string GetEpilogPrompt(string absoluteWorkingDirectory)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         return """
 

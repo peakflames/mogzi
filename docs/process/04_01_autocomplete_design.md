@@ -377,141 +377,134 @@ Normal Input → Trigger Detected → Autocomplete Active → Selection Made →
 
 ## Terminal UI Integration
 
-### Composite Rendering Design
+In the refactored component-based architecture, autocomplete is no longer rendered via a monolithic method. Instead, it is handled by two distinct components: `InputPanel` and `AutocompletePanel`.
+
+### Component-Based Rendering
+
+-   **`InputPanel`**: This component is responsible for rendering the user's input text, the prompt symbol (`>`), and the cursor.
+-   **`AutocompletePanel`**: This component is responsible for rendering the list of suggestions when autocomplete is active.
+
+The `TuiComponentManager` controls the visibility of these components. The `AutocompletePanel` is only visible when `InputContext.HasSuggestions` is `true`.
+
+### Rendering Logic in `AutocompletePanel`
+
+The `AutocompletePanel`'s `Render` method is responsible for creating the suggestion list UI.
 
 ```csharp
-private IRenderable CreateInputWithAutocomplete(InputContext context)
+// In AutocompletePanel.cs
+public override IRenderable Render(IRenderContext context)
 {
-    var inputPanel = CreateFlexInputComponent(context.CurrentInput);
-
-    if (!context.ShowSuggestions || context.Suggestions.Count == 0)
-        return inputPanel;
-
-    var suggestionItems = context.Suggestions.Select((suggestion, index) => 
+    if (!IsVisible || !context.InputContext.HasSuggestions)
     {
-        var isSelected = index == context.SelectedSuggestionIndex;
-        var style = isSelected ? "[blue on white]" : "[dim]";
-        var prefix = isSelected ? ">" : " ";
+        return new Text(string.Empty);
+    }
 
-        var description = context.CompletionItems[index].Description;
-        return new Markup($"{style}{prefix} {suggestion,-12} {description}[/]");
-    }).ToArray();
+    var suggestionItems = context.InputContext.CompletionItems
+        .Select((item, index) => 
+        {
+            var isSelected = index == context.InputContext.SelectedSuggestionIndex;
+            var style = isSelected ? "yellow bold" : "dim";
+            var prefix = isSelected ? "► " : "  ";
+            return new Markup($"[{style}]{prefix}{item.DisplayText,-20} {item.Description}[/]");
+        }).ToArray();
 
-    var suggestionsPanel = new Panel(new Rows(suggestionItems))
-        .Border(BoxBorder.Rounded)
-        .BorderColor(Color.Blue)
-        .Padding(0, 0);
-
-    return new Rows(inputPanel, suggestionsPanel);
+    return new Panel(new Rows(suggestionItems))
+    {
+        Header = new PanelHeader("[blue]Suggestions[/]"),
+        Border = BoxBorder.Rounded,
+        BorderStyle = Style.Parse("blue")
+    };
 }
 ```
 
 **UI Design Features:**
-- **Layered Composition**: Input field and suggestions rendered as separate components
-- **Visual Hierarchy**: Clear distinction between input and suggestions
-- **Selection Highlighting**: Visual feedback for current selection
-- **Responsive Layout**: Adapts to different suggestion counts and content
-
-### Dynamic Content Updates
-
-```csharp
-private IRenderable RenderDynamicContent()
-{
-    var bottomComponent = _currentState switch
-    {
-        ChatState.Input when _inputContext.ShowSuggestions => 
-            CreateInputWithAutocomplete(_inputContext),
-        ChatState.Input => 
-            CreateFlexInputComponent(_inputContext.CurrentInput),
-        ChatState.Thinking => 
-            CreateFlexThinkingComponent(),
-        ChatState.ToolExecution => 
-            CreateFlexToolExecutionComponent(_toolProgress),
-        _ => CreateFlexInputComponent(_inputContext.CurrentInput)
-    };
-
-    return new Rows(new Text(""), bottomComponent, new Text(""), CreateFlexFooterComponent());
-}
-```
-
-**Dynamic Rendering Features:**
-- **State-Aware Rendering**: Different UI based on application state
-- **Conditional Autocomplete**: Shows suggestions only when appropriate
-- **Smooth Transitions**: Seamless switching between input modes
-- **Performance Optimization**: Minimal redraws for better responsiveness
+-   **Component Isolation**: Rendering logic is encapsulated within the `AutocompletePanel`.
+-   **State-Driven Visibility**: The panel is only rendered when there are suggestions to display.
+-   **Rich Formatting**: Uses Spectre.Console's `Panel`, `Rows`, and `Markup` for a rich visual display.
+-   **Selection Highlighting**: The currently selected item is highlighted to provide clear visual feedback.
 
 ## Keyboard Event Integration
 
-### Event-Driven Architecture
+Keyboard input is managed through a coordinated flow involving the `FlexColumnMediator` and the active UI components.
+
+### Mediator-Based Input Distribution
+
+1.  The main application loop captures keyboard events.
+2.  Events are passed to the `FlexColumnMediator`.
+3.  The mediator determines the active state and forwards the event to the relevant components by calling their `HandleInputAsync` method.
+
+When autocomplete is active, both `InputPanel` and `AutocompletePanel` may handle keyboard events.
+
+### Component Input Handling
+
+The logic for handling navigation and selection is now located within the `HandleInputAsync` methods of the components.
 
 ```csharp
-private async void OnKeyPressed(object? sender, KeyPressEventArgs e)
+// In AutocompletePanel.cs
+public override async Task<bool> HandleInputAsync(IRenderContext context, object inputEvent)
 {
-    // Handle autocomplete navigation first
-    if (_inputContext.State == InputState.Autocomplete && _inputContext.ShowSuggestions)
+    if (!IsVisible || inputEvent is not KeyPressEventArgs keyEvent)
     {
-        switch (e.Key)
-        {
-            case ConsoleKey.UpArrow:
-                NavigateAutocomplete(up: true);
-                e.Handled = true;
-                return;
-
-            case ConsoleKey.DownArrow:
-                NavigateAutocomplete(up: false);
-                e.Handled = true;
-                return;
-
-            case ConsoleKey.Tab:
-            case ConsoleKey.Enter:
-                AcceptAutocompleteSuggestion();
-                e.Handled = true;
-                return;
-
-            case ConsoleKey.Escape:
-                CancelAutocomplete();
-                e.Handled = true;
-                return;
-        }
+        return false;
     }
 
-    // Handle normal input...
+    switch (keyEvent.Key)
+    {
+        case ConsoleKey.UpArrow:
+            context.AutocompleteManager.NavigateSuggestions(context.InputContext, up: true);
+            return true; // Event handled
+
+        case ConsoleKey.DownArrow:
+            context.AutocompleteManager.NavigateSuggestions(context.InputContext, up: false);
+            return true; // Event handled
+
+        case ConsoleKey.Tab:
+        case ConsoleKey.Enter:
+            context.AutocompleteManager.AcceptSuggestion(context.InputContext);
+            return true; // Event handled
+
+        case ConsoleKey.Escape:
+            context.InputContext.ClearAutocomplete();
+            return true; // Event handled
+    }
+
+    return false; // Event not handled
 }
 ```
 
 **Event Handling Features:**
-- **Priority Processing**: Autocomplete keys handled before normal input
-- **Event Marking**: `e.Handled = true` prevents further processing
-- **State-Aware Logic**: Different behavior based on input state
-- **Clean Separation**: Autocomplete logic isolated from normal input handling
+-   **Decoupled Logic**: Input handling logic is encapsulated within the component that uses it.
+-   **Mediator Coordination**: The mediator ensures that events are routed correctly without direct component-to-component coupling.
+-   **Clear Responsibility**: The `AutocompletePanel` is responsible for navigation, selection, and cancellation, while the `InputPanel` handles text entry.
+-   **Event Propagation Control**: A component returns `true` to signify it has handled the event, stopping further propagation.
 
-### Navigation Logic
+### Navigation Logic in AutocompleteManager
+
+The logic for navigating suggestions is centralized in the `AutocompleteManager` to be reusable.
 
 ```csharp
-private void NavigateAutocomplete(bool up)
+// In AutocompleteManager.cs
+public void NavigateSuggestions(InputContext context, bool up)
 {
-    if (!_inputContext.ShowSuggestions || _inputContext.Suggestions.Count == 0)
+    if (!context.HasSuggestions)
         return;
 
+    int count = context.Suggestions.Count;
     if (up)
     {
-        _inputContext.SelectedSuggestionIndex = 
-            (_inputContext.SelectedSuggestionIndex - 1 + _inputContext.Suggestions.Count) 
-            % _inputContext.Suggestions.Count;
+        context.SelectedSuggestionIndex = (context.SelectedSuggestionIndex - 1 + count) % count;
     }
     else
     {
-        _inputContext.SelectedSuggestionIndex = 
-            (_inputContext.SelectedSuggestionIndex + 1) 
-            % _inputContext.Suggestions.Count;
+        context.SelectedSuggestionIndex = (context.SelectedSuggestionIndex + 1) % count;
     }
 }
 ```
 
 **Navigation Features:**
-- **Circular Navigation**: Wraps around at beginning/end of suggestions
-- **Bounds Checking**: Safe navigation even with empty suggestion lists
-- **Immediate Feedback**: Selection changes reflected instantly in UI
+-   **Circular Navigation**: Wraps around at the beginning/end of the suggestion list.
+-   **Stateful Update**: Directly modifies the `InputContext` to reflect the new selection.
+-   **Centralized Logic**: Keeps the navigation algorithm in one place.
 
 ## Error Handling and Resilience
 

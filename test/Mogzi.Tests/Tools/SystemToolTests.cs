@@ -20,6 +20,7 @@ public class SystemToolTests
     [Fact]
     public async Task ExecuteCommand_ShouldReturnCommandOutput_WhenSuccessful()
     {
+        // TOR-4.2
         // Arrange
         var command = "echo hello world";
 
@@ -33,6 +34,7 @@ public class SystemToolTests
     [Fact]
     public async Task ExecuteCommand_ShouldReturnStderr_WhenCommandFails()
     {
+        // TOR-4.2, TOR-8.2
         // Arrange
         var command = "non_existent_command";
 
@@ -46,6 +48,7 @@ public class SystemToolTests
     [Fact]
     public async Task ExecuteCommand_ShouldBeBlocked_WhenApprovalIsRequiredInReadonlyMode()
     {
+        // TOR-7.1
         // Arrange
         _config.ToolApprovals = "readonly";
         _systemTools = new SystemTools(_config);
@@ -61,6 +64,7 @@ public class SystemToolTests
     [Fact]
     public async Task ExecuteCommand_ShouldSucceed_WhenApprovalIsRequiredInAllMode()
     {
+        // TOR-4.2, TOR-7.1
         // Arrange
         _config.ToolApprovals = "all";
         _systemTools = new SystemTools(_config);
@@ -76,6 +80,7 @@ public class SystemToolTests
     [Fact]
     public async Task ExecuteCommand_WithNonExistentCommand_ShouldReturnShellError()
     {
+        // TOR-4.2, TOR-8.2
         // Arrange
         var nonExistentCommand = Guid.NewGuid().ToString("N");
         _systemTools = new SystemTools(_config);
@@ -92,6 +97,7 @@ public class SystemToolTests
     [Fact]
     public void AttemptCompletion_ShouldReturnCorrectXml()
     {
+        // TOR-5.2
         // Arrange
         var resultText = "Task completed successfully.";
         var tools = new SystemTools(new ApplicationConfiguration());

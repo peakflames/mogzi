@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Version>0.13.7-prerelease</Version>
+    <Version>0.14.0-prerelease</Version>
     <OutputType>Exe</OutputType>
     <AssemblyName>mogzi</AssemblyName>
     <TargetFramework>net9.0</TargetFramework>
@@ -11,6 +11,20 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <AllowedReferenceRelatedFileExtensions>*.pdb</AllowedReferenceRelatedFileExtensions>
     <ExcludeFilesFromDeployment>bin\**\*.pdb</ExcludeFilesFromDeployment>
+
+    <!--
+    Workaround for IDE0005: removed unused directives, we must enable XML
+    documentation and ignore the warning it generates (CS1591)
+      -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>IL2026;IL2104;IL3002;CS1591</NoWarn>
+    <AnalysisLevel>9.0</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- <TreatWarningsAsErrors>true</TreatWarningsAsErrors> -->
+
+    <!-- AOT Compatibility Settings -->
+    <TrimmerDefaultAction>link</TrimmerDefaultAction>
+    <!-- <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings> -->
   </PropertyGroup>
 
   <ItemGroup>

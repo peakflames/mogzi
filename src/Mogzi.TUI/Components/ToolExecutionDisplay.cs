@@ -67,7 +67,7 @@ public static class ToolExecutionDisplay
             _ => "⠋"
         };
 
-        var text = !string.IsNullOrWhiteSpace(description) 
+        var text = !string.IsNullOrWhiteSpace(description)
             ? $"{spinner} {toolName}: {description}"
             : $"{spinner} Executing {toolName}...";
 
@@ -125,7 +125,9 @@ public static class ToolExecutionDisplay
     /// Creates a bordered display of file content for write operations with rounded borders.
     /// Shows the last ~50 lines for WriteFileTool as requested.
     /// </summary>
+#pragma warning disable IDE0060 // Remove unused parameter
     private static IRenderable CreateBorderedFileContentDisplay(string content, string toolName, string? description = null)
+#pragma warning restore IDE0060 // Remove unused parameter
     {
         var lines = content.Split('\n');
         var maxLines = 50;
@@ -151,7 +153,7 @@ public static class ToolExecutionDisplay
         }
 
         // Extract filename from description or tool name
-        var fileName = ExtractFileNameFromDescription(description) ?? ExtractFileNameFromToolName(toolName) ?? "file";
+        var fileName = ExtractFileNameFromDescription(description) ?? ExtractFileNameFromToolName() ?? "file";
 
         // Wrap content in a bordered panel with rounded borders
         return new Panel(new Rows(components))
@@ -159,38 +161,6 @@ public static class ToolExecutionDisplay
             .Border(BoxBorder.Rounded)
             .BorderColor(Color.Grey23)
             .Padding(1, 0);
-    }
-
-    /// <summary>
-    /// Creates a clean display of file content for write operations.
-    /// Shows the last ~50 lines for WriteFileTool as requested.
-    /// </summary>
-    private static IRenderable CreateFileContentDisplay(string content)
-    {
-        var lines = content.Split('\n');
-        var maxLines = 50;
-
-        var components = new List<IRenderable>();
-
-        // For WriteFileTool, show the last ~50 lines (or all if fewer)
-        var startIndex = Math.Max(0, lines.Length - maxLines);
-        var displayLines = lines.Skip(startIndex).ToArray();
-
-        // Add truncation indicator if we're not showing the beginning
-        if (startIndex > 0)
-        {
-            components.Add(new Markup($"[dim]... (showing last {displayLines.Length} of {lines.Length} lines)[/]"));
-        }
-
-        for (var i = 0; i < displayLines.Length; i++)
-        {
-            var actualLineNumber = startIndex + i + 1;
-            var lineNumber = actualLineNumber.ToString().PadLeft(3);
-            var lineContent = displayLines[i].EscapeMarkup();
-            components.Add(new Markup($"[dim]{lineNumber}[/] {lineContent}"));
-        }
-
-        return new Rows(components);
     }
 
     /// <summary>
@@ -255,7 +225,9 @@ public static class ToolExecutionDisplay
     private static string? ExtractFileNameFromDescription(string? description)
     {
         if (string.IsNullOrWhiteSpace(description))
+        {
             return null;
+        }
 
         // Look for common filename patterns in the description
         // e.g., "test_file.js", "src/components/App.tsx", etc.
@@ -277,9 +249,9 @@ public static class ToolExecutionDisplay
     /// <summary>
     /// Extracts filename from tool name or description for display purposes.
     /// </summary>
-    private static string? ExtractFileNameFromToolName(string toolName)
+    private static string? ExtractFileNameFromToolName()
     {
-        // For now, return a generic name since we don't have the actual filename
+        // TODO: For now, return a generic name since we don't have the actual filename
         // In the future, this could be enhanced to extract from tool arguments
         return "file";
     }

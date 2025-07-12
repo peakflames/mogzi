@@ -43,6 +43,7 @@ public class DiffPatchToolTests : IDisposable
     [Fact]
     public void ApplyCodePatch_WithValidPatch_ShouldApplyChanges()
     {
+        // TOR-3.1, TOR-3.2
         // Arrange
         var testFile = "test.txt";
         var initialContent = "Hello, old world!";
@@ -67,6 +68,7 @@ public class DiffPatchToolTests : IDisposable
     [Fact]
     public void GenerateCodePatch_WithChanges_ShouldCreatePatch()
     {
+        // TOR-3.1, TOR-3.2
         // Arrange
         var testFile = "test.txt";
         var initialContent = "line1\nline2\nline3";
@@ -255,6 +257,7 @@ public class DiffPatchToolTests : IDisposable
     [Fact]
     public void ApplyCodePatch_WithPathTraversalAttempt_ShouldReturnError()
     {
+        // TOR-7.2
         // Arrange
         var patch = @"--- a/../../../etc/passwd
 +++ b/../../../etc/passwd

@@ -43,6 +43,58 @@ Thank you for your interest in contributing to Mogzi! This document provides gui
 5. Unit Tesing are only created when absolutely necessary, as deemed by the project maintainer.
 6. Git Flow branching and Pull Requests are used coordinate parallel development (i.e. `feature/add-feature-name`, `hotfix/address-issue-12`)
 
+## Requirements Trace Matrix
+
+The project includes an automated requirements trace matrix generator that tracks which requirements are covered by tests. This tool helps ensure comprehensive test coverage and maintains traceability between requirements and verification.
+
+### Generating the Trace Matrix
+
+To generate the requirements trace matrix:
+
+```bash
+# Run the trace matrix generator script
+./scripts/generate_trace_matrix.py
+```
+
+This will generate two output files:
+- `outputs/latest_rqmts_trace_matrix.md` - Markdown format for documentation
+- `outputs/latest_rqmts_trace_matrix.html` - HTML format with enhanced styling and dark theme
+
+### Viewing the HTML Report
+
+To view the HTML trace matrix in your browser:
+
+```bash
+# Start a local web server in the outputs directory
+python -m http.server -d outputs/
+
+# Then open your browser to: http://localhost:8000/latest_rqmts_trace_matrix.html
+```
+
+### Adding Test Coverage
+
+To link test cases to specific requirements, add requirement ID comments on the same line as the assertion that validates the requirement:
+
+```csharp
+[Fact]
+public void MyTestMethod_ShouldValidateRequirement()
+{
+    // Test implementation here...
+    var result = MyMethod();
+    result.Should().BeTrue("this is the reason why"); // TOR-1.1, TOR-2.3
+}
+```
+
+The trace matrix generator automatically scans for these comments and creates the traceability links.
+
+### Coverage Statistics
+
+The trace matrix provides:
+- Overall coverage percentage
+- Coverage breakdown by requirement priority (Critical, High, Medium, Low)
+- Detailed mapping of requirements to test files and methods
+- Identification of requirements without test coverage
+
 
 **Forking Development Workflow:**
 

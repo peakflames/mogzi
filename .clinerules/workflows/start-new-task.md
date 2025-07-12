@@ -20,6 +20,8 @@ Prepare an AI model to work effectively on the Mogzi project by ensuring compreh
 
 5. Use the `read_file` tool to read `docs/process/05_ai_tool_op_requirements.md` to understand the AI tool operational requirements.
 
+6. Use the `list_files` tool to know the locations of the existing design documents in `docs/process/`.
+
 ## 2. Codebase Familiarization
 
 **IMPORTANT NOTE**: The `src/Cli/` project is obsolete and should not be examined. Focus only on the current Mogzi.TUI implementation.
