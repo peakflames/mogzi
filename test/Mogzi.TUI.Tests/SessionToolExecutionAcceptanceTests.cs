@@ -38,17 +38,93 @@ public class SessionToolExecutionAcceptanceTests : SessionTestBase
         var sessionName = $"Test-ToolExecution-{sessionGuid}";
         await _sessionManager.RenameSessionAsync(sessionName);
         
-        // TODO: Create messages with function call and function result content
-        // This will be implemented when we have the actual tool execution workflow
+        // Create user message requesting tool execution
+        var userMessage = new ChatMessage(ChatRole.User, "Please read the file test.txt");
+        await _sessionManager.AddMessageToCurrentSessionAsync(userMessage);
         
-        // Act - Load session to verify persistence
-        // TODO: Implement session loading and verification of tool execution data
+        // Create assistant message with function call
+        var assistantMessage = new ChatMessage(ChatRole.Assistant, "I'll read the file for you.");
+        
+        // Add function call content
+        var functionCallArgs = new Dictionary<string, object?>
+        {
+            ["path"] = "test.txt"
+        };
+        var functionCall = new FunctionCallContent("call_123", "read_text_file", functionCallArgs);
+        assistantMessage.Contents.Add(functionCall);
+        await _sessionManager.AddMessageToCurrentSessionAsync(assistantMessage);
+        
+        // Create tool message with function result
+        var toolMessage = new ChatMessage(ChatRole.Tool, string.Empty);
+        var functionResult = new FunctionResultContent("call_123", "File content: Hello, this is test content!");
+        toolMessage.Contents.Add(functionResult);
+        await _sessionManager.AddMessageToCurrentSessionAsync(toolMessage);
+        
+        // Create final assistant response
+        var finalResponse = new ChatMessage(ChatRole.Assistant, "I've successfully read the file. The content is: Hello, this is test content!");
+        await _sessionManager.AddMessageToCurrentSessionAsync(finalResponse);
+        
+        // Act - Load session in new SessionManager instance to verify persistence
+        var newLogger = _serviceProvider.GetRequiredService<ILogger<SessionManager>>();
+        var newSessionManager = new SessionManager(newLogger);
+        await newSessionManager.LoadSessionAsync(originalSessionId.ToString());
         
         // Assert - Verify tool execution data is preserved
-        // TODO: Verify function calls and results are properly persisted and can be replayed
+        var loadedSession = newSessionManager.CurrentSession;
+        loadedSession.Should().NotBeNull("session should be loaded successfully");
+        loadedSession!.Id.Should().Be(originalSessionId, "loaded session should have same ID");
+        loadedSession.History.Should().HaveCount(4, "session should have all 4 messages preserved"); // TOR-5.3, TOR-5.3.16
         
-        _output?.WriteLine("⏳ TOR-5.3.16: Tool execution persistence test - STUB (to be implemented)");
-        _logger.LogInformation("Tool execution persistence test stub completed");
+        // Verify user message
+        var loadedUserMessage = loadedSession.History[0];
+        loadedUserMessage.Role.Should().Be("user", "first message should be user role");
+        loadedUserMessage.Content.Should().Be("Please read the file test.txt", "user message content should be preserved");
+        
+        // Verify assistant message with function call
+        var loadedAssistantMessage = loadedSession.History[1];
+        loadedAssistantMessage.Role.Should().Be("assistant", "second message should be assistant role");
+        loadedAssistantMessage.Content.Should().Be("I'll read the file for you.", "assistant message content should be preserved");
+        loadedAssistantMessage.FunctionCalls.Should().HaveCount(1, "assistant message should have function call preserved"); // TOR-5.3.16
+        
+        var preservedFunctionCall = loadedAssistantMessage.FunctionCalls[0];
+        preservedFunctionCall.CallId.Should().Be("call_123", "function call ID should be preserved"); // TOR-5.3.16
+        preservedFunctionCall.Name.Should().Be("read_text_file", "function name should be preserved"); // TOR-5.3.16
+        preservedFunctionCall.Arguments.Should().Contain("test.txt", "function arguments should be preserved"); // TOR-5.3.16
+        
+        // Verify tool message with function result
+        var loadedToolMessage = loadedSession.History[2];
+        loadedToolMessage.Role.Should().Be("tool", "third message should be tool role");
+        loadedToolMessage.FunctionResults.Should().HaveCount(1, "tool message should have function result preserved"); // TOR-5.3.16
+        
+        var preservedFunctionResult = loadedToolMessage.FunctionResults[0];
+        preservedFunctionResult.CallId.Should().Be("call_123", "function result call ID should be preserved"); // TOR-5.3.16
+        preservedFunctionResult.Result.Should().Be("File content: Hello, this is test content!", "function result should be preserved"); // TOR-5.3.16
+        
+        // Verify final assistant response
+        var loadedFinalResponse = loadedSession.History[3];
+        loadedFinalResponse.Role.Should().Be("assistant", "fourth message should be assistant role");
+        loadedFinalResponse.Content.Should().Be("I've successfully read the file. The content is: Hello, this is test content!", "final response should be preserved");
+        
+        // Verify complete conversation replay capability by converting back to ChatMessage objects
+        var replayMessages = newSessionManager.GetCurrentSessionMessages();
+        replayMessages.Should().HaveCount(4, "replay should include all messages"); // TOR-5.3.16
+        
+        // Verify function call content is properly restored for AI context
+        var replayAssistantMessage = replayMessages[1];
+        var functionCallContent = replayAssistantMessage.Contents.OfType<FunctionCallContent>().FirstOrDefault();
+        functionCallContent.Should().NotBeNull("function call content should be restored for AI context"); // TOR-5.3.16
+        functionCallContent!.CallId.Should().Be("call_123", "restored function call ID should match");
+        functionCallContent.Name.Should().Be("read_text_file", "restored function name should match");
+        
+        // Verify function result content is properly restored for AI context
+        var replayToolMessage = replayMessages[2];
+        var functionResultContent = replayToolMessage.Contents.OfType<FunctionResultContent>().FirstOrDefault();
+        functionResultContent.Should().NotBeNull("function result content should be restored for AI context"); // TOR-5.3.16
+        functionResultContent!.CallId.Should().Be("call_123", "restored function result call ID should match");
+        functionResultContent.Result.Should().Be("File content: Hello, this is test content!", "restored function result should match");
+        
+        _output?.WriteLine("✅ TOR-5.3.16: Tool execution persistence verified - all interactions preserved for complete replay");
+        _logger.LogInformation("Tool execution persistence test completed successfully");
     }
 
     /// <summary>
@@ -170,17 +246,126 @@ public class SessionToolExecutionAcceptanceTests : SessionTestBase
         var sessionName = $"Test-AIContext-{sessionGuid}";
         await _sessionManager.RenameSessionAsync(sessionName);
         
-        // TODO: Create session with tool interactions and verify AI context includes all tool history
-        // This will test the conversion from session storage back to ChatMessage format for AI
+        // Create a complex conversation with multiple tool interactions
+        var userMessage1 = new ChatMessage(ChatRole.User, "Please list the files in the current directory");
+        await _sessionManager.AddMessageToCurrentSessionAsync(userMessage1);
         
-        // Act - Load session and verify AI receives complete context
-        // TODO: Verify GetCurrentChatHistory() includes all tool interactions in proper format
+        // Assistant response with function call
+        var assistantMessage1 = new ChatMessage(ChatRole.Assistant, "I'll list the files for you.");
+        var functionCall1 = new FunctionCallContent("call_001", "list_files", new Dictionary<string, object?> { ["path"] = "." });
+        assistantMessage1.Contents.Add(functionCall1);
+        await _sessionManager.AddMessageToCurrentSessionAsync(assistantMessage1);
         
-        // Assert - Verify AI model receives complete tool interaction history
-        // TODO: Verify ChatMessage objects include FunctionCallContent and FunctionResultContent
+        // Tool result
+        var toolMessage1 = new ChatMessage(ChatRole.Tool, string.Empty);
+        var functionResult1 = new FunctionResultContent("call_001", "file1.txt\nfile2.py\nREADME.md");
+        toolMessage1.Contents.Add(functionResult1);
+        await _sessionManager.AddMessageToCurrentSessionAsync(toolMessage1);
         
-        _output?.WriteLine("⏳ TOR-5.3.20: AI model conversation context test - STUB (to be implemented)");
-        _logger.LogInformation("AI model conversation context test stub completed");
+        // Assistant response with analysis
+        var assistantMessage2 = new ChatMessage(ChatRole.Assistant, "I found 3 files: file1.txt, file2.py, and README.md. Would you like me to read any of them?");
+        await _sessionManager.AddMessageToCurrentSessionAsync(assistantMessage2);
+        
+        // User requests file reading
+        var userMessage2 = new ChatMessage(ChatRole.User, "Please read file1.txt");
+        await _sessionManager.AddMessageToCurrentSessionAsync(userMessage2);
+        
+        // Assistant response with another function call
+        var assistantMessage3 = new ChatMessage(ChatRole.Assistant, "I'll read file1.txt for you.");
+        var functionCall2 = new FunctionCallContent("call_002", "read_text_file", new Dictionary<string, object?> { ["path"] = "file1.txt" });
+        assistantMessage3.Contents.Add(functionCall2);
+        await _sessionManager.AddMessageToCurrentSessionAsync(assistantMessage3);
+        
+        // Tool result for file reading
+        var toolMessage2 = new ChatMessage(ChatRole.Tool, string.Empty);
+        var functionResult2 = new FunctionResultContent("call_002", "This is the content of file1.txt\nIt contains important information.");
+        toolMessage2.Contents.Add(functionResult2);
+        await _sessionManager.AddMessageToCurrentSessionAsync(toolMessage2);
+        
+        // Final assistant response
+        var assistantMessage4 = new ChatMessage(ChatRole.Assistant, "The file contains: 'This is the content of file1.txt\\nIt contains important information.'");
+        await _sessionManager.AddMessageToCurrentSessionAsync(assistantMessage4);
+        
+        // Act - Load session in new SessionManager instance and get AI context
+        var newLogger = _serviceProvider.GetRequiredService<ILogger<SessionManager>>();
+        var newSessionManager = new SessionManager(newLogger);
+        await newSessionManager.LoadSessionAsync(originalSessionId.ToString());
+        
+        var aiContextMessages = newSessionManager.GetCurrentSessionMessages();
+        
+        // Assert - Verify complete conversation context for AI model
+        aiContextMessages.Should().HaveCount(8, "AI should receive all 8 messages in conversation"); // TOR-5.3, TOR-5.3.20
+        
+        // Verify first tool interaction is preserved for AI context
+        var aiUserMessage1 = aiContextMessages[0];
+        aiUserMessage1.Role.Should().Be(ChatRole.User, "first message should be user role");
+        aiUserMessage1.Text.Should().Be("Please list the files in the current directory", "user message should be preserved");
+        
+        var aiAssistantMessage1 = aiContextMessages[1];
+        aiAssistantMessage1.Role.Should().Be(ChatRole.Assistant, "second message should be assistant role");
+        aiAssistantMessage1.Text.Should().Be("I'll list the files for you.", "assistant text should be preserved");
+        
+        // Verify function call content is available for AI context
+        var aiFunctionCall1 = aiAssistantMessage1.Contents.OfType<FunctionCallContent>().FirstOrDefault();
+        aiFunctionCall1.Should().NotBeNull("AI should receive function call content"); // TOR-5.3.20
+        aiFunctionCall1!.CallId.Should().Be("call_001", "function call ID should be preserved for AI");
+        aiFunctionCall1.Name.Should().Be("list_files", "function name should be preserved for AI");
+        aiFunctionCall1.Arguments.Should().ContainKey("path", "function arguments should be preserved for AI");
+        
+        var aiToolMessage1 = aiContextMessages[2];
+        aiToolMessage1.Role.Should().Be(ChatRole.Tool, "third message should be tool role");
+        
+        // Verify function result content is available for AI context
+        var aiFunctionResult1 = aiToolMessage1.Contents.OfType<FunctionResultContent>().FirstOrDefault();
+        aiFunctionResult1.Should().NotBeNull("AI should receive function result content"); // TOR-5.3.20
+        aiFunctionResult1!.CallId.Should().Be("call_001", "function result call ID should be preserved for AI");
+        aiFunctionResult1.Result.Should().Be("file1.txt\nfile2.py\nREADME.md", "function result should be preserved for AI");
+        
+        // Verify second tool interaction is preserved for AI context
+        var aiAssistantMessage3 = aiContextMessages[5];
+        var aiFunctionCall2 = aiAssistantMessage3.Contents.OfType<FunctionCallContent>().FirstOrDefault();
+        aiFunctionCall2.Should().NotBeNull("AI should receive second function call content"); // TOR-5.3.20
+        aiFunctionCall2!.CallId.Should().Be("call_002", "second function call ID should be preserved for AI");
+        aiFunctionCall2.Name.Should().Be("read_text_file", "second function name should be preserved for AI");
+        
+        var aiToolMessage2 = aiContextMessages[6];
+        var aiFunctionResult2 = aiToolMessage2.Contents.OfType<FunctionResultContent>().FirstOrDefault();
+        aiFunctionResult2.Should().NotBeNull("AI should receive second function result content"); // TOR-5.3.20
+        aiFunctionResult2!.CallId.Should().Be("call_002", "second function result call ID should be preserved for AI");
+        aiFunctionResult2.Result.Should().Be("This is the content of file1.txt\nIt contains important information.", "second function result should be preserved for AI");
+        
+        // Verify conversation flow is maintained for AI understanding
+        var aiAssistantMessage2 = aiContextMessages[3];
+        aiAssistantMessage2.Text.Should().Contain("I found 3 files", "AI should see assistant's analysis of tool results");
+        
+        var aiUserMessage2 = aiContextMessages[4];
+        aiUserMessage2.Text.Should().Be("Please read file1.txt", "AI should see user's follow-up request");
+        
+        var aiAssistantMessage4 = aiContextMessages[7];
+        aiAssistantMessage4.Text.Should().Contain("The file contains", "AI should see final assistant response");
+        
+        // Verify all message types are properly represented for AI
+        var userMessages = aiContextMessages.Where(m => m.Role == ChatRole.User).ToList();
+        var assistantMessages = aiContextMessages.Where(m => m.Role == ChatRole.Assistant).ToList();
+        var toolMessages = aiContextMessages.Where(m => m.Role == ChatRole.Tool).ToList();
+        
+        userMessages.Should().HaveCount(2, "AI should receive both user messages"); // TOR-5.3.20
+        assistantMessages.Should().HaveCount(4, "AI should receive all assistant messages"); // TOR-5.3.20
+        toolMessages.Should().HaveCount(2, "AI should receive both tool messages"); // TOR-5.3.20
+        
+        // Verify function calls and results are properly linked for AI understanding
+        var allFunctionCalls = aiContextMessages.SelectMany(m => m.Contents.OfType<FunctionCallContent>()).ToList();
+        var allFunctionResults = aiContextMessages.SelectMany(m => m.Contents.OfType<FunctionResultContent>()).ToList();
+        
+        allFunctionCalls.Should().HaveCount(2, "AI should receive both function calls"); // TOR-5.3.20
+        allFunctionResults.Should().HaveCount(2, "AI should receive both function results"); // TOR-5.3.20
+        
+        // Verify call IDs match between calls and results for AI understanding
+        allFunctionCalls[0].CallId.Should().Be(allFunctionResults[0].CallId, "first call/result pair should have matching IDs for AI");
+        allFunctionCalls[1].CallId.Should().Be(allFunctionResults[1].CallId, "second call/result pair should have matching IDs for AI");
+        
+        _output?.WriteLine("✅ TOR-5.3.20: Complete conversation context with tool history verified for AI model resumption");
+        _logger.LogInformation("AI model conversation context test completed successfully");
     }
 
     #endregion
