@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.14.1] - IN PROG
+## [0.14.1] - 2025-07-14
 
 - enhance SessionNameGenerator with fruits and ice cream flavors
 - rename `/session list` command to `/session load`
