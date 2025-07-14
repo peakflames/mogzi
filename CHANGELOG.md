@@ -2,7 +2,7 @@
 
 ## [0.14.1] - IN PROG
 
-- TBD
+- Configure HttpClient with Mogzi-specific headers to identify requests as originating from the Mogzi application.
 
 ## [0.14.0] - 2025-07-12
 

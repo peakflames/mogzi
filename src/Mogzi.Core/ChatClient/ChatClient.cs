@@ -183,6 +183,11 @@ public partial class ChatClient
 
         if (chatClient == null)
         {
+            // Create custom HttpClient with Mogzi's default headers
+            var customHttpClient = new HttpClient();
+            customHttpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://github.com/peakflames/mogzi");
+            customHttpClient.DefaultRequestHeaders.Add("X-Title", "Mogzi");
+
             chatClient = new OpenAIClient(
                     new ApiKeyCredential(apiKey),
                     new OpenAIClientOptions
@@ -190,7 +195,8 @@ public partial class ChatClient
                         Endpoint = new(baseUrl),
                         RetryPolicy = new ClientRetryPolicy(3),
                         NetworkTimeout = TimeSpan.FromSeconds(600),
-                        UserAgentApplicationId = "mogzi"
+                        UserAgentApplicationId = "mogzi",
+                        Transport = new HttpClientPipelineTransport(customHttpClient)
                     }
                 )
                 .GetChatClient(modelId)
