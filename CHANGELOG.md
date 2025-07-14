@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.14.1] - IN PROG
+
+- TBD
+
 ## [0.14.0] - 2025-07-12
 
 - Add session name to footer and improve session list
