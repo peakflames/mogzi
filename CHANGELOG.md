@@ -2,6 +2,7 @@
 
 ## [0.14.1] - IN PROG
 
+- enhance SessionNameGenerator with fruits and ice cream flavors
 - rename `/session list` command to `/session load`
 - Configure HttpClient with Mogzi-specific headers to identify requests as originating from the Mogzi application.
 - **Add comprehensive token usage tracking (input/output/cache tokens) & session usage metrics tracking**
