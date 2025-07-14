@@ -16,8 +16,8 @@ public class SessionListProvider(SessionManager sessionManager, ChatClient chatC
     // Cache the session list to ensure consistency between GetSelectionsAsync and OnSelectionAsync
     private List<Session>? _cachedSessions;
 
-    public string Command => "/session list";
-    public string Description => "List and select from available sessions.";
+    public string Command => "/session load";
+    public string Description => "Load a selected session.";
 
     public async Task<List<CompletionItem>> GetSelectionsAsync()
     {

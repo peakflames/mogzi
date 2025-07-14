@@ -2,12 +2,13 @@
 
 ## [0.14.1] - IN PROG
 
+- rename `/session list` command to `/session load`
 - Configure HttpClient with Mogzi-specific headers to identify requests as originating from the Mogzi application.
-- Add comprehensive token usage tracking (input/output/cache tokens) & session usage metrics tracking
-- Implement real-time metrics display in footer with smart formatting
-- Add context window utilization percentage calculation
-- Include session-scoped metrics isolation and persistence
-- Add acceptance tests for metrics functionality
+- **Add comprehensive token usage tracking (input/output/cache tokens) & session usage metrics tracking**
+  - Implement real-time metrics display in footer with smart formatting
+  - Add context window utilization percentage calculation
+  - Include session-scoped metrics isolation and persistence
+  - Add acceptance tests for metrics functionality
 
 ## [0.14.0] - 2025-07-12
 

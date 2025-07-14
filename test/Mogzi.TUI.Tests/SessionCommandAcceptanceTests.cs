@@ -387,8 +387,8 @@ public class SessionCommandAcceptanceTests : SessionTestBase
     {
         // TOR-5.3.2
         // Arrange
-        _output?.WriteLine("🚀 Testing /session list command functionality");
-        _logger.LogInformation("🚀 Testing /session list command functionality");
+        _output?.WriteLine("🚀 Testing /session load command functionality");
+        _logger.LogInformation("🚀 Testing /session load command functionality");
 
         await InitializeApplicationAsync();
 
@@ -411,9 +411,9 @@ public class SessionCommandAcceptanceTests : SessionTestBase
 
         _output?.WriteLine($"📋 Created test sessions: {session1Name} ({session1Id}), {session2Name} ({session2Id})");
 
-        // Act 1: Type /session list
-        _output?.WriteLine("📝 Typing '/session list'");
-        await SimulateUserTypingAsync("/session list");
+        // Act 1: Type /session load
+        _output?.WriteLine("📝 Typing '/session load'");
+        await SimulateUserTypingAsync("/session load");
 
         // Assert 1: Should be in autocomplete state while typing
         _tuiContext.InputContext.State.Should().Be(InputState.Autocomplete,
@@ -525,8 +525,8 @@ public class SessionCommandAcceptanceTests : SessionTestBase
             "should not create any chat messages for interactive commands");
         _output?.WriteLine("✅ No AI messages created (correct interactive behavior)");
 
-        _output?.WriteLine("🎉 /session list command test completed successfully!");
-        _logger.LogInformation("🎉 /session list command test completed successfully!");
+        _output?.WriteLine("🎉 /session load command test completed successfully!");
+        _logger.LogInformation("🎉 /session load command test completed successfully!");
     }
 
     [Fact]

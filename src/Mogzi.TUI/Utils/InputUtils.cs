@@ -52,7 +52,7 @@ public static class InputUtils
     /// <summary>
     /// Finds the bounds of the slash command at the cursor position.
     /// For slash commands, we extract from the '/' to the end of the input or until we hit a non-command character.
-    /// This allows multi-word commands like "/session list" to be treated as a single command.
+    /// This allows multi-word commands like "/session load" to be treated as a single command.
     /// </summary>
     /// <param name="input">The current input text.</param>
     /// <param name="cursorPos">The current cursor position.</param>
