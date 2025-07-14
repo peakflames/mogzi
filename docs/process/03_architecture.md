@@ -240,8 +240,9 @@ ApplicationConfigurationRoot -> ApplicationConfiguration -> ApiProvider[], Profi
 - **ApiProvider**: External service configuration (OpenAI, custom endpoints)
 - **Profile**: User-specific model and provider combinations
 - **ChatHistory**: Message persistence and session management
-- **Session**: Represents a single chat session, including its metadata and history.
-- **ApiMetrics**: Token counting and usage tracking
+- **Session**: Represents a single chat session, including its metadata, history, and usage metrics
+- **SessionUsageMetrics**: Real-time token usage tracking per session with Cline-inspired display
+- **ApiMetrics**: Global token counting and usage tracking
 
 ## Session Management Architecture
 

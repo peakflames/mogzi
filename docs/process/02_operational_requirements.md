@@ -190,6 +190,58 @@
   - **Impl Status**: Implemented
   - **Verification**: Test, Analysis
 
+### TOR-5.4: Session Usage Metrics
+
+- **TOR-5.4.1**: The system SHALL track token usage metrics (input tokens, output tokens, request count) for each session in real-time during AI interactions.
+  - **Priority**: High
+  - **Impl Status**: Implemented
+  - **Verification**: Test, Demonstration
+
+- **TOR-5.4.2**: The system SHALL persist session usage metrics as part of the session data to ensure metrics survive application restarts and session reloading.
+  - **Priority**: High
+  - **Impl Status**: Implemented
+  - **Verification**: Test, Analysis
+
+- **TOR-5.4.3**: The system SHALL display token usage metrics in the footer formatted with smart number abbreviations (345, 1.9k, 15k, 1.9m).
+  - **Priority**: Medium
+  - **Impl Status**: Implemented
+  - **Verification**: Demonstration, Inspection
+
+- **TOR-5.4.4**: The system SHALL clearly distinguish token flow direction in the token usage display.
+  - **Priority**: Low
+  - **Impl Status**: Implemented
+  - **Verification**: Demonstration
+
+- **TOR-5.4.5**: The system SHALL calculate and display context window utilization as a percentage.
+  - **Priority**: Medium
+  - **Impl Status**: Implemented
+  - **Verification**: Test, Demonstration
+
+- **TOR-5.4.6**: The system SHALL maintain session-scoped usage metrics isolation, ensuring each session tracks its own token usage independently.
+  - **Priority**: High
+  - **Impl Status**: Implemented
+  - **Verification**: Test, Analysis
+
+- **TOR-5.4.7**: The system SHALL gracefully handle missing or unavailable usage data by displaying placeholder indicators ("--") without affecting application functionality.
+  - **Priority**: Medium
+  - **Impl Status**: Implemented
+  - **Verification**: Test
+
+- **TOR-5.4.8**: The system SHALL update usage metrics immediately after each AI interaction to provide real-time feedback to users.
+  - **Priority**: Medium
+  - **Impl Status**: Implemented
+  - **Verification**: Test, Demonstration
+
+- **TOR-5.4.9**: The system SHALL include cache token tracking fields in the usage metrics structure to support future cache token functionality when available.
+  - **Priority**: Low
+  - **Impl Status**: Implemented
+  - **Verification**: Analysis, Inspection
+
+- **TOR-5.4.10**: The system SHALL display usage metrics in a consistent footer format: "[Tokens: ↑ X ↓ Y] [Cache: --] [Context: A/B (C%)]" for optimal user experience.
+  - **Priority**: Medium
+  - **Impl Status**: Implemented
+  - **Verification**: Demonstration, Inspection
+
 ### TOR-6: Extensibility and Integration
 
 - **TOR-6.1**: The system SHALL support Model Context Protocol (MCP) for external integrations
@@ -273,19 +325,19 @@
 
 | Priority | Count | Percentage |
 |----------|-------|------------|
-| Critical | 18    | 46%        |
-| High     | 13    | 33%        |
-| Medium   | 8     | 21%        |
-| Low      | 1     | 3%         |
-| **Total** | **39** | **100%** |
+| Critical | 18    | 37%        |
+| High     | 16    | 33%        |
+| Medium   | 13    | 27%        |
+| Low      | 2     | 4%         |
+| **Total** | **49** | **100%** |
 
 | Implementation Status | Count | Percentage |
 |----------------------|-------|------------|
-| Implemented          | 20    | 51%        |
-| Partial              | 3     | 8%         |
-| Not Implemented      | 16    | 41%        |
+| Implemented          | 30    | 61%        |
+| Partial              | 3     | 6%         |
+| Not Implemented      | 16    | 33%        |
 | Deprecated           | 0     | 0%         |
-| **Total**            | **39** | **100%** |
+| **Total**            | **49** | **100%** |
 
 ---
 
