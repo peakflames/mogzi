@@ -148,7 +148,7 @@ public class InputContinuationAcceptanceTests : SessionTestBase
             ("/session rename ", true, "should detect /session rename with space as input continuation command"),
             
             // Non-input continuation commands
-            ("/session list", false, "should detect /session list as non-input continuation command"),
+            ("/session load", false, "should detect /session load as non-input continuation command"),
             ("/session clear", false, "should detect /session clear as non-input continuation command"),
             ("/help", false, "should detect /help as non-input continuation command"),
             ("/clear", false, "should detect /clear as non-input continuation command"),

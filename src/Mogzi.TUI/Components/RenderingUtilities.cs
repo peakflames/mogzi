@@ -67,6 +67,73 @@ public class RenderingUtilities(ILogger<RenderingUtilities> logger) : IRendering
         }
     }
 
+    public string FormatTokenNumber(long tokens)
+    {
+        return tokens switch
+        {
+            < 1000 => tokens.ToString(),
+            < 10000 => $"{tokens / 1000.0:F1}k",
+            < 1000000 => $"{tokens / 1000}k",
+            _ => $"{tokens / 1000000.0:F1}m"
+        };
+    }
+
+    public string FormatSessionTokenUsage(Session? session)
+    {
+        if (session?.UsageMetrics == null)
+        {
+            return "Tokens: --";
+        }
+
+        var metrics = session.UsageMetrics;
+        var input = FormatTokenNumber(metrics.InputTokens);
+        var output = FormatTokenNumber(metrics.OutputTokens);
+
+        return $"Tokens: ↑ {input} ↓ {output}";
+    }
+
+    public string FormatCacheUsage(Session? session)
+    {
+        if (session?.UsageMetrics == null)
+        {
+            return "Cache: --";
+        }
+
+        // Future implementation when cache metrics available
+        // var read = FormatTokenNumber(session.UsageMetrics.CacheReadTokens);
+        // var write = FormatTokenNumber(session.UsageMetrics.CacheWriteTokens);
+        // return $"Cache: © +{read} → {write}";
+
+        return "Cache: --";
+    }
+
+    public string FormatContextWindowUsage(IAppService appService, IEnumerable<ChatMessage> chatHistory)
+    {
+        try
+        {
+            var currentTokens = appService.CalculateTokenMetrics([.. chatHistory]);
+            var maxTokens = EstimateContextWindowSize(appService);
+            var percentage = Math.Min(100.0, (double)currentTokens / maxTokens * 100);
+
+            var colorTag = percentage switch
+            {
+                <= 50 => "[green]",
+                <= 80 => "[yellow]",
+                _ => "[red]"
+            };
+
+            var currentFormatted = FormatTokenNumber(currentTokens);
+            var maxFormatted = FormatTokenNumber(maxTokens);
+
+            return $"{colorTag}Context: {currentFormatted}/{maxFormatted} ({percentage:F0}%)[/]";
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error calculating context window usage");
+            return "[dim]Context: --[/]";
+        }
+    }
+
     public IRenderable RenderMessage(ChatMessage message, IThemeInfo? themeInfo = null)
     {
         if (string.IsNullOrEmpty(message.Text))

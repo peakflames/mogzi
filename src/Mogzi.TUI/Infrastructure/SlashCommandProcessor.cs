@@ -337,7 +337,7 @@ public sealed class SlashCommandProcessor
 
         // Session management commands
         _commands["/session clear"] = new SlashCommand("/session clear", "Clear the current session history", GetSessionClearComponent);
-        _commands["/session list"] = new SlashCommand("/session list", "List and select from available sessions", null, true);
+        _commands["/session load"] = new SlashCommand("/session load", "Load an available session", null, true);
         _commands["/session rename"] = new SlashCommand("/session rename", "Rename the current session", GetSessionRenameComponent, RequiresInputContinuation: true);
     }
 

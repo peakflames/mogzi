@@ -104,6 +104,28 @@ Dynamic, model-specific prompt generation system:
 
 > **📋 Detailed Documentation**: [Modular System Prompt Design](04_08_modular_system_prompt_design.md)
 
+### Session Management
+Comprehensive session persistence with attachment support and usage tracking:
+
+- **Session Lifecycle**: Complete session creation, loading, and persistence
+- **Attachment Handling**: Support for images, PDFs, and other file types within chat messages
+- **Directory-Based Storage**: Each session gets its own directory with metadata and attachments
+- **Usage Metrics**: Real-time token usage tracking with Cline-inspired display formatting
+- **Tool Execution Replay**: Complete preservation of function calls and results for session restoration
+
+> **📋 Detailed Documentation**: [Session Management Design](04_09_session_mgmt.md)
+
+### Session Usage Metrics
+Real-time token usage tracking with Cline-inspired display and per-session isolation:
+
+- **Token Tracking**: Automatic capture of input/output tokens during AI interactions
+- **Cline-Style Formatting**: Smart number abbreviations (345, 1.9k, 15k, 1.9m) for clean display
+- **Context Window Monitoring**: Color-coded context utilization (Green/Yellow/Red)
+- **Session Persistence**: Usage metrics automatically saved and restored with sessions
+- **Footer Integration**: Enhanced footer display with token usage and context window status
+
+> **📋 Detailed Documentation**: [Session Usage Metrics Design](04_10_session_usage_metrics_design.md)
+
 ## System Prompt Design
 
 **Dynamic Prompt Generation:**

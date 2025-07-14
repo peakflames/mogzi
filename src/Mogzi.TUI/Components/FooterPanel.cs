@@ -14,14 +14,20 @@ public class FooterPanel : ITuiComponent
         var currentDir = context.RenderingUtilities.FormatDisplayPath(
             context.TuiContext.WorkingDirectoryProvider.GetCurrentDirectory());
         var modelInfo = context.RenderingUtilities.FormatModelInfo(context.TuiContext.AppService);
-        var tokenInfo = context.RenderingUtilities.FormatTokenUsage(
+        var sessionName = context.TuiContext.SessionManager.CurrentSession?.Name ?? "no session";
+
+        // NEW: Session-scoped token metrics
+        var tokenInfo = context.RenderingUtilities.FormatSessionTokenUsage(
+            context.TuiContext.SessionManager.CurrentSession);
+
+        var cacheInfo = context.RenderingUtilities.FormatCacheUsage(
+            context.TuiContext.SessionManager.CurrentSession);
+
+        var contextInfo = context.RenderingUtilities.FormatContextWindowUsage(
             context.TuiContext.AppService,
             context.TuiContext.HistoryManager.GetCurrentChatHistory());
 
-        // Get the current session name
-        var sessionName = context.TuiContext.SessionManager.CurrentSession?.Name ?? "no session";
-
-        var content = $"[skyblue2]{currentDir}[/]   [yellow]session: {sessionName}[/]  [rosybrown]{modelInfo}[/] [dim]({tokenInfo})[/]";
+        var content = $"[skyblue2]{currentDir}[/]   [yellow]session: {sessionName}[/]   [rosybrown]{modelInfo}[/]   [dim]{tokenInfo}[/]   [dim]{cacheInfo}[/]   {contextInfo}";
 
         return new Panel(new Markup(content))
             .NoBorder();

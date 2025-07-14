@@ -1,7 +1,7 @@
 namespace Mogzi.Core.Utils;
 
 /// <summary>
-/// Utility class for generating creative session names using random color and creature combinations.
+/// Utility class for generating creative session names using random combinations of colors, creatures, fruits, and ice cream flavors.
 /// </summary>
 public static class SessionNameGenerator
 {
@@ -11,12 +11,32 @@ public static class SessionNameGenerator
     [
         "amber", "aqua", "azure", "beige", "black", "blue", "bronze", "brown", "burgundy", "charcoal",
         "coral", "cream", "crimson", "cyan", "ebony", "emerald", "fuchsia", "gold", "gray", "green",
-        "indigo", "ivory", "jade", "khaki", "lavender", "lemon", "lime", "magenta", "maroon", "mint",
-        "navy", "ochre", "olive", "orange", "peach", "pearl", "pink", "plum", "purple", "red",
-        "rose", "ruby", "rust", "sage", "salmon", "sand", "sapphire", "scarlet", "sepia", "silver",
-        "slate", "snow", "tan", "teal", "topaz", "turquoise", "umber", "vanilla", "violet", "white",
-        "wine", "yellow", "zinc", "cerulean", "cobalt", "copper", "garnet", "mahogany", "onyx", "pewter",
-        "platinum", "steel", "titanium", "vermillion", "chartreuse", "mauve", "periwinkle", "taupe"
+        "indigo", "ivory", "jade", "khaki", "lavender", "magenta", "maroon", "navy", "ochre", "olive",
+        "orange", "pearl", "pink", "purple", "red", "rose", "ruby", "rust", "sage", "salmon",
+        "sand", "sapphire", "scarlet", "sepia", "silver", "slate", "snow", "tan", "teal", "topaz",
+        "turquoise", "umber", "violet", "white", "wine", "yellow", "zinc", "cerulean", "cobalt",
+        "copper", "garnet", "mahogany", "onyx", "pewter", "platinum", "steel", "titanium", "vermillion",
+        "chartreuse", "mauve", "periwinkle", "taupe"
+    ];
+
+    private static readonly string[] Fruits =
+    [
+        "apple", "apricot", "avocado", "banana", "blackberry", "blueberry", "cherry", "coconut", "cranberry",
+        "fig", "grape", "grapefruit", "guava", "kiwi", "lemon", "lime", "mango", "melon", "nectarine",
+        "orange", "papaya", "passionfruit", "peach", "pear", "pineapple", "plum", "pomegranate", "raspberry",
+        "strawberry", "tangerine", "watermelon", "dragonfruit", "lychee", "persimmon", "starfruit", "durian",
+        "jackfruit", "rambutan", "mangosteen", "elderberry", "gooseberry", "currant", "boysenberry", "mulberry",
+        "cantaloupe", "honeydew", "clementine", "mandarin", "kumquat", "plantain"
+    ];
+
+    private static readonly string[] IceCreamFlavors =
+    [
+        "vanilla", "chocolate", "strawberry", "mint", "cookies", "caramel", "butterscotch", "pistachio",
+        "rocky", "neapolitan", "sherbet", "sorbet", "fudge", "toffee", "praline", "marshmallow",
+        "bubblegum", "cotton", "rainbow", "birthday", "cookie", "brownie", "cheesecake", "tiramisu",
+        "espresso", "mocha", "cappuccino", "hazelnut", "almond", "coconut", "peanut", "pecan",
+        "walnut", "cashew", "macadamia", "honey", "maple", "cinnamon", "ginger", "lavender",
+        "rose", "lemon", "orange", "berry", "swirl", "ripple", "chunk", "chip", "crunch", "twist"
     ];
 
     private static readonly string[] Creatures =
@@ -66,13 +86,42 @@ public static class SessionNameGenerator
     ];
 
     /// <summary>
-    /// Generates a random session name in the format "color_creature".
+    /// Generates a random session name in the format "item1_item2" using colors, creatures, fruits, and ice cream flavors.
+    /// Ensures the two items come from different categories and are not duplicates.
     /// </summary>
-    /// <returns>A randomly generated session name using lowercase color and creature names separated by an underscore.</returns>
+    /// <returns>A randomly generated session name using lowercase items from different categories separated by an underscore.</returns>
     public static string GenerateName()
     {
-        var color = Colors[Random.Next(Colors.Length)];
-        var creature = Creatures[Random.Next(Creatures.Length)];
-        return $"{color}_{creature}";
+        // Define the four categories
+        var categories = new[]
+        {
+            ("Colors", Colors),
+            ("Fruits", Fruits),
+            ("IceCreamFlavors", IceCreamFlavors),
+            ("Creatures", Creatures)
+        };
+
+        // Pick two different categories
+        var firstCategoryIndex = Random.Next(categories.Length);
+        int secondCategoryIndex;
+        do
+        {
+            secondCategoryIndex = Random.Next(categories.Length);
+        } while (secondCategoryIndex == firstCategoryIndex);
+
+        var firstCategory = categories[firstCategoryIndex];
+        var secondCategory = categories[secondCategoryIndex];
+
+        // Pick random items from each category
+        var firstItem = firstCategory.Item2[Random.Next(firstCategory.Item2.Length)];
+        string secondItem;
+
+        // Ensure no duplicates (in case different categories have overlapping items)
+        do
+        {
+            secondItem = secondCategory.Item2[Random.Next(secondCategory.Item2.Length)];
+        } while (secondItem == firstItem);
+
+        return $"{firstItem}_{secondItem}";
     }
 }
