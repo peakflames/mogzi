@@ -116,6 +116,35 @@ public interface IRenderingUtilities
     string FormatTokenUsage(IAppService appService, IEnumerable<ChatMessage> chatHistory);
 
     /// <summary>
+    /// Formats a token number with appropriate abbreviations (k, m).
+    /// </summary>
+    /// <param name="tokens">The token count</param>
+    /// <returns>The formatted token number string</returns>
+    string FormatTokenNumber(long tokens);
+
+    /// <summary>
+    /// Formats session token usage information for display.
+    /// </summary>
+    /// <param name="session">The session containing usage metrics</param>
+    /// <returns>The formatted session token usage string</returns>
+    string FormatSessionTokenUsage(Session? session);
+
+    /// <summary>
+    /// Formats cache usage information for display.
+    /// </summary>
+    /// <param name="session">The session containing cache metrics</param>
+    /// <returns>The formatted cache usage string</returns>
+    string FormatCacheUsage(Session? session);
+
+    /// <summary>
+    /// Formats context window usage information with color coding.
+    /// </summary>
+    /// <param name="appService">The application service</param>
+    /// <param name="chatHistory">The chat history</param>
+    /// <returns>The formatted context window usage string with color markup</returns>
+    string FormatContextWindowUsage(IAppService appService, IEnumerable<ChatMessage> chatHistory);
+
+    /// <summary>
     /// Renders a chat message with appropriate styling.
     /// </summary>
     /// <param name="message">The chat message to render</param>

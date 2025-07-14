@@ -21,6 +21,9 @@ public class Session
 
     [JsonPropertyName("initialPrompt")]
     public string InitialPrompt { get; set; } = string.Empty;
+
+    [JsonPropertyName("usageMetrics")]
+    public SessionUsageMetrics? UsageMetrics { get; set; }
 }
 
 /// <summary>
@@ -33,6 +36,7 @@ public class Session
 [JsonSerializable(typeof(List<SerializableChatMessage>))]
 [JsonSerializable(typeof(AttachmentMetadata))]
 [JsonSerializable(typeof(List<AttachmentMetadata>))]
+[JsonSerializable(typeof(SessionUsageMetrics))]
 public partial class SessionContext : JsonSerializerContext
 {
 }

@@ -251,6 +251,9 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
             var renderingUtilities = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
             context.ScrollbackTerminal.WriteStatic(new Markup(""));
 
+            // Track usage metrics for session
+            UsageDetails? finalUsage = null;
+
             // Message Boundary Detection System
             // This system creates separate ChatMessage objects for different content types
             // to ensure proper message sequencing in scrollback history and chat persistence.
@@ -270,6 +273,13 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
 
             await foreach (var responseUpdate in responseStream)
             {
+                // Capture usage details from response updates
+                var usageContent = responseUpdate.Contents?.OfType<UsageContent>().FirstOrDefault();
+                if (usageContent?.Details != null)
+                {
+                    finalUsage = usageContent.Details;
+                }
+
                 var updateContentType = DetermineContentType(responseUpdate);
 
                 // Content Type Transition Detection
@@ -375,6 +385,12 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
 
             context.ScrollbackTerminal.WriteStatic(new Markup(""));
             _logger?.LogTrace("=== STREAMING COMPLETED - ALL MESSAGES FINALIZED ===");
+
+            // Update session usage metrics if we captured usage data
+            if (finalUsage != null)
+            {
+                await UpdateSessionUsageMetrics(context, finalUsage);
+            }
         }
         catch (OperationCanceledException) when (context.AiOperationCts?.Token.IsCancellationRequested == true)
         {
@@ -911,7 +927,43 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
         return functionCall?.Name ?? "Unknown Tool";
     }
 
+    /// <summary>
+    /// Updates the current session's usage metrics with data from the AI response.
+    /// </summary>
+    private async Task UpdateSessionUsageMetrics(ITuiContext context, UsageDetails usage)
+    {
+        try
+        {
+            _logger.LogTrace("Updating session usage metrics - Input: {Input}, Output: {Output}, Total: {Total}",
+                usage.InputTokenCount, usage.OutputTokenCount, usage.TotalTokenCount);
 
+            var sessionManager = context.ServiceProvider.GetRequiredService<SessionManager>();
+            var currentSession = sessionManager.CurrentSession;
 
+            if (currentSession != null)
+            {
+                // Initialize usage metrics if not present
+                currentSession.UsageMetrics ??= new SessionUsageMetrics();
 
+                // Add the usage data from this request
+                currentSession.UsageMetrics.AddUsage(usage);
+
+                // Save the updated session
+                await sessionManager.SaveCurrentSessionAsync();
+
+                _logger.LogTrace("Session usage metrics updated - Total Input: {TotalInput}, Total Output: {TotalOutput}, Requests: {Requests}",
+                    currentSession.UsageMetrics.InputTokens,
+                    currentSession.UsageMetrics.OutputTokens,
+                    currentSession.UsageMetrics.RequestCount);
+            }
+            else
+            {
+                _logger.LogWarning("No current session found, unable to update usage metrics");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating session usage metrics");
+        }
+    }
 }
