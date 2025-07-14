@@ -4,10 +4,13 @@ namespace Mogzi.TUI.Services;
 /// Provides user selection functionality for listing and selecting sessions.
 /// Implements the IUserSelectionProvider interface to integrate with the TUI's user selection system.
 /// </summary>
-public class SessionListProvider(SessionManager sessionManager, ChatClient chatClient, ILogger<SessionListProvider> logger) : IUserSelectionProvider
+public class SessionListProvider(SessionManager sessionManager, ChatClient chatClient, HistoryManager historyManager, IScrollbackTerminal scrollbackTerminal, IServiceProvider serviceProvider, ILogger<SessionListProvider> logger) : IUserSelectionProvider
 {
     private readonly SessionManager _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
     private readonly ChatClient _chatClient = chatClient ?? throw new ArgumentNullException(nameof(chatClient));
+    private readonly HistoryManager _historyManager = historyManager ?? throw new ArgumentNullException(nameof(historyManager));
+    private readonly IScrollbackTerminal _scrollbackTerminal = scrollbackTerminal ?? throw new ArgumentNullException(nameof(scrollbackTerminal));
+    private readonly IServiceProvider _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     private readonly ILogger<SessionListProvider> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
     // Cache the session list to ensure consistency between GetSelectionsAsync and OnSelectionAsync
@@ -121,7 +124,38 @@ public class SessionListProvider(SessionManager sessionManager, ChatClient chatC
         {
             _logger.LogInformation("SessionListProvider: Loading session '{SessionName}' (ID: {SessionId})",
                 selectedSession.Name, selectedSession.Id);
+
+            // Load the session data
             await _sessionManager.LoadSessionAsync(selectedSession.Id.ToString());
+
+            // Clear existing history before loading new session
+            _historyManager.ClearHistory();
+
+            // Load session messages into history manager for UI display (same logic as FlexColumnTuiApp.Initialize)
+            var sessionMessages = _sessionManager.GetCurrentSessionMessages();
+            foreach (var message in sessionMessages)
+            {
+                // Add messages according to their actual role, but skip persistence since they're already persisted
+                if (message.Role == ChatRole.User)
+                {
+                    _historyManager.AddUserMessageWithoutPersistence(message);
+                }
+                else if (message.Role == ChatRole.Assistant)
+                {
+                    _historyManager.AddAssistantMessageWithoutPersistence(message);
+                }
+                else if (message.Role == ChatRole.Tool)
+                {
+                    _historyManager.AddToolMessageWithoutPersistence(message);
+                }
+            }
+
+            // Clear scrollback and render the loaded session
+            _scrollbackTerminal.Initialize();
+            RenderWelcomeAndHistory();
+
+            _logger.LogInformation("SessionListProvider: Successfully loaded and rendered {MessageCount} messages from session '{SessionName}'",
+                sessionMessages.Count, selectedSession.Name);
         }
         else
         {
@@ -130,5 +164,78 @@ public class SessionListProvider(SessionManager sessionManager, ChatClient chatC
 
         // Clear the cache after use
         _cachedSessions = null;
+    }
+
+    /// <summary>
+    /// Renders the welcome message and chat history after loading a session.
+    /// This replicates the logic from FlexColumnTuiApp.RenderInitialContent().
+    /// </summary>
+    private void RenderWelcomeAndHistory()
+    {
+        try
+        {
+            // Get required services for rendering
+            var tuiContext = _serviceProvider.GetRequiredService<ITuiContext>();
+            var stateManager = _serviceProvider.GetRequiredService<ITuiStateManager>();
+            var renderingUtilities = _serviceProvider.GetRequiredService<IRenderingUtilities>();
+            var themeInfo = _serviceProvider.GetRequiredService<IThemeInfo>();
+
+            // Create render context
+            var renderContext = new RenderContext(
+                tuiContext,
+                stateManager.CurrentStateType,
+                _logger,
+                _serviceProvider,
+                renderingUtilities,
+                themeInfo
+            );
+
+            // Render welcome panel first
+            var welcomePanel = _serviceProvider.GetRequiredService<WelcomePanel>();
+            var welcomeContent = welcomePanel.Render(renderContext);
+            _scrollbackTerminal.WriteStatic(welcomeContent);
+            _scrollbackTerminal.WriteStatic(new Markup(""));
+
+            // If we have existing chat history, render it after the welcome message
+            var chatHistory = _historyManager.GetCurrentChatHistory();
+            if (chatHistory.Any())
+            {
+                _scrollbackTerminal.WriteStatic(new Markup($"[dim]Loading {chatHistory.Count} messages from existing chat history[/]"));
+                _scrollbackTerminal.WriteStatic(new Markup(""));
+                RenderHistory(renderingUtilities);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error rendering welcome and history for loaded session");
+        }
+    }
+
+    /// <summary>
+    /// Renders the chat history messages to the scrollback terminal.
+    /// This replicates the logic from FlexColumnTuiApp.RenderHistory().
+    /// </summary>
+    private void RenderHistory(IRenderingUtilities renderingUtilities)
+    {
+        var chatHistory = _historyManager.GetCurrentChatHistory();
+        ChatRole? previousRole = null;
+
+        foreach (var message in chatHistory)
+        {
+            if (previousRole != message.Role)
+            {
+                _scrollbackTerminal.WriteStatic(new Markup(""));
+            }
+
+            var renderedMessage = renderingUtilities.RenderMessage(message);
+            _scrollbackTerminal.WriteStatic(renderedMessage);
+
+            if (previousRole != message.Role)
+            {
+                _scrollbackTerminal.WriteStatic(new Markup(""));
+            }
+
+            previousRole = message.Role;
+        }
     }
 }
