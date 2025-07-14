@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.14.2] - IN-PROG
+
+- TBD
+
 ## [0.14.1] - 2025-07-14
 
 - enhance SessionNameGenerator with fruits and ice cream flavors
