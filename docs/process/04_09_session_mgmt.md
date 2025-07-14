@@ -23,6 +23,7 @@ public class Session
     public DateTime LastModifiedAt { get; set; }
     public List<SerializableChatMessage> History { get; set; } = [];
     public string InitialPrompt { get; set; } = string.Empty;
+    public SessionUsageMetrics? UsageMetrics { get; set; } // Real-time token usage tracking
 }
 ```
 
