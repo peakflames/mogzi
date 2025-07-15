@@ -69,7 +69,7 @@ public interface ITuiContext
     /// <summary>
     /// Gets the TUI mediator for coordinating component interactions.
     /// </summary>
-    ITuiMediator Mediator { get; }
+    IAiProcessingCoordinator AiProcessCoordinator { get; }
 
     /// <summary>
     /// Gets the current tool progress text.

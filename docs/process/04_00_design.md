@@ -272,17 +272,13 @@ public interface ITuiComponentManager
 }
 ```
 
-**Mediator Pattern:**
+**AI Processing Coordinator:**
 ```csharp
-public interface ITuiMediator
+public interface IAiProcessingCoordinator
 {
     string Name { get; }
-    Task HandleUserInputAsync(string input, ITuiContext context);
-    Task HandleKeyPressAsync(KeyPressEventArgs e, ITuiContext context);
-    Task HandleCharacterTypedAsync(CharacterTypedEventArgs e, ITuiContext context);
-    Task HandleStateChangeAsync(ChatState newState, ChatState previousState, ITuiContext context);
-    Task HandleToolExecutionAsync(string toolName, string progress, ITuiContext context);
-    Task NotifyComponentAsync(string componentName, object eventData, ITuiContext context);
+    Task StartAiProcessingWorkflow(ITuiContext context);
+    Task NotifyHistoryChangedAsync();
 }
 ```
 

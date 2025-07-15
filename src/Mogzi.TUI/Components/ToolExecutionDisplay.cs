@@ -123,18 +123,18 @@ public static class ToolExecutionDisplay
 
     /// <summary>
     /// Creates a bordered display of file content for write operations with rounded borders.
-    /// Shows the last ~50 lines for WriteFileTool as requested.
+    /// Shows the last N lines for WriteFileTool as requested.
     /// </summary>
 #pragma warning disable IDE0060 // Remove unused parameter
     private static IRenderable CreateBorderedFileContentDisplay(string content, string toolName, string? description = null)
 #pragma warning restore IDE0060 // Remove unused parameter
     {
         var lines = content.Split('\n');
-        var maxLines = 50;
+        var maxLines = 100;
 
         var components = new List<IRenderable>();
 
-        // For WriteFileTool, show the last ~50 lines (or all if fewer)
+        // For WriteFileTool, show the last N lines (or all if fewer)
         var startIndex = Math.Max(0, lines.Length - maxLines);
         var displayLines = lines.Skip(startIndex).ToArray();
 
@@ -149,7 +149,7 @@ public static class ToolExecutionDisplay
             var actualLineNumber = startIndex + i + 1;
             var lineNumber = actualLineNumber.ToString().PadLeft(3);
             var lineContent = displayLines[i].EscapeMarkup();
-            components.Add(new Markup($"[dim]{lineNumber}[/] {lineContent}"));
+            components.Add(new Markup($"[dim]{lineNumber}[/] {Markup.Escape(lineContent)}"));
         }
 
         // Extract filename from description or tool name

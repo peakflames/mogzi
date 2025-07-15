@@ -169,7 +169,7 @@ public class RenderingUtilities(ILogger<RenderingUtilities> logger) : IRendering
             ? Mogzi.Utils.MessageUtils.StripSystemEnvironment(message.Text)
             : message.Text;
 
-        return new Markup($"[{color}]{prefix}{displayText}[/]");
+        return new Markup($"[{color}]{prefix}{Markup.Escape(displayText)}[/]");
     }
 
     private int EstimateContextWindowSize(IAppService appService)

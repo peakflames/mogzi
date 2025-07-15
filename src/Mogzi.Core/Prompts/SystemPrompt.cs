@@ -1,6 +1,3 @@
-
-using System.Text;
-
 namespace Mogzi.Prompts;
 
 public static partial class Promptinator

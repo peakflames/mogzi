@@ -1,7 +1,3 @@
-using FluentResults;
-using System.Text.Json;
-using System.ClientModel.Primitives;
-
 namespace Mogzi;
 
 public partial class ChatClient
