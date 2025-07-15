@@ -1,9 +1,3 @@
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Security;
-using System.Text;
-
 namespace Mogzi.Tools;
 
 public class ShellTool(ApplicationConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)

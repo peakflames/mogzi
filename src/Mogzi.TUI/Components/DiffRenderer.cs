@@ -145,10 +145,10 @@ public static class DiffRenderer
             };
 
             var lineNumberPadded = lineNumber.PadLeft(4);
-            return new Markup($"[dim]{lineNumberPadded}[/] [{color}]{prefix} {content}[/]");
+            return new Markup($"[dim]{lineNumberPadded}[/] [{color}]{prefix} {Markup.Escape(content)}[/]");
         }
 
-        return new Markup($"[{color}]{prefix} {content}[/]");
+        return new Markup($"[{color}]{prefix} {Markup.Escape(content)}[/]");
     }
 
     /// <summary>
@@ -335,6 +335,6 @@ public static class DiffRenderer
 
         // Format like Gemini: "  1  + const hello = () => {"
         var lineNumberPadded = lineNumber.PadLeft(3);
-        return new Markup($"[dim]{lineNumberPadded}[/]  [{color}]{prefix} {content}[/]");
+        return new Markup($"[dim]{lineNumberPadded}[/]  [{color}]{prefix} {Markup.Escape(content)}[/]");
     }
 }

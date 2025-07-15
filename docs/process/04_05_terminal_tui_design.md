@@ -19,7 +19,7 @@ The TUI is built around a set of core interfaces that define the component syste
 
 -   **`ITuiComponent`**: The base interface for all UI components. It defines the contract for rendering, input handling, and lifecycle management.
 -   **`ITuiComponentManager`**: Responsible for registering, managing, and rendering all UI components. It acts as the central hub for the component system.
--   **`ITuiMediator`**: Defines the contract for coordinating interactions between components, ensuring they remain decoupled.
+-   **`IAiProcessingCoordinator`**: Defines the contract for coordinating AI processing workflows and component interactions, ensuring they remain decoupled.
 -   **`ITuiLayout`**: Defines how components are arranged and composed into a single `IRenderable` view.
 -   **`IRenderContext`**: Provides components with access to shared services, application state, and rendering utilities.
 
@@ -47,13 +47,10 @@ classDiagram
         +UpdateComponentVisibility(ChatState, IRenderContext) void
     }
     
-    class ITuiMediator {
+    class IAiProcessingCoordinator {
         +Name string
-        +HandleUserInputAsync(string, ITuiContext) Task
-        +HandleKeyPressAsync(KeyPressEventArgs, ITuiContext) Task
-        +HandleCharacterTypedAsync(CharacterTypedEventArgs, ITuiContext) Task
-        +HandleStateChangeAsync(ChatState, ChatState, ITuiContext) Task
-        +NotifyComponentAsync(string, object, ITuiContext) Task
+        +StartAiProcessingWorkflow(ITuiContext) Task
+        +NotifyHistoryChangedAsync() Task
     }
     
     class ITuiLayout {
@@ -85,7 +82,7 @@ classDiagram
     
     ITuiComponentManager --* ITuiComponent : manages
     ITuiComponentManager --* ITuiLayout : uses
-    ITuiMediator --o ITuiComponent : coordinates
+    IAiProcessingCoordinator --o ITuiComponent : coordinates
     InputPanel ..|> ITuiComponent : implements
     AutocompletePanel ..|> ITuiComponent : implements
     ProgressPanel ..|> ITuiComponent : implements
@@ -198,7 +195,7 @@ private static void ConfigureServices(IServiceCollection services)
 
     // TUI Management
     services.AddSingleton<ITuiLayout, FlexColumnLayout>();
-    services.AddSingleton<ITuiMediator, FlexColumnMediator>();
+    services.AddSingleton<IAiProcessingCoordinator, AiProcessingCoordinator>();
     services.AddSingleton<ITuiComponentManager, TuiComponentManager>();
 
     // Main TUI Application

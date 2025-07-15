@@ -1,8 +1,3 @@
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Text;
-
 namespace Mogzi.Tools;
 
 public class SystemTools(ApplicationConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null)

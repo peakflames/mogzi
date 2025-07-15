@@ -26,7 +26,7 @@ graph TD
     B --> C[FlexColumnTuiApp]
     C --> D[ITuiStateManager]
     C --> E[ITuiComponentManager]
-    C --> F[ITuiMediator]
+    C --> F[IAiProcessingCoordinator]
     C --> G[IScrollbackTerminal]
     C --> H[AdvancedKeyboardHandler]
     
@@ -43,7 +43,7 @@ graph TD
     E --> PP[ProgressPanel]
     E --> FL[FlexColumnLayout]
     
-    F --> FCM[FlexColumnMediator]
+    F --> APC[AiProcessingCoordinator]
     
     TC --> IC[InputContext]
     TC --> HM[HistoryManager]

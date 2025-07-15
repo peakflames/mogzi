@@ -16,7 +16,7 @@ public class TuiContext(
     IWorkingDirectoryProvider workingDirectoryProvider,
     ToolResponseParser toolResponseParser,
     IAppService appService,
-    ITuiMediator mediator) : ITuiContext
+    IAiProcessingCoordinator aiProcessingCoordinator) : ITuiContext
 {
 
     public InputContext InputContext { get; } = inputContext ?? throw new ArgumentNullException(nameof(inputContext));
@@ -31,7 +31,7 @@ public class TuiContext(
     public IWorkingDirectoryProvider WorkingDirectoryProvider { get; } = workingDirectoryProvider ?? throw new ArgumentNullException(nameof(workingDirectoryProvider));
     public ToolResponseParser ToolResponseParser { get; } = toolResponseParser ?? throw new ArgumentNullException(nameof(toolResponseParser));
     public IAppService AppService { get; } = appService ?? throw new ArgumentNullException(nameof(appService));
-    public ITuiMediator Mediator { get; } = mediator ?? throw new ArgumentNullException(nameof(mediator));
+    public IAiProcessingCoordinator AiProcessCoordinator { get; } = aiProcessingCoordinator ?? throw new ArgumentNullException(nameof(aiProcessingCoordinator));
 
     public string ToolProgress { get; set; } = string.Empty;
     public string CurrentToolName { get; set; } = string.Empty;

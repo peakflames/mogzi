@@ -29,7 +29,7 @@ public class ToolExecutionTuiState : ITuiState
                 : "Executing tool...")
             : context.ToolProgress;
 
-        var toolExecutionComponent = new Panel(new Markup($"[yellow]{leadingAnimation}[/] [dim]{progressText}[/]"))
+        var toolExecutionComponent = new Panel(new Markup($"[yellow]{leadingAnimation}[/] [dim]{Markup.Escape(progressText)}[/]"))
             .NoBorder();
 
         return new Rows(new Text(""), toolExecutionComponent, new Text(""), CreateFlexFooterComponent(context));

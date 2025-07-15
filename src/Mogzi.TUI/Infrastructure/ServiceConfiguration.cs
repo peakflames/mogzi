@@ -83,7 +83,7 @@ public static class ServiceConfiguration
             var workingDirectoryProvider = serviceProvider.GetRequiredService<IWorkingDirectoryProvider>();
             var toolResponseParser = serviceProvider.GetRequiredService<ToolResponseParser>();
             var appService = serviceProvider.GetRequiredService<IAppService>();
-            var mediator = serviceProvider.GetRequiredService<ITuiMediator>();
+            var aiProcessingCoordinator = serviceProvider.GetRequiredService<IAiProcessingCoordinator>();
 
             return new TuiContext(
                 inputContext,
@@ -98,7 +98,7 @@ public static class ServiceConfiguration
                 workingDirectoryProvider,
                 toolResponseParser,
                 appService,
-                mediator);
+                aiProcessingCoordinator);
         });
 
         // Register state implementations
@@ -140,22 +140,21 @@ public static class ServiceConfiguration
             return componentManager;
         });
 
-        // Register and configure mediator
-        _ = services.AddSingleton<ITuiMediator>(serviceProvider =>
+        // Register and configure AI processing coordinator
+        _ = services.AddSingleton<IAiProcessingCoordinator>(serviceProvider =>
         {
-            var logger = serviceProvider.GetRequiredService<ILogger<FlexColumnMediator>>();
-            var themeInfo = serviceProvider.GetRequiredService<IThemeInfo>();
-            var mediator = new FlexColumnMediator(logger, themeInfo);
+            var logger = serviceProvider.GetRequiredService<ILogger<AiProcessingCoordinator>>();
+            var coordinator = new AiProcessingCoordinator(logger);
 
-            // Register components with mediator
-            mediator.RegisterComponent(serviceProvider.GetRequiredService<InputPanel>());
-            mediator.RegisterComponent(serviceProvider.GetRequiredService<AutocompletePanel>());
-            mediator.RegisterComponent(serviceProvider.GetRequiredService<UserSelectionPanel>());
-            mediator.RegisterComponent(serviceProvider.GetRequiredService<ProgressPanel>());
-            mediator.RegisterComponent(serviceProvider.GetRequiredService<FooterPanel>());
-            mediator.RegisterComponent(serviceProvider.GetRequiredService<WelcomePanel>());
+            // Register components with coordinator
+            coordinator.RegisterComponent(serviceProvider.GetRequiredService<InputPanel>());
+            coordinator.RegisterComponent(serviceProvider.GetRequiredService<AutocompletePanel>());
+            coordinator.RegisterComponent(serviceProvider.GetRequiredService<UserSelectionPanel>());
+            coordinator.RegisterComponent(serviceProvider.GetRequiredService<ProgressPanel>());
+            coordinator.RegisterComponent(serviceProvider.GetRequiredService<FooterPanel>());
+            coordinator.RegisterComponent(serviceProvider.GetRequiredService<WelcomePanel>());
 
-            return mediator;
+            return coordinator;
         });
     }
 }
