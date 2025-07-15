@@ -385,7 +385,7 @@ public sealed class FlexColumnTuiApp : IDisposable
                 ? Mogzi.Utils.MessageUtils.StripSystemEnvironment(message.Text)
                 : message.Text;
 
-            components.Add(new Markup($"[{color}]{prefix}{displayText}[/]"));
+            components.Add(new Markup($"[{color}]{prefix}{Markup.Escape(displayText)}[/]"));
         }
 
         // Handle function calls and results for tool execution display

@@ -237,7 +237,7 @@ public class InputTuiState : ITuiState
             var description = context.SlashCommandProcessor.GetAllCommands()
                 .GetValueOrDefault(suggestion, "");
 
-            return new Markup($"{style}{prefix} {suggestion,-12} {description}[/]");
+            return new Markup($"{style}{prefix} {suggestion,-12} {Markup.Escape(description)}[/]");
         }).ToArray();
 
         var suggestionsPanel = new Panel(new Rows(suggestionItems))
@@ -263,7 +263,7 @@ public class InputTuiState : ITuiState
             var style = isSelected ? "[blue on white]" : "[dim]";
             var prefix = isSelected ? ">" : " ";
 
-            return new Markup($"{style}{prefix} {item.Text,-12} {item.Description}[/]");
+            return new Markup($"{style}{prefix} {item.Text,-12} {Markup.Escape(item.Description)}[/]");
         }).ToArray();
 
         var selectionPanel = new Panel(new Rows(selectionItems))
