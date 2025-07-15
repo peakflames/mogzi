@@ -14,7 +14,7 @@ public class NullReferenceExceptionTest : IDisposable
     private readonly TestScrollbackTerminal _testTerminal;
     private readonly ITuiContext _tuiContext;
     private readonly ITuiStateManager _stateManager;
-    private readonly ITuiMediator _mediator;
+    private readonly IAiProcessingCoordinator _coordinator;
     private readonly ILogger<NullReferenceExceptionTest> _logger;
     private readonly ITestOutputHelper? _output;
     private bool _disposed = false;
@@ -56,7 +56,7 @@ public class NullReferenceExceptionTest : IDisposable
         _testTerminal = (TestScrollbackTerminal)_serviceProvider.GetRequiredService<IScrollbackTerminal>();
         _tuiContext = _serviceProvider.GetRequiredService<ITuiContext>();
         _stateManager = _serviceProvider.GetRequiredService<ITuiStateManager>();
-        _mediator = _serviceProvider.GetRequiredService<ITuiMediator>();
+        _coordinator = _serviceProvider.GetRequiredService<IAiProcessingCoordinator>();
         _logger = _serviceProvider.GetRequiredService<ILogger<NullReferenceExceptionTest>>();
         
         _logger.LogInformation("NullReferenceExceptionTest initialized with real service configuration");
@@ -87,7 +87,7 @@ public class NullReferenceExceptionTest : IDisposable
         var exception = await Record.ExceptionAsync(async () =>
         {
             // This simulates what ThinkingTuiState.OnEnterAsync does
-            await _mediator.StartAiProcessingWorkflow(_tuiContext);
+            await _coordinator.StartAiProcessingWorkflow(_tuiContext);
         });
         
         // We expect NO exception - the fix should handle null AiOperationCts gracefully
@@ -101,31 +101,6 @@ public class NullReferenceExceptionTest : IDisposable
         _logger.LogInformation("✅ StartAiProcessingWorkflow handled null AiOperationCts gracefully");
     }
 
-    [Fact]
-    public async Task HandleUserInputAsync_ShouldProperlyInitializeAiOperationCts()
-    {
-        // Arrange
-        _output?.WriteLine("🧪 Testing that HandleUserInputAsync properly initializes AiOperationCts");
-        _logger.LogInformation("🧪 Testing that HandleUserInputAsync properly initializes AiOperationCts");
-        
-        await InitializeApplicationAsync();
-        
-        // Ensure AiOperationCts starts as null
-        _tuiContext.AiOperationCts = null;
-        
-        // Act
-        _output?.WriteLine("🔍 Calling HandleUserInputAsync to initialize AiOperationCts");
-        _logger.LogInformation("🔍 Calling HandleUserInputAsync to initialize AiOperationCts");
-        
-        await _mediator.HandleUserInputAsync("tell me a joke", _tuiContext);
-        
-        // Assert
-        _tuiContext.AiOperationCts.Should().NotBeNull("HandleUserInputAsync should initialize AiOperationCts");
-        _tuiContext.AiOperationCts!.Token.Should().NotBeNull("AiOperationCts.Token should be available");
-        
-        _output?.WriteLine("✅ HandleUserInputAsync properly initialized AiOperationCts");
-        _logger.LogInformation("✅ HandleUserInputAsync properly initialized AiOperationCts");
-    }
 
     /// <summary>
     /// Initializes the TUI application components.

@@ -1,10 +1,10 @@
 namespace Mogzi.TUI.State;
 
-public class HistoryManager(ITuiMediator mediator)
+public class HistoryManager(IAiProcessingCoordinator aiProcessingCoordinator)
 {
     private readonly List<ChatMessage> _completedMessages = [];
     private readonly List<ChatMessage> _pendingMessages = [];
-    private readonly ITuiMediator _mediator = mediator;
+    private readonly IAiProcessingCoordinator _aiProcessingCoordinator = aiProcessingCoordinator;
     private SessionManager? _sessionManager;
 
     /// <summary>
@@ -187,7 +187,7 @@ public class HistoryManager(ITuiMediator mediator)
     {
         // This is now handled by the mediator, which will trigger a re-render.
         // In a more advanced implementation, the mediator could notify specific components.
-        _ = _mediator.NotifyHistoryChangedAsync();
+        _ = _aiProcessingCoordinator.NotifyHistoryChangedAsync();
     }
 
     /// <summary>

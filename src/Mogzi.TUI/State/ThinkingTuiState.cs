@@ -73,7 +73,7 @@ public class ThinkingTuiState : ITuiState
         {
             // Start AI processing when entering thinking state
             context.Logger.LogTrace("Calling StartAiProcessingWorkflow from ThinkingTuiState.OnEnterAsync");
-            await context.Mediator.StartAiProcessingWorkflow(context);
+            await context.AiProcessCoordinator.StartAiProcessingWorkflow(context);
             context.Logger.LogTrace("StartAiProcessingWorkflow completed successfully");
         }
         catch (Exception ex)

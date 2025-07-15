@@ -4,197 +4,13 @@ namespace Mogzi.TUI.Components;
 /// Coordinates interactions between TUI components and manages complex workflows.
 /// Implements the mediator pattern to reduce coupling between components.
 /// </summary>
-public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo themeInfo) : ITuiMediator
+public class AiProcessingCoordinator(ILogger<AiProcessingCoordinator> logger) : IAiProcessingCoordinator
 {
     private readonly Dictionary<string, ITuiComponent> _registeredComponents = [];
-    private readonly ILogger<FlexColumnMediator> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    private readonly IThemeInfo _themeInfo = themeInfo ?? throw new ArgumentNullException(nameof(themeInfo));
+    private readonly ILogger<AiProcessingCoordinator> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-    public string Name => "FlexColumnMediator";
+    public string Name => "AiProcessingCoordinator";
 
-    public async Task HandleUserInputAsync(string input, ITuiContext context)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(input);
-        ArgumentNullException.ThrowIfNull(context);
-
-        _logger.LogTrace("Mediator handling user input: {Input}", input);
-
-        try
-        {
-            // Add spacing before user message
-            context.ScrollbackTerminal.WriteStatic(new Markup(""));
-
-            // Get current environment context
-            var envPrompt = EnvSystemPrompt.GetEnvPrompt(
-                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-                context.AppService.ChatClient.OperatingSystem.ToString(),
-                context.AppService.ChatClient.DefaultShell,
-                context.AppService.ChatClient.Username,
-                context.AppService.ChatClient.Hostname,
-                context.WorkingDirectoryProvider.GetCurrentDirectory(),
-                "chat", // mode - could be made configurable
-                context.AppService.ChatClient.Config.ToolApprovals
-            );
-
-            _logger?.LogTrace("Generated environment prompt: {EnvPrompt}", envPrompt);
-
-            // Check if this is the first message in the session and add workspace details
-            var systemEnvironment = envPrompt;
-            if (context.SessionManager.CurrentSession?.IsFirstMessage == true)
-            {
-                var workspaceDetails = EnvSystemPrompt.GetWorkspaceDetails(
-                    context.WorkingDirectoryProvider.GetCurrentDirectory());
-                systemEnvironment = envPrompt + "\n\n" + workspaceDetails;
-
-                _logger?.LogTrace("Added workspace details for first message in session");
-
-                // Mark that we've processed the first message
-                if (context.SessionManager.CurrentSession != null)
-                {
-                    context.SessionManager.CurrentSession.IsFirstMessage = false;
-                    await context.SessionManager.SaveCurrentSessionAsync();
-                }
-            }
-
-            // Create user message with environment context appended (for AI processing)
-            var fullUserMessage = Mogzi.Utils.MessageUtils.AppendSystemEnvironment(input, systemEnvironment);
-            var userMessage = new ChatMessage(ChatRole.User, fullUserMessage);
-            context.HistoryManager.AddUserMessage(userMessage);
-
-            _logger?.LogTrace("Full user message (with env context) length: {Length}", fullUserMessage.Length);
-            _logger?.LogTrace("Original user input: {Input}", input);
-
-            // Display only the original user input (stripped of env context)
-            var displayMessage = new ChatMessage(ChatRole.User, input);
-            var renderingUtilities = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
-            context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(displayMessage));
-
-            // Process slash commands using component-based approach
-            if (context.SlashCommandProcessor.TryProcessCommandAsComponent(input, out var commandComponent))
-            {
-                if (context.InputContext.State == InputState.UserSelection)
-                {
-                    // Command is interactive, so we don't process it as a chat message.
-                    return;
-                }
-
-                if (commandComponent != null)
-                {
-                    // Render the component directly to the scrollback terminal
-                    var renderContext = new RenderContext(
-                        context,
-                        ChatState.Input,
-                        _logger!,
-                        context.ServiceProvider,
-                        renderingUtilities,
-                        _themeInfo
-                    );
-
-                    var componentRenderable = commandComponent.Render(renderContext);
-                    context.ScrollbackTerminal.WriteStatic(componentRenderable);
-                    context.ScrollbackTerminal.WriteStatic(new Markup(""));
-                }
-                return;
-            }
-
-            // Create new cancellation token for this AI operation
-            context.AiOperationCts?.Dispose();
-            context.AiOperationCts = new CancellationTokenSource();
-            // Don't set AiOperationStartTime here - it should be set when the actual API call starts
-
-            // Transition to thinking state and start AI processing
-            await context.RequestStateTransitionAsync(ChatState.Thinking);
-
-            // Start AI processing workflow
-            await StartAiProcessingWorkflow(context);
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error in mediator handling user input");
-            var errorMessage = new ChatMessage(ChatRole.Assistant, $"Error processing input: {ex.Message}");
-            context.HistoryManager.AddAssistantMessage(errorMessage);
-            var renderingUtilities = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
-            context.ScrollbackTerminal.WriteStatic(renderingUtilities.RenderMessage(errorMessage));
-        }
-    }
-
-    public async Task HandleKeyPressAsync(KeyPressEventArgs e, ITuiContext context)
-    {
-        ArgumentNullException.ThrowIfNull(e);
-        ArgumentNullException.ThrowIfNull(context);
-
-        // Delegate to the current state for handling
-        // The mediator coordinates but doesn't replace state-specific logic
-        await Task.CompletedTask;
-    }
-
-    public async Task HandleCharacterTypedAsync(CharacterTypedEventArgs e, ITuiContext context)
-    {
-        ArgumentNullException.ThrowIfNull(e);
-        ArgumentNullException.ThrowIfNull(context);
-
-        // Delegate to the current state for handling
-        // The mediator coordinates but doesn't replace state-specific logic
-        await Task.CompletedTask;
-    }
-
-    public async Task HandleStateChangeAsync(ChatState newState, ChatState previousState, ITuiContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-
-        _logger.LogTrace("Mediator handling state change from {PreviousState} to {NewState}", previousState, newState);
-
-        // Notify relevant components about state changes
-        await NotifyComponentAsync("ProgressPanel", new { NewState = newState, PreviousState = previousState }, context);
-        await NotifyComponentAsync("InputPanel", new { NewState = newState, PreviousState = previousState }, context);
-        await NotifyComponentAsync("FooterPanel", new { NewState = newState, PreviousState = previousState }, context);
-    }
-
-    public async Task HandleToolExecutionAsync(string toolName, string progress, ITuiContext context)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(toolName);
-        ArgumentNullException.ThrowIfNull(context);
-
-        _logger.LogTrace("Mediator handling tool execution: {ToolName} - {Progress}", toolName, progress);
-
-        // Update context with tool information
-        context.CurrentToolName = toolName;
-        context.ToolProgress = progress;
-
-        // Transition to tool execution state if not already there
-        if (context.InputContext.State != InputState.Normal) // Assuming we're not in input state during tool execution
-        {
-            await context.RequestStateTransitionAsync(ChatState.ToolExecution);
-        }
-
-        // Notify progress panel about tool execution
-        await NotifyComponentAsync("ProgressPanel", new { ToolName = toolName, Progress = progress }, context);
-    }
-
-    public async Task NotifyComponentAsync(string componentName, object eventData, ITuiContext context)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(componentName);
-        ArgumentNullException.ThrowIfNull(eventData);
-        ArgumentNullException.ThrowIfNull(context);
-
-        if (_registeredComponents.TryGetValue(componentName, out var component))
-        {
-            try
-            {
-                var renderContext = CreateRenderContext(context);
-                _ = await component.HandleInputAsync(renderContext, eventData);
-                _logger.LogTrace("Notified component {ComponentName} with event data", componentName);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error notifying component {ComponentName}", componentName);
-            }
-        }
-        else
-        {
-            _logger.LogTrace("Component {ComponentName} not registered for notifications", componentName);
-        }
-    }
 
     public void RegisterComponent(ITuiComponent component)
     {
@@ -202,16 +18,6 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
 
         _registeredComponents[component.Name] = component;
         _logger.LogTrace("Registered component with mediator: {ComponentName}", component.Name);
-    }
-
-    public void UnregisterComponent(ITuiComponent component)
-    {
-        ArgumentNullException.ThrowIfNull(component);
-
-        if (_registeredComponents.Remove(component.Name))
-        {
-            _logger.LogTrace("Unregistered component from mediator: {ComponentName}", component.Name);
-        }
     }
 
     public async Task NotifyHistoryChangedAsync()
@@ -224,19 +30,6 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
         await Task.CompletedTask;
     }
 
-    private IRenderContext CreateRenderContext(ITuiContext context)
-    {
-        var renderingUtilities = context.ServiceProvider.GetRequiredService<IRenderingUtilities>();
-
-        return new RenderContext(
-            context,
-            ChatState.Input, // Default state for render context
-            _logger,
-            context.ServiceProvider,
-            renderingUtilities,
-            _themeInfo
-        );
-    }
 
     public async Task StartAiProcessingWorkflow(ITuiContext context)
     {

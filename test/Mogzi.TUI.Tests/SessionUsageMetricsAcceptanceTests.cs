@@ -9,7 +9,7 @@ namespace Mogzi.TUI.Tests;
 [Collection("Sequential_Session_Tests")]
 public class SessionUsageMetricsAcceptanceTests : SessionTestBase
 {
-    private readonly ITuiMediator _mediator;
+    private readonly IAiProcessingCoordinator _coordinator;
     private readonly FooterPanel _footerPanel;
     private readonly IRenderingUtilities _renderingUtilities;
 
@@ -17,7 +17,7 @@ public class SessionUsageMetricsAcceptanceTests : SessionTestBase
         : base(output, nameof(SessionUsageMetricsAcceptanceTests))
     {
         // Get required services for usage metrics testing
-        _mediator = _serviceProvider.GetRequiredService<ITuiMediator>();
+        _coordinator = _serviceProvider.GetRequiredService<IAiProcessingCoordinator>();
         _footerPanel = _serviceProvider.GetRequiredService<FooterPanel>();
         _renderingUtilities = _serviceProvider.GetRequiredService<IRenderingUtilities>();
 
