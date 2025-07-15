@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.14.2] - IN-PROG
+## [0.14.2] - 2025-07-14
 
 - Added on initial AI api call a hidden "Mogzi User Prompt" to send the AI model the user's WorkspaceDetails. This is to help reduce tool call errors by the LLM.
 - Added Markup.Escape() around all markup calls as this apparently may have been the root cause to all the odd, random crashing and functional synchronization issues
