@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.15.0] - IN PROG
+
+- TBD
+
 ## [0.14.2] - 2025-07-14
 
 - Added on initial AI api call a hidden "Mogzi User Prompt" to send the AI model the user's WorkspaceDetails. This is to help reduce tool call errors by the LLM.
