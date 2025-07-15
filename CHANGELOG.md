@@ -2,7 +2,8 @@
 
 ## [0.14.2] - IN-PROG
 
-- TBD
+- Added Markup.Escape() around all markup calls as this apparently may have been the root cause to all the odd, random crashing and functional synchronization issues
+- Corrected thinking timer to show API call duration only
 
 ## [0.14.1] - 2025-07-14
 

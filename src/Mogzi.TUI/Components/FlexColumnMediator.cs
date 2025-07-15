@@ -82,7 +82,7 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
             // Create new cancellation token for this AI operation
             context.AiOperationCts?.Dispose();
             context.AiOperationCts = new CancellationTokenSource();
-            context.AiOperationStartTime = DateTime.Now;
+            // Don't set AiOperationStartTime here - it should be set when the actual API call starts
 
             // Transition to thinking state and start AI processing
             await context.RequestStateTransitionAsync(ChatState.Thinking);
@@ -232,7 +232,6 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
             {
                 _logger.LogTrace("AiOperationCts is null, initializing new CancellationTokenSource");
                 context.AiOperationCts = new CancellationTokenSource();
-                context.AiOperationStartTime = DateTime.Now;
                 _logger.LogTrace("AiOperationCts initialized successfully");
             }
             else
@@ -243,6 +242,10 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
             _logger.LogTrace("Getting chat history from HistoryManager");
             var chatHistory = context.HistoryManager.GetCurrentChatHistory();
             _logger.LogTrace("Chat history retrieved, message count: {Count}", chatHistory.Count);
+
+            // Set the AI operation start time right before the actual API call begins
+            // This ensures the timer shows only the API call duration, not setup time
+            context.AiOperationStartTime = DateTime.Now;
 
             _logger.LogTrace("Starting ProcessChatMessageAsync with AiOperationCts.Token");
             var responseStream = context.AppService.ProcessChatMessageAsync(chatHistory, context.AiOperationCts.Token);
