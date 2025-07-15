@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Mogzi.Core.Domain;
 
 public class Session
@@ -24,6 +22,9 @@ public class Session
 
     [JsonPropertyName("usageMetrics")]
     public SessionUsageMetrics? UsageMetrics { get; set; }
+
+    [JsonPropertyName("isFirstMessage")]
+    public bool IsFirstMessage { get; set; } = true;
 }
 
 /// <summary>

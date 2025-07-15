@@ -38,8 +38,26 @@ public class FlexColumnMediator(ILogger<FlexColumnMediator> logger, IThemeInfo t
 
             _logger?.LogTrace("Generated environment prompt: {EnvPrompt}", envPrompt);
 
+            // Check if this is the first message in the session and add workspace details
+            var systemEnvironment = envPrompt;
+            if (context.SessionManager.CurrentSession?.IsFirstMessage == true)
+            {
+                var workspaceDetails = EnvSystemPrompt.GetWorkspaceDetails(
+                    context.WorkingDirectoryProvider.GetCurrentDirectory());
+                systemEnvironment = envPrompt + "\n\n" + workspaceDetails;
+
+                _logger?.LogTrace("Added workspace details for first message in session");
+
+                // Mark that we've processed the first message
+                if (context.SessionManager.CurrentSession != null)
+                {
+                    context.SessionManager.CurrentSession.IsFirstMessage = false;
+                    await context.SessionManager.SaveCurrentSessionAsync();
+                }
+            }
+
             // Create user message with environment context appended (for AI processing)
-            var fullUserMessage = Mogzi.Utils.MessageUtils.AppendSystemEnvironment(input, envPrompt);
+            var fullUserMessage = Mogzi.Utils.MessageUtils.AppendSystemEnvironment(input, systemEnvironment);
             var userMessage = new ChatMessage(ChatRole.User, fullUserMessage);
             context.HistoryManager.AddUserMessage(userMessage);
 
