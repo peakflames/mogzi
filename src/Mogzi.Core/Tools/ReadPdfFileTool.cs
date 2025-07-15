@@ -1,9 +1,4 @@
-using System.ComponentModel;
-using System.Security;
-using System.Security.Cryptography;
-using System.Runtime.InteropServices;
 using UglyToad.PdfPig;
-using System.Text;
 
 namespace Mogzi.Tools;
 

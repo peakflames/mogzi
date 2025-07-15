@@ -1,11 +1,3 @@
-using System.ComponentModel;
-using System.Security;
-using System.Security.Cryptography;
-using System.Text;
-using System.Runtime.InteropServices;
-using System.Diagnostics;
-using System.Text.RegularExpressions;
-
 namespace Mogzi.Tools;
 
 public class GrepTool(ApplicationConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)

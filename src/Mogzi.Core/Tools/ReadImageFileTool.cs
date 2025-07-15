@@ -1,8 +1,3 @@
-using System.ComponentModel;
-using System.Security;
-using System.Security.Cryptography;
-using System.Runtime.InteropServices;
-
 namespace Mogzi.Tools;
 
 public class ReadImageFileTool(ApplicationConfiguration config, Action<string, ConsoleColor>? llmResponseDetailsCallback = null, IWorkingDirectoryProvider? workingDirectoryProvider = null)
