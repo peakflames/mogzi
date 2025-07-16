@@ -29,11 +29,11 @@ public class EditTool(ApplicationConfiguration config, Action<string, ConsoleCol
     {
         var expectedReplacements = expected_replacements ?? 1;
 
+        _llmResponseDetailsCallback?.Invoke($"=== REPLACE_IN_FILE START === file_path: {file_path}, expected_replacements: {expectedReplacements}", ConsoleColor.Green);
         _llmResponseDetailsCallback?.Invoke($"Replacing text in file '{file_path}' (expecting {expectedReplacements} replacement{(expectedReplacements == 1 ? "" : "s")}).", ConsoleColor.DarkGray);
 
         try
         {
-            // Validate parameters
             var validationError = ValidateParameters(file_path, old_string, new_string, expectedReplacements);
             if (validationError != null)
             {
@@ -132,6 +132,7 @@ public class EditTool(ApplicationConfiguration config, Action<string, ConsoleCol
                 var checksum = ComputeSha256(finalContent);
                 var lineCount = finalContent.Split(["\r\n", "\r", "\n"], StringSplitOptions.None).Length;
 
+                _llmResponseDetailsCallback?.Invoke($"=== REPLACE_IN_FILE SUCCESS === file_path: {file_path}, replacements: {occurrences}", ConsoleColor.Green);
                 return CreateSuccessResponse(file_path, absolutePath, finalContent, checksum, lineCount, occurrences);
             }
             catch (Exception ex)

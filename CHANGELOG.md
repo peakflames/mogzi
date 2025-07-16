@@ -2,7 +2,7 @@
 
 ## [0.15.0] - IN PROG
 
-- TBD
+- Fix tool execution display and race conditions in AI processing
 
 ## [0.14.2] - 2025-07-14
 

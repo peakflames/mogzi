@@ -104,12 +104,12 @@ public interface ITuiContext
     /// <summary>
     /// Gets the function call to tool name mapping for tool execution tracking.
     /// </summary>
-    Dictionary<string, string> FunctionCallToToolName { get; }
+    ConcurrentDictionary<string, string> FunctionCallToToolName { get; }
 
     /// <summary>
     /// Gets the function call to pre-edit content mapping for diff generation.
     /// </summary>
-    Dictionary<string, string> FunctionCallToPreEditContent { get; }
+    ConcurrentDictionary<string, string> FunctionCallToPreEditContent { get; }
 
     /// <summary>
     /// Gets or sets whether piped input should be automatically submitted.
