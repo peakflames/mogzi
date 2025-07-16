@@ -115,7 +115,16 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
                 if (!string.IsNullOrEmpty(absolutePath))
                 {
                     info.FilePath = absolutePath;
-                    info.Description = $"Modified {Path.GetFileName(absolutePath)}";
+                    info.Description = GetToolSpecificDescription(info.ToolName, absolutePath, xmlResponse);
+                }
+                else
+                {
+                    // For tools without file paths (like shell commands), generate description anyway
+                    var normalizedToolName = info.ToolName.ToLowerInvariant();
+                    if (normalizedToolName is "execute_command" or "shell" or "run_shell_command")
+                    {
+                        info.Description = ExtractShellCommandDescription(xmlResponse);
+                    }
                 }
             }
 
@@ -192,6 +201,104 @@ public class ToolResponseParser(ILogger<ToolResponseParser>? logger = null)
     private static bool IsDiffPatchTool(string normalizedToolName)
     {
         return normalizedToolName is "apply_code_patch" or "generate_code_patch" or "preview_patch_application";
+    }
+
+    /// <summary>
+    /// Gets an appropriate description based on the tool type and file path.
+    /// This fixes the issue where read-only tools were showing "Modified" incorrectly.
+    /// </summary>
+    /// <param name="toolName">The name of the tool</param>
+    /// <param name="filePath">The file path being operated on</param>
+    /// <param name="xmlResponse">The full XML response for extracting additional info like commands</param>
+    /// <returns>An appropriate description for the tool operation</returns>
+    private static string GetToolSpecificDescription(string toolName, string filePath, string? xmlResponse = null)
+    {
+        var fileName = Path.GetFileName(filePath);
+        var normalizedToolName = toolName.ToLowerInvariant();
+
+        return normalizedToolName switch
+        {
+            // Read-only tools
+            "read_file" or "readfile" or "read_text_file" or "read_image_file" or "read_pdf_file" => $"Read {fileName}",
+
+            // Write/modification tools
+            "write_file" or "writefile" or "write_to_file" => $"Created {fileName}",
+            "replace_in_file" or "edit_file" or "editfile" or "edit" => $"Modified {fileName}",
+
+            // Directory/listing tools
+            "ls" or "list" or "list_files" => $"Listed {fileName}",
+
+            // Search tools
+            "grep" or "search" => $"Searched {fileName}",
+
+            // Shell/command tools
+            "execute_command" or "shell" or "run_shell_command" => ExtractShellCommandDescription(xmlResponse),
+
+            // Diff/patch tools
+            "apply_code_patch" or "generate_code_patch" or "preview_patch_application" => $"Patched {fileName}",
+
+            // Default fallback
+            _ => $"Processed {fileName}"
+        };
+    }
+
+    /// <summary>
+    /// Extracts the actual command from shell tool XML response for better UX.
+    /// </summary>
+    /// <param name="xmlResponse">The XML response containing command information</param>
+    /// <returns>A description showing the actual command that was executed</returns>
+    private static string ExtractShellCommandDescription(string? xmlResponse)
+    {
+        if (string.IsNullOrEmpty(xmlResponse))
+        {
+            return "Executed command";
+        }
+
+        try
+        {
+            var doc = new XmlDocument();
+            doc.LoadXml(xmlResponse);
+
+            // Look for command in various possible locations
+            var commandNode = doc.SelectSingleNode("//command") ??
+                             doc.SelectSingleNode("//executed_command") ??
+                             doc.SelectSingleNode("//notes");
+
+            if (commandNode != null)
+            {
+                var commandText = commandNode.InnerText?.Trim();
+                if (!string.IsNullOrEmpty(commandText))
+                {
+                    // For notes, try to extract command from common patterns
+                    if (commandNode.Name == "notes")
+                    {
+                        // Look for patterns like "Successfully executed command: xyz" or "Command: xyz"
+                        var match = System.Text.RegularExpressions.Regex.Match(commandText,
+                            @"(?:Successfully executed command|Command|Executed):\s*(.+?)(?:\n|$)",
+                            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+                        if (match.Success)
+                        {
+                            commandText = match.Groups[1].Value.Trim();
+                        }
+                    }
+
+                    // Truncate long commands for display
+                    if (commandText.Length > 50)
+                    {
+                        commandText = commandText[..47] + "...";
+                    }
+
+                    return $"Executed: {commandText}";
+                }
+            }
+        }
+        catch (XmlException)
+        {
+            // If XML parsing fails, fall back to default
+        }
+
+        return "Executed command";
     }
 
     private UnifiedDiff? GenerateEditToolDiff(string? originalContent, string? newContent, string? filePath)

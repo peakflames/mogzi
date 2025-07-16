@@ -49,7 +49,7 @@ SYSTEM INFORMATION:
     {
         try
         {
-            var gitIgnoreRules = LoadGitIgnoreRules(currentWorkingDirectory);
+            var gitIgnoreRules = LoadGitIgnoreRules();
             var files = GetFilteredFilesList(currentWorkingDirectory, gitIgnoreRules, maxFiles, out var didHitLimit);
             var gitRemotes = GetGitRemoteUrls(currentWorkingDirectory);
 
@@ -79,38 +79,82 @@ SYSTEM INFORMATION:
         }
     }
 
-    private static List<string> LoadGitIgnoreRules(string workingDirectory)
+    private static List<string> LoadGitIgnoreRules()
     {
-        var rules = new List<string>
-        {
-            // Always ignore .git directory
+        // Skip .gitignore parsing for performance - use hardcoded common ignore patterns
+        return
+        [
+            // Git
             ".git/",
-            ".git"
-        };
+            ".git",
 
-        try
-        {
-            var gitIgnorePath = Path.Combine(workingDirectory, ".gitignore");
-            if (File.Exists(gitIgnorePath))
-            {
-                var lines = File.ReadAllLines(gitIgnorePath);
-                foreach (var line in lines)
-                {
-                    var trimmed = line.Trim();
-                    // Skip empty lines and comments
-                    if (!string.IsNullOrEmpty(trimmed) && !trimmed.StartsWith('#'))
-                    {
-                        rules.Add(trimmed);
-                    }
-                }
-            }
-        }
-        catch (Exception)
-        {
-            // If we can't read .gitignore, just use default rules
-        }
+            // Node.js / JavaScript / TypeScript
+            "node_modules/",
+            "node_modules",
+            ".npm",
+            ".yarn",
+            "dist/",
+            "build/",
+            ".next/",
+            ".nuxt/",
+            "coverage/",
+            ".nyc_output/",
 
-        return rules;
+            // .NET
+            "bin/",
+            "bin",
+            "obj/",
+            "obj",
+            "packages/",
+            ".vs/",
+            ".vscode/",
+            "*.user",
+            "*.suo",
+            "*.cache",
+
+            // Python
+            "__pycache__/",
+            "__pycache__",
+            "*.pyc",
+            "*.pyo",
+            "*.pyd",
+            ".Python",
+            "env/",
+            "venv/",
+            ".env",
+            ".venv/",
+            "pip-log.txt",
+            "pip-delete-this-directory.txt",
+            ".pytest_cache/",
+
+            // Java
+            "target/",
+            "target",
+            "*.class",
+            "*.jar",
+            "*.war",
+            "*.ear",
+            ".gradle/",
+            "build/",
+            ".idea/",
+            "*.iml",
+            "*.iws",
+
+            // General IDE/Editor
+            ".vscode/",
+            ".idea/",
+            "*.swp",
+            "*.swo",
+            "*~",
+            ".DS_Store",
+            "Thumbs.db",
+
+            // Logs and temp files
+            "*.log",
+            "logs/",
+            "tmp/",
+            "temp/"
+        ];
     }
 
     private static List<string> GetFilteredFilesList(string absolutePath, List<string> gitIgnoreRules, int maxFiles, out bool didHitLimit)
@@ -166,6 +210,16 @@ SYSTEM INFORMATION:
 
     private static bool ShouldIgnorePath(string relativePath, bool isDirectory, List<string> gitIgnoreRules)
     {
+        // Early exit for common cases
+        if (relativePath.StartsWith(".git/") || relativePath == ".git")
+        {
+            return true;
+        }
+
+        // Pre-split path once for efficiency
+        var pathParts = relativePath.Split('/');
+        var fileName = pathParts[^1];
+
         foreach (var rule in gitIgnoreRules)
         {
             if (string.IsNullOrEmpty(rule))
@@ -185,106 +239,181 @@ SYSTEM INFORMATION:
             if (isDirectoryRule)
             {
                 pattern = pattern[..^1];
-                // Directory rules only apply to directories
                 if (!isDirectory)
                 {
                     continue;
                 }
             }
 
-            var matches = false;
+            bool matches;
 
-            // Handle different pattern types
-            if (pattern.Contains('*') || pattern.Contains('?') || pattern.Contains('['))
+            // Optimize for common simple patterns first
+            if (!pattern.Contains('*') && !pattern.Contains('?') && !pattern.Contains('['))
             {
-                // Wildcard or character class pattern matching
-                matches = MatchesWildcardPattern(relativePath, pattern);
-
-                // Also check if pattern matches any path component for patterns without /
-                if (!matches && !pattern.Contains('/'))
+                // Simple exact match patterns - much faster
+                if (pattern.Contains('/'))
                 {
-                    var pathParts = relativePath.Split('/');
-                    matches = pathParts.Any(part => MatchesWildcardPattern(part, pattern));
+                    // Path-specific pattern
+                    matches = relativePath == pattern || relativePath.StartsWith(pattern + "/");
                 }
-            }
-            else if (pattern.Contains('/'))
-            {
-                // Path-specific pattern
-                matches = relativePath == pattern || relativePath.StartsWith(pattern + "/");
+                else
+                {
+                    // Simple filename pattern - check filename directly first (most common case)
+                    matches = fileName == pattern || relativePath == pattern;
+
+                    // Only check other path parts if filename doesn't match
+                    if (!matches && pathParts.Length > 1)
+                    {
+                        for (var i = 0; i < pathParts.Length - 1; i++)
+                        {
+                            if (pathParts[i] == pattern)
+                            {
+                                matches = true;
+                                break;
+                            }
+                        }
+                    }
+                }
             }
             else
             {
-                // Simple filename or directory name pattern
-                var pathParts = relativePath.Split('/');
-                matches = pathParts.Any(part => part == pattern) || relativePath == pattern;
+                // Wildcard patterns - use optimized matching
+                matches = MatchesWildcardPatternOptimized(relativePath, pathParts, fileName, pattern);
             }
 
             if (matches)
             {
-                return !isNegation; // If negation (!), don't ignore; otherwise, ignore
+                return !isNegation;
             }
         }
 
-        return false; // Don't ignore by default
+        return false;
     }
 
-    private static bool MatchesWildcardPattern(string path, string pattern)
+    private static bool MatchesWildcardPatternOptimized(string relativePath, string[] pathParts, string fileName, string pattern)
     {
-        try
+        // For patterns without path separators, check filename first (most common case)
+        if (!pattern.Contains('/'))
         {
-            // Convert gitignore pattern to regex pattern
-            var regexPattern = ConvertGitIgnorePatternToRegex(pattern);
-            return Regex.IsMatch(path, regexPattern, RegexOptions.IgnoreCase);
-        }
-        catch
-        {
-            // If regex fails, fall back to simple contains check
-            return path.Contains(pattern.Replace("*", ""));
-        }
-    }
-
-    private static string ConvertGitIgnorePatternToRegex(string pattern)
-    {
-        var result = new StringBuilder("^");
-
-        for (var i = 0; i < pattern.Length; i++)
-        {
-            var c = pattern[i];
-
-            switch (c)
+            if (SimpleWildcardMatch(fileName, pattern))
             {
-                case '*':
-                    _ = result.Append(".*");
-                    break;
-                case '?':
-                    _ = result.Append(".");
-                    break;
-                case '[':
-                    // Handle character classes like [Bb] or [Oo]
-                    var closingBracket = pattern.IndexOf(']', i + 1);
-                    if (closingBracket != -1)
-                    {
-                        // Extract the character class and add it to regex
-                        var charClass = pattern.Substring(i, closingBracket - i + 1);
-                        _ = result.Append(charClass);
-                        i = closingBracket; // Skip to after the closing bracket
-                    }
-                    else
-                    {
-                        // No closing bracket found, treat as literal
-                        _ = result.Append(Regex.Escape(c.ToString()));
-                    }
-                    break;
-                default:
-                    // Escape other regex special characters
-                    _ = result.Append(Regex.Escape(c.ToString()));
-                    break;
+                return true;
+            }
+
+            // Check other path components only if needed
+            for (var i = 0; i < pathParts.Length - 1; i++)
+            {
+                if (SimpleWildcardMatch(pathParts[i], pattern))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // For path patterns, match against full path
+        return SimpleWildcardMatch(relativePath, pattern);
+    }
+
+    private static bool SimpleWildcardMatch(string text, string pattern)
+    {
+        // Simple wildcard matching without regex for better performance
+        var textIndex = 0;
+        var patternIndex = 0;
+        var starIndex = -1;
+        var match = 0;
+
+        while (textIndex < text.Length)
+        {
+            if (patternIndex < pattern.Length && (pattern[patternIndex] == '?' || pattern[patternIndex] == text[textIndex]))
+            {
+                textIndex++;
+                patternIndex++;
+            }
+            else if (patternIndex < pattern.Length && pattern[patternIndex] == '*')
+            {
+                starIndex = patternIndex;
+                match = textIndex;
+                patternIndex++;
+            }
+            else if (starIndex != -1)
+            {
+                patternIndex = starIndex + 1;
+                match++;
+                textIndex = match;
+            }
+            else
+            {
+                return false;
             }
         }
 
-        _ = result.Append("$");
-        return result.ToString();
+        // Skip any remaining '*' in pattern
+        while (patternIndex < pattern.Length && pattern[patternIndex] == '*')
+        {
+            patternIndex++;
+        }
+
+        return patternIndex == pattern.Length;
     }
+
+    // private static bool MatchesWildcardPattern(string path, string pattern)
+    // {
+    //     try
+    //     {
+    //         // Convert gitignore pattern to regex pattern
+    //         var regexPattern = ConvertGitIgnorePatternToRegex(pattern);
+    //         return Regex.IsMatch(path, regexPattern, RegexOptions.IgnoreCase);
+    //     }
+    //     catch
+    //     {
+    //         // If regex fails, fall back to simple contains check
+    //         return path.Contains(pattern.Replace("*", ""));
+    //     }
+    // }
+
+    // private static string ConvertGitIgnorePatternToRegex(string pattern)
+    // {
+    //     var result = new StringBuilder("^");
+
+    //     for (var i = 0; i < pattern.Length; i++)
+    //     {
+    //         var c = pattern[i];
+
+    //         switch (c)
+    //         {
+    //             case '*':
+    //                 _ = result.Append(".*");
+    //                 break;
+    //             case '?':
+    //                 _ = result.Append(".");
+    //                 break;
+    //             case '[':
+    //                 // Handle character classes like [Bb] or [Oo]
+    //                 var closingBracket = pattern.IndexOf(']', i + 1);
+    //                 if (closingBracket != -1)
+    //                 {
+    //                     // Extract the character class and add it to regex
+    //                     var charClass = pattern.Substring(i, closingBracket - i + 1);
+    //                     _ = result.Append(charClass);
+    //                     i = closingBracket; // Skip to after the closing bracket
+    //                 }
+    //                 else
+    //                 {
+    //                     // No closing bracket found, treat as literal
+    //                     _ = result.Append(Regex.Escape(c.ToString()));
+    //                 }
+    //                 break;
+    //             default:
+    //                 // Escape other regex special characters
+    //                 _ = result.Append(Regex.Escape(c.ToString()));
+    //                 break;
+    //         }
+    //     }
+
+    //     _ = result.Append("$");
+    //     return result.ToString();
+    // }
 
     private static string FormatFilesList(string absolutePath, List<string> files, bool didHitLimit)
     {

@@ -28,13 +28,18 @@ public static class ServiceConfiguration
         services.TryAddSingleton(serviceProvider =>
         {
             // Create ChatClient - this will be configured per command based on settings
+            var logger = serviceProvider.GetRequiredService<ILogger<ChatClient>>();
             var chatClientResult = ChatClient.Create(
                 serviceProvider.GetRequiredService<IWorkingDirectoryProvider>(),
                 configPath, // Let Create handle finding the default path,
                 profileName, // Use specified profile or default
                 toolApprovals, // Use specified tool approvals override
                 "chat",
-                (details, color) => { },
+                (details, color) =>
+                {
+                    // Log tool execution details to the log file instead of discarding them
+                    logger.LogDebug("Tool execution: {Details}", details);
+                },
                 false
             );
 

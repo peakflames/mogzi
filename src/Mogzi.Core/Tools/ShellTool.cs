@@ -21,7 +21,8 @@ public class ShellTool(ApplicationConfiguration config, Action<string, ConsoleCo
     public async Task<string> RunShellCommand(
         [Description("Exact bash command to execute as `bash -c <command>`")] string command,
         [Description("Brief description of the command for the user. Be specific and concise. Ideally a single sentence. Can be up to 3 sentences for clarity. No line breaks.")] string? description = null,
-        [Description("(OPTIONAL) Directory to run the command in, if not the project root directory. Must be relative to the project root directory and must already exist.")] string? directory = null)
+        [Description("(OPTIONAL) Directory to run the command in, if not the project root directory. Must be relative to the project root directory and must already exist.")] string? directory = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -60,7 +61,7 @@ public class ShellTool(ApplicationConfiguration config, Action<string, ConsoleCo
             _llmResponseDetailsCallback?.Invoke($"Executing command: {command}{(directory != null ? $" [in {directory}]" : "")}{(description != null ? $" ({description.Replace("\n", " ")})" : "")}", ConsoleColor.DarkGray);
 
             // Execute the command
-            var result = await ExecuteCommand(command, executionDirectory);
+            var result = await ExecuteCommand(command, executionDirectory, cancellationToken);
 
             if (_config.Debug)
             {
@@ -158,8 +159,22 @@ public class ShellTool(ApplicationConfiguration config, Action<string, ConsoleCo
         }
     }
 
-    private async Task<ShellExecutionResult> ExecuteCommand(string command, string workingDirectory)
+    private async Task<ShellExecutionResult> ExecuteCommand(string command, string workingDirectory, CancellationToken cancellationToken)
     {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return new ShellExecutionResult
+            {
+                Command = command,
+                Stdout = "",
+                Stderr = "Command was cancelled before it could start.",
+                Output = "Command was cancelled before it could start.",
+                ExitCode = -1,
+                ProcessId = 0,
+                WasCancelled = true
+            };
+        }
+
         string fileName;
         string arguments;
 
@@ -187,6 +202,7 @@ public class ShellTool(ApplicationConfiguration config, Action<string, ConsoleCo
                 Arguments = arguments,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                RedirectStandardInput = true, // Enable stdin redirection for interactive commands
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 WorkingDirectory = workingDirectory
@@ -196,46 +212,272 @@ public class ShellTool(ApplicationConfiguration config, Action<string, ConsoleCo
         var stdout = new StringBuilder();
         var stderr = new StringBuilder();
         var output = new StringBuilder();
+        var lastOutputTime = DateTime.UtcNow;
+        var outputLock = new object();
+        var processExited = false;
 
+        // Real-time output handling with periodic updates
         process.OutputDataReceived += (sender, e) =>
         {
-            if (e.Data != null)
+            if (e.Data != null && !processExited)
             {
                 var data = StripAnsiCodes(e.Data);
-                _ = stdout.AppendLine(data);
-                _ = output.AppendLine(data);
+                lock (outputLock)
+                {
+                    _ = stdout.AppendLine(data);
+                    _ = output.AppendLine(data);
+                    lastOutputTime = DateTime.UtcNow;
+                }
+
+                // Provide real-time feedback for long-running commands
+                if (_config.Debug)
+                {
+                    _llmResponseDetailsCallback?.Invoke($"STDOUT: {data}", ConsoleColor.Gray);
+                }
             }
         };
 
         process.ErrorDataReceived += (sender, e) =>
         {
-            if (e.Data != null)
+            if (e.Data != null && !processExited)
             {
                 var data = StripAnsiCodes(e.Data);
-                _ = stderr.AppendLine(data);
-                _ = output.AppendLine(data);
+                lock (outputLock)
+                {
+                    _ = stderr.AppendLine(data);
+                    _ = output.AppendLine(data);
+                    lastOutputTime = DateTime.UtcNow;
+                }
+
+                // Provide real-time feedback for errors
+                if (_config.Debug)
+                {
+                    _llmResponseDetailsCallback?.Invoke($"STDERR: {data}", ConsoleColor.Yellow);
+                }
             }
         };
 
-        _ = process.Start();
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
-
-        await process.WaitForExitAsync();
-
-        var stdoutText = stdout.ToString().TrimEnd();
-        var stderrText = stderr.ToString().TrimEnd();
-        var outputText = output.ToString().TrimEnd();
-
-        return new ShellExecutionResult
+        process.Exited += (sender, e) =>
         {
-            Command = command,
-            Stdout = stdoutText,
-            Stderr = stderrText,
-            Output = outputText,
-            ExitCode = process.ExitCode,
-            ProcessId = process.Id
+            processExited = true;
         };
+
+        try
+        {
+            _ = process.Start();
+
+            // For Unix systems, set up process group for better process management
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                try
+                {
+                    // This helps with managing child processes
+                    process.StartInfo.UseShellExecute = false;
+                }
+                catch
+                {
+                    // Ignore if we can't set process group
+                }
+            }
+
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            // Handle interactive commands by providing default responses to common prompts
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await HandleInteractivePrompts(process, command, cancellationToken);
+                }
+                catch
+                {
+                    // Ignore errors in interactive handling
+                }
+            }, cancellationToken);
+
+            // Set up cancellation handling
+            var cancellationRegistration = cancellationToken.Register(async () =>
+            {
+                if (!process.HasExited)
+                {
+                    try
+                    {
+                        await KillProcessTreeAsync(process);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (_config.Debug)
+                        {
+                            _llmResponseDetailsCallback?.Invoke($"Error killing process: {ex.Message}", ConsoleColor.Red);
+                        }
+                    }
+                }
+            });
+
+            try
+            {
+                // Wait for process to exit or cancellation
+                await process.WaitForExitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // Process was cancelled
+                return new ShellExecutionResult
+                {
+                    Command = command,
+                    Stdout = stdout.ToString().TrimEnd(),
+                    Stderr = stderr.ToString().TrimEnd(),
+                    Output = output.ToString().TrimEnd(),
+                    ExitCode = -1,
+                    ProcessId = process.Id,
+                    WasCancelled = true
+                };
+            }
+            finally
+            {
+                cancellationRegistration.Dispose();
+            }
+
+            var stdoutText = stdout.ToString().TrimEnd();
+            var stderrText = stderr.ToString().TrimEnd();
+            var outputText = output.ToString().TrimEnd();
+
+            return new ShellExecutionResult
+            {
+                Command = command,
+                Stdout = stdoutText,
+                Stderr = stderrText,
+                Output = outputText,
+                ExitCode = process.ExitCode,
+                ProcessId = process.Id,
+                WasCancelled = false
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ShellExecutionResult
+            {
+                Command = command,
+                Stdout = stdout.ToString().TrimEnd(),
+                Stderr = $"Process execution error: {ex.Message}",
+                Output = $"Process execution error: {ex.Message}",
+                ExitCode = -1,
+                ProcessId = process.Id,
+                WasCancelled = cancellationToken.IsCancellationRequested
+            };
+        }
+    }
+
+    private async Task HandleInteractivePrompts(Process process, string command, CancellationToken cancellationToken)
+    {
+        // Detect common interactive commands and provide default responses
+        var commandLower = command.ToLowerInvariant();
+
+        // Common interactive commands that might need default responses
+        var interactiveCommands = new[]
+        {
+            "npx create-", "npm create", "yarn create",
+            "git clone", "git pull", "git push",
+            "sudo ", "su ",
+            "ssh ", "scp ",
+            "docker run -it", "docker exec -it"
+        };
+
+        var isInteractive = interactiveCommands.Any(commandLower.Contains);
+
+        if (!isInteractive)
+        {
+            return;
+        }
+
+        // For interactive commands, we'll monitor for common prompts and provide defaults
+        var timeout = TimeSpan.FromSeconds(30); // Timeout for interactive prompts
+        var startTime = DateTime.UtcNow;
+
+        while (!process.HasExited && !cancellationToken.IsCancellationRequested &&
+               DateTime.UtcNow - startTime < timeout)
+        {
+            await Task.Delay(1000, cancellationToken);
+
+            // If the process seems to be waiting (no recent output), send default responses
+            // This is a simple heuristic - in practice, you might want more sophisticated detection
+            try
+            {
+                if (commandLower.Contains("npx create-") || commandLower.Contains("npm create"))
+                {
+                    // For create-* commands, send Enter to accept defaults
+                    await process.StandardInput.WriteLineAsync("");
+                    await Task.Delay(500, cancellationToken);
+                }
+            }
+            catch
+            {
+                // Ignore errors when trying to send input
+                break;
+            }
+        }
+    }
+
+    private async Task KillProcessTreeAsync(Process process)
+    {
+        if (process.HasExited)
+        {
+            return;
+        }
+
+        try
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                // On Windows, use taskkill to kill the process tree
+                var killProcess = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "taskkill",
+                        Arguments = $"/pid {process.Id} /f /t",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    }
+                };
+                _ = killProcess.Start();
+                await killProcess.WaitForExitAsync();
+            }
+            else
+            {
+                // On Unix systems, try to kill the process group first, then the process
+                try
+                {
+                    // Send SIGTERM to process group
+                    _ = Process.Start("kill", $"-TERM -{process.Id}");
+                    await Task.Delay(200);
+
+                    if (!process.HasExited)
+                    {
+                        // Send SIGKILL to process group
+                        _ = Process.Start("kill", $"-KILL -{process.Id}");
+                    }
+                }
+                catch
+                {
+                    // Fallback to killing just the main process
+                    process.Kill(entireProcessTree: true);
+                }
+            }
+        }
+        catch
+        {
+            // Last resort - try the built-in Kill method
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch
+            {
+                // If all else fails, ignore the error
+            }
+        }
     }
 
     private string StripAnsiCodes(string input)
@@ -290,5 +532,6 @@ public class ShellTool(ApplicationConfiguration config, Action<string, ConsoleCo
         public string Output { get; set; } = "";
         public int ExitCode { get; set; }
         public int ProcessId { get; set; }
+        public bool WasCancelled { get; set; }
     }
 }

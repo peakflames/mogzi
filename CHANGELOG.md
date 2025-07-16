@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.14.3] - 2025-07-14
+
+- Fix tool execution display and race conditions in AI processing
+- Imporved performenace of generating Workspace Details
+
 ## [0.14.2] - 2025-07-14
 
 - Added on initial AI api call a hidden "Mogzi User Prompt" to send the AI model the user's WorkspaceDetails. This is to help reduce tool call errors by the LLM.
