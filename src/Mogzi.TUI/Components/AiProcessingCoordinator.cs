@@ -165,7 +165,7 @@ public class AiProcessingCoordinator(ILogger<AiProcessingCoordinator> logger) : 
                 if (IsToolExecutionUpdate(responseUpdate))
                 {
                     await context.RequestStateTransitionAsync(ChatState.ToolExecution);
-                    ExtractToolNameFromUpdate(context, responseUpdate);
+                    await ExtractToolNameFromUpdateAsync(context, responseUpdate);
 
                     // Set progress text for dynamic display
                     if (!string.IsNullOrWhiteSpace(responseUpdate.Text))
@@ -369,7 +369,7 @@ public class AiProcessingCoordinator(ILogger<AiProcessingCoordinator> logger) : 
         return false;
     }
 
-    private void ExtractToolNameFromUpdate(ITuiContext context, ChatResponseUpdate responseUpdate)
+    private async Task ExtractToolNameFromUpdateAsync(ITuiContext context, ChatResponseUpdate responseUpdate)
     {
         if (responseUpdate.Contents == null)
         {
@@ -396,7 +396,8 @@ public class AiProcessingCoordinator(ILogger<AiProcessingCoordinator> logger) : 
             context.FunctionCallToToolName[functionCall.CallId] = functionCall.Name!;
 
             // For EditTool, capture the pre-edit content
-            _ = CapturePreEditContentForEditTool(context, functionCall);
+            // CRITICAL FIX: Await this to prevent race conditions with rapid tool executions
+            await CapturePreEditContentForEditTool(context, functionCall);
         }
         else
         {
@@ -674,9 +675,20 @@ public class AiProcessingCoordinator(ILogger<AiProcessingCoordinator> logger) : 
                     result: displayContent ?? toolInfo.Summary ?? result
                 );
 
-                // Display the tool execution result in scrollback
-                context.ScrollbackTerminal.WriteStatic(toolDisplay);
-                context.ScrollbackTerminal.WriteStatic(new Markup(""));
+                // CRITICAL FIX: Ensure each tool execution result is displayed individually
+                // and persisted in the scrollback terminal. This addresses the issue where
+                // multiple sequential tool executions (like 5 replace_in_file operations)
+                // were not all being shown to the user.
+                _logger.LogTrace("=== DISPLAYING TOOL EXECUTION RESULT ===");
+                _logger.LogTrace("Tool: {ToolName}, Status: {Status}, Description: {Description}",
+                    toolInfo.ToolName, toolInfo.Status, toolInfo.Description);
+
+                // Display the tool execution result in scrollback as static content
+                // This ensures it's permanently added to the scrollback history
+                context.ScrollbackTerminal.WriteStatic(toolDisplay, isUpdatable: false);
+                context.ScrollbackTerminal.WriteStatic(new Markup(""), isUpdatable: false);
+
+                _logger.LogTrace("=== TOOL EXECUTION RESULT DISPLAYED ===");
             }
         }
         catch (Exception ex)

@@ -423,6 +423,8 @@ public class InputTuiState : ITuiState
             var systemEnvironment = envPrompt;
             if (context.SessionManager.CurrentSession?.IsFirstMessage == true)
             {
+                context.ScrollbackTerminal.WriteStatic(new Markup("Gathering workspace details..."));
+                context.ScrollbackTerminal.WriteStatic(new Markup(""));
                 var workspaceDetails = EnvSystemPrompt.GetWorkspaceDetails(
                     context.WorkingDirectoryProvider.GetCurrentDirectory());
                 systemEnvironment = envPrompt + "\n\n" + workspaceDetails;

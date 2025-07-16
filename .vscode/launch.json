@@ -94,7 +94,7 @@
             "request": "launch",
             "preLaunchTask": "build",     
             "program": "${workspaceFolder}/src/Mogzi.TUI/bin/Debug/net9.0/mogzi.dll",
-            "args": ["chat", "--profile", "flash"],
+            "args": ["chat", "--profile", "testing", "-ta", "all"],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,
             "console": "integratedTerminal",

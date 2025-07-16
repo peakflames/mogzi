@@ -39,8 +39,8 @@ public class TuiContext(
     public int CommandHistoryIndex { get; set; } = -1;
     public DateTime AiOperationStartTime { get; set; } = DateTime.Now;
     public CancellationTokenSource? AiOperationCts { get; set; }
-    public Dictionary<string, string> FunctionCallToToolName { get; } = [];
-    public Dictionary<string, string> FunctionCallToPreEditContent { get; } = [];
+    public ConcurrentDictionary<string, string> FunctionCallToToolName { get; } = new();
+    public ConcurrentDictionary<string, string> FunctionCallToPreEditContent { get; } = new();
     public bool AutoSubmitPipedInput { get; set; } = false;
 
     public async Task RequestStateTransitionAsync(ChatState newState)
