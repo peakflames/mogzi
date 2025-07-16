@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.15.0] - IN-PROG
+
+- TBD
+
 ## [0.14.3] - 2025-07-14
 
 - Fix tool execution display and race conditions in AI processing
