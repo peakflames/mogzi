@@ -1,8 +1,9 @@
 # Changelog
 
-## [0.15.0] - IN PROG
+## [0.14.3] - 2025-07-14
 
 - Fix tool execution display and race conditions in AI processing
+- Imporved performenace of generating Workspace Details
 
 ## [0.14.2] - 2025-07-14
 
