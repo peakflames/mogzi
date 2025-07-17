@@ -150,6 +150,12 @@ The application uses a JSON configuration file with the following structure:
 
 Mogzi includes a tool approval feature to provide control over file system operations. This setting can be configured in your `mogzi.config.json` file or overridden at runtime with a command-line argument.
 
+**Modes:**
+
+*   `readonly`: (Default) Mogzi will be prevented from performing any write operations or shell commands.
+*   `all`: Mogzi is pre-approved to perform any file system operation or shell commands without asking for confirmation. (i.e. YOLO mode)
+
+
 **Configuration:**
 
 To set the default tool approval mode, add the `tool_approvals` property to your `mogzi.config.json`:
@@ -157,7 +163,7 @@ To set the default tool approval mode, add the `tool_approvals` property to your
 ```json
 {
     "mogziConfig": {
-        "tool_approvals": "all",  // <--- can be set to 'readonly' or 'all'
+        "tool_approvals": "all",
     }
 }
 ```
@@ -170,10 +176,6 @@ You can override the configuration file setting using the `--tool-approvals` or 
 mogzi "Create a new file" -ta all
 ```
 
-**Modes:**
-
-*   `readonly`: (Default) Mogzi will ask for your permission before performing any write operations (e.g., creating or modifying files).
-*   `all`: Mogzi is pre-approved to perform any file system operation without asking for confirmation.
 
 ## Contributing 🤝
 
