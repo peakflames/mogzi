@@ -8,47 +8,39 @@ A Multi-model autonomous assistant right in your terminal or CI/CD pipeline and 
 
 Perform engineering research, full coding tasks, and multiple workflow with either natural language or shell scripts 👈
 
-_Please note that this project is still in the alpha stage and being actively developed. We welcome various conteribution from the community._
+_Please note that this project is still in the alpha stage and being actively developed. I welcome contribution from the community [per this guidance](CONTRIBUTING.md)._
 
 ## Features ✨
 
-- Supports both `interactive chat` and `non-tnteractive` interface with streaming AI responses
-- Currently supports the OpenAI-compatible APIs enabling numerous provides like Requesty.ai, Openrouter.ai, Supernova, Cerebras, Deepseek, and more.
-   - For now, the `best` results are with models having excellect tool and instruction following like those form Anthropic, Google, and OpenAI models.
-- Profile-based configuration for easy switching between providers and models
 - Cross-platform support (Windows, MacOS, Linux)
-- Control file system access via tool appproval (`readonly` or `all`)
+- Interactive chat interface with streaming AI responses
 - Chat history persistence with session management
-- Pipe support for integrating with shell workflows
+- Profile-based configuration for easy switching between providers and models
+  - Currently supports the OpenAI-compatible APIs enabling numerous provides like Requesty.ai, Supernova, etc.
+   - For now, the `best` results are with models having excellect tool and instruction following like those from Anthropic and the new Kimi models. 
+- Control file system access via tool appproval (`readonly` or `all`)
+
+**Planned:**
+
 - MCP-Support (coming soon)
+- Non-Interactive Chat/Workflows
+  - Pipe support for integrating with shell workflows
 
 ### Examples 💡
 
 ```bash
-# Start a rich interactive chat
+# Start an interactive chat using your default profile as defined by your `mogzi.config.json`
 mogzi
 
-# Switch to using your profile named 'sonnet'
+# Start an interactive chat using a profile named 'sonnet' as defined by your `mogzi.config.json`
 mogzi --profile sonnet
 
-# Resume a previous conversation
-mogzi chat --session "My Project Discussion"
-
-# List available sessions (shows most recent 10 by default)
+# List available sessions (shows most recent 10 by default, can be configed in `mogzi.config.json`)
 mogzi session list
 
-# Get detailed information about a specific session
-mogzi session info "My Project Discussion"
+# Continues an interactive chat session named 'rainbow_unicorn'
+mogzi chat --session rainbow_unicorn
 
-
-# Translate a README.md to portugese in one shot
-cat README.md | mogzi run -p "Translate to portugese"
-
-# Pipe content to continue an existing session
-echo "Review this code change" | mogzi chat --session project-review
-
-# (coming soon) Run a no non-interactive nworkflow prompt
-mogzi run -p workflows/generate-release-notes.md
 ```
 
 ## Prerequisites ✅
@@ -165,9 +157,7 @@ To set the default tool approval mode, add the `tool_approvals` property to your
 ```json
 {
     "mogziConfig": {
-        "tool_approvals": "all",
-        "apiProviders": [ ... ],
-        "profiles": [ ... ]
+        "tool_approvals": "all",  // <--- can be set to 'readonly' or 'all'
     }
 }
 ```
@@ -192,37 +182,18 @@ To contribute to the project, start with our [Contributing Guide](CONTRIBUTING.m
 [![Discord](https://img.shields.io/discord/1390332197788975185?label=Join%20Discord&logo=discord&logoColor=white)](https://discord.gg/tHMYPCyY)
 
 
-## Available Assistant Tools 🛠️
+### Tools
 
-Mogzi is equipped with a powerful set of tools to interact with your local system. Here is a summary of the currently implemented tools:
-
-| Tool Name           | Status | Notes                                                              | Safety/Security Features                                                                                                                            |
-| ------------------- | ------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `list_directory`    | ✅ | Lists files and directories in a specified path. Supports glob patterns and .gitignore filtering. | Read-only operation. Constrained to the working directory. Respects .gitignore patterns by default.                                                |
-| `read_text_file`    | ✅ | Reads the content of text files with optional line range support for large files. | Read-only operation. Constrained to the working directory. Supports pagination for large files.                                                    |
-| `read_image_file`   | ✅ | Reads and analyzes image files (PNG, JPEG, GIF, BMP, WebP).       | Read-only operation. Constrained to the working directory. Returns base64-encoded image data for AI analysis.                                      |
-| `read_pdf_file`     | ✅ | Extracts text content from PDF files.                             | Read-only operation. Constrained to the working directory. Extracts readable text from PDF documents.                                              |
-| `write_file`        | ✅ | Creates a new file or overwrites an existing one with content.     | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic writes with verification.<br>- Respects read-only file attributes. |
-| `replace_in_file`           | ✅ | Replaces specific text within files with precise context matching. | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses atomic operations with backups.<br>- Requires exact text matching for safety. |
-| `apply_code_patch`  | ✅ | Applies Git-style unified diff patches for precise code changes.   | - Requires `--tool-approvals all`.<br>- Constrained to the working directory.<br>- Uses fuzzy matching for robust patch application.                |
-| `generate_code_patch` | ✅ | Creates unified diff patches showing changes between content.       | Read-only operation. Generates patches without modifying files.                                                                                     |
-| `preview_patch_application` | ✅ | Previews what changes a patch would make without applying them.     | Read-only operation. Safe preview of potential changes.                                                                                             |
-| `execute_command`   | ✅ | Executes shell commands with cross-platform support.              | - Requires `--tool-approvals all` by default.<br>- Cross-platform aware (uses `cmd`, `zsh`, `bash` appropriately).<br>- Non-interactive commands only. |
-| `search_file_content` | ✅ | Regex-based search across file contents with glob filtering.       | Read-only operation. Constrained to the working directory. Supports pattern matching and file filtering.                                           |
-| `attempt_completion` | ✅ | Signals task completion and presents results to the user.          | Read-only operation. Provides structured completion feedback and optional demonstration commands.                                                    |
-
-### Tool Categories
-
-**File System Operations (Read-Only)**
+**File System Operations**
 - `list_directory` - Browse directory contents
 - `read_text_file` - Read text files with pagination support
 - `read_image_file` - Read and analyze image files
 - `read_pdf_file` - Extract text from PDF documents
 
-**File System Operations (Write - Requires `--tool-approvals all`)**
-- `write_file` - Create or overwrite files
-- `replace_in_file` - Make targeted text replacements in files
-- `apply_code_patch` - Apply unified diff patches
+**File System Operations**
+- `write_file` - Create or overwrite files (requires `--tool-approvals all`)
+- `replace_in_file` - Make targeted text replacements in files (requires `--tool-approvals all`)
+- `apply_code_patch` - Apply unified diff patches (requires `--tool-approvals all`)
 
 **Code Analysis & Search**
 - `search_file_content` - Search file contents with regex patterns
@@ -230,7 +201,7 @@ Mogzi is equipped with a powerful set of tools to interact with your local syste
 - `preview_patch_application` - Preview patch changes
 
 **System Operations**
-- `execute_command` - Run shell commands (requires approval)
+- `execute_command` - Run shell commands (requires `--tool-approvals all`)
 - `attempt_completion` - Signal task completion
 
 ### Upcoming Tools
