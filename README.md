@@ -40,95 +40,108 @@ mogzi session list
 
 # Continues an interactive chat session named 'rainbow_unicorn'
 mogzi chat --session rainbow_unicorn
-
 ```
 
-## Prerequisites ✅
+## Getting Started ✅
 
-Before running the application, ensure you have:
+### Step 1: Obtain the API details about an OpenAI-Compatiable
 
-- Access to at least one supported API provider
-- Configuration file set up with your API providers and profiles
-
-## Setup 🛠️
-
-1. Download the latest release following the steps below.
-
-   For Windows:
-
-   - Download mogzi.exe and moves it to your WindowsApp directory
-   ```sh
-   Start-BitsTransfer -Source https://github.com/peakflames/mogzi/releases/latest/download/mogzi-win-x64.exe -Destination mogzi.exe; move -Force mogzi.exe $env:USERPROFILE\\AppData\\Local\\Microsoft\\WindowsApps
-   ```
-
-    For MacOS (sudo):
-
-    - Download mogzi and moves it to your `/usr/local/bin`
+1. Obtain the API details about an OpenAI-Compatiable Provider (e.g. [Requesty AI](https://www.requesty.ai/), etc.)
+   - Base URL
+   - API Key
+   - Desired Model Id
   
-    ```sh
-    sudo curl -L -o mogzi https://github.com/peakflames/mogzi/releases/latest/download/mogzi-osx-x64 && sudo chmod +x mogzi && sudo mv -f mogzi /usr/local/bin
-    ```
+### Step 2: Download Mogzi executable
 
-    For Linux (sudo)
+Download the latest release following the steps below.
 
-    - Download mogzi and moves it to your `/usr/local/bin`
+For Windows:
 
-    ```sh
-    sudo curl -L -o mogzi https://github.com/peakflames/mogzi/releases/latest/download/mogzi-linux-x64 && sudo chmod +x mogzi && sudo mv -f mogzi /usr/local/bin
-    ```
+- Download mogzi.exe and moves it to your WindowsApp directory
+```sh
+Start-BitsTransfer -Source https://github.com/peakflames/mogzi/releases/latest/download/mogzi-win-x64.exe -Destination mogzi.exe; move -Force mogzi.exe $env:USERPROFILE\\AppData\\Local\\Microsoft\\WindowsApps
+```
 
-2. In your home directory, create a configuration file (`mogzi.config.json`) with your API provider details:
+For MacOS (sudo):
 
-   ```json
-   {
-       "mogziConfig": {
-           "sessionListLimit": 10,
-           "apiProviders": [
-               {
-                    "name": "MyCompanyProvider",
-                    "type": "OpenAI-Compatible",
-                    "apiKey": "example-key",
-                    "baseUrl": "https://litellm.mycompany.com"
-                },
-                {
-                    "name": "RequestyAI",
-                    "type": "OpenAI-Compatible",
-                    "apiKey": "example-key",
-                    "baseUrl": "https://router.requesty.ai/v1"
-                },
-                {
-                    "name": "Deepseek",
-                    "type": "OpenAI-Compatible",
-                    "apiKey": "example-key",
-                    "baseUrl": "https://api.deepseek.com"
-                }
-           ],
-           "profiles": [
-               {
-                   "default": true,
-                   "name": "Default",
-                   "apiProvider": "MyCompanyProvider",
-                   "modelId": "03-mini"
-               },
-               {
-                   "name": "Sonnet",
-                   "apiProvider": "RequestyAI",
-                   "modelId": "vertex/anthropic/claude-3-7-sonnet"
-               },
-               {
-                    "name": "Gemini",
-                    "apiProvider": "RequestyAI",
-                    "modelId": "google/gemini-2.5-pro"
-                },
-                {
-                    "name": "V3",
-                    "apiProvider": "Deepseek",
-                    "modelId": "deepseek-chat"
-                }
-           ]
-       }
-   }
-   ```
+- Download mogzi and moves it to your `/usr/local/bin`
+
+```sh
+sudo curl -L -o mogzi https://github.com/peakflames/mogzi/releases/latest/download/mogzi-osx-x64 && sudo chmod +x mogzi && sudo mv -f mogzi /usr/local/bin
+```
+
+For Linux (sudo)
+
+- Download mogzi and moves it to your `/usr/local/bin`
+
+```sh
+sudo curl -L -o mogzi https://github.com/peakflames/mogzi/releases/latest/download/mogzi-linux-x64 && sudo chmod +x mogzi && sudo mv -f mogzi /usr/local/bin
+```
+
+### Step 3: Create your mogzi.config.json in your home directory
+
+In your home directory, create a configuration file (`mogzi.config.json`) with your API provider details:
+
+```json
+{
+    "mogziConfig": {
+        "sessionListLimit": 10,
+        "apiProviders": [
+            {
+                "name": "MyCompanyProvider",
+                "type": "OpenAI-Compatible",
+                "apiKey": "example-key",
+                "baseUrl": "https://litellm.mycompany.com"
+            },
+            {
+                "name": "RequestyAI",
+                "type": "OpenAI-Compatible",
+                "apiKey": "example-key",
+                "baseUrl": "https://router.requesty.ai/v1"
+            },
+            {
+                "name": "Deepseek",
+                "type": "OpenAI-Compatible",
+                "apiKey": "example-key",
+                "baseUrl": "https://api.deepseek.com"
+            }
+        ],
+        "profiles": [
+            {
+                "default": true,
+                "name": "Default",
+                "apiProvider": "MyCompanyProvider",
+                "modelId": "03-mini"
+            },
+            {
+                "name": "Sonnet",
+                "apiProvider": "RequestyAI",
+                "modelId": "vertex/anthropic/claude-3-7-sonnet"
+            },
+            {
+                "name": "Gemini",
+                "apiProvider": "RequestyAI",
+                "modelId": "google/gemini-2.5-pro"
+            },
+            {
+                "name": "V3",
+                "apiProvider": "Deepseek",
+                "modelId": "deepseek-chat"
+            }
+        ]
+    }
+}
+```
+
+### Step 4: Open a Terminal and chat
+
+1. Open you favorite Terminal app
+2. Start an interactive chat
+
+```sh
+$ mogzi
+```
+
 
 ### Configuration Schema ⚙️
 
@@ -176,12 +189,7 @@ You can override the configuration file setting using the `--tool-approvals` or 
 mogzi "Create a new file" -ta all
 ```
 
-
-## Contributing 🤝
-
-To contribute to the project, start with our [Contributing Guide](CONTRIBUTING.md) to learn the basics. You can also join our [Discord](https://discord.gg/tHMYPCyY) to chat with other contributors in the `#contributors` channel.
-
-### Tools
+## Tools
 
 **File System Operations**
 - `list_directory` - Browse directory contents
@@ -206,6 +214,11 @@ To contribute to the project, start with our [Contributing Guide](CONTRIBUTING.m
 ### Upcoming Tools
 - `list_code_definition_names` - Extract code structure and definitions
 - `mcp_tools` - Model Context Protocol support for external integrations
+
+
+## Contributing 🤝
+
+To contribute to the project, start with our [Contributing Guide](CONTRIBUTING.md) to learn the basics. You can also join our [Discord](https://discord.gg/tHMYPCyY) to chat with other contributors in the `#contributors` channel.
 
 ## Copyright ©️
 
